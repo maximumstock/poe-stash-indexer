@@ -55,6 +55,8 @@ pub struct Offer {
     account_name: Option<String>,
     public: bool,
     stash_type: String,
+    created_at: u64,
+    change_id: String,
 }
 
 #[derive(Debug, PartialEq)]
@@ -111,7 +113,7 @@ fn parse_note(input: &str) -> Result<Note, ItemParseError> {
     }
 }
 
-fn parse_item(item: &Item, stash: &Stash) -> ItemParseResult {
+fn parse_item(item: &Item, stash: &Stash, id: &str) -> ItemParseResult {
     if item.note.is_none()
         || !item.name.is_empty()
         || item.stack_size.is_none()
@@ -129,10 +131,18 @@ fn parse_item(item: &Item, stash: &Stash) -> ItemParseResult {
                 league: stash.league.clone(),
                 public: stash.public,
                 stash_type: stash.stash_type.clone(),
+                change_id: id.to_owned(),
+                created_at: gen_timestamp(),
             }),
             Err(e) => ItemParseResult::Error(e),
         }
     }
+}
+
+fn gen_timestamp() -> u64 {
+    let start = std::time::SystemTime::now();
+    let n = start.duration_since(std::time::UNIX_EPOCH).unwrap();
+    n.as_secs()
 }
 #[derive(Debug, PartialEq)]
 struct Note {
@@ -140,12 +150,12 @@ struct Note {
     currency_id: String,
 }
 
-pub fn parse_items(response: &StashTabResponse) -> Vec<ItemParseResult> {
+pub fn parse_items(response: &StashTabResponse, id: &str) -> Vec<ItemParseResult> {
     let mut results = vec![];
 
     for stash in &response.stashes {
         for item in &stash.items {
-            let parsed = parse_item(item, stash);
+            let parsed = parse_item(item, stash, id);
             results.push(parsed);
         }
     }
