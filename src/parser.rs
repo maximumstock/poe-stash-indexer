@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 pub struct StashTabResponse {
@@ -6,7 +6,7 @@ pub struct StashTabResponse {
     stashes: Vec<Stash>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Stash {
     #[serde(rename(deserialize = "accountName"))]
     account_name: Option<String>,
@@ -27,13 +27,34 @@ struct Item {
     note: Option<String>,
     #[serde(rename(deserialize = "typeLine"))]
     type_line: String,
+    #[serde(rename(deserialize = "stackSize"))]
+    stack_size: Option<u32>,
+    extended: ItemExtendedProp,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct ItemLog {
-    name: String,
-    price: f32,
-    currency_id: String,
+impl Item {
+    fn is_currency(&self) -> bool {
+        self.extended.category.eq("currency")
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct ItemExtendedProp {
+    category: String,
+    #[serde(rename(deserialize = "baseType"))]
+    base_type: String,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+pub struct Offer {
+    sell: String,
+    buy: String,
+    conversion_rate: f32,
+    stock: u32,
+    league: Option<String>,
+    account_name: Option<String>,
+    public: bool,
+    stash_type: String,
 }
 
 #[derive(Debug, PartialEq)]
@@ -45,7 +66,7 @@ pub enum ItemParseError {
 
 #[derive(Debug, PartialEq)]
 pub enum ItemParseResult {
-    Success(ItemLog),
+    Success(Offer),
     Error(ItemParseError),
     Empty,
 }
@@ -90,15 +111,24 @@ fn parse_note(input: &str) -> Result<Note, ItemParseError> {
     }
 }
 
-fn parse_item(item: &Item) -> ItemParseResult {
-    if item.note.is_none() || !item.name.is_empty() {
+fn parse_item(item: &Item, stash: &Stash) -> ItemParseResult {
+    if item.note.is_none()
+        || !item.name.is_empty()
+        || item.stack_size.is_none()
+        || item.is_currency()
+    {
         ItemParseResult::Empty
     } else {
         match parse_note(item.note.clone().unwrap().as_ref()) {
-            Ok(note) => ItemParseResult::Success(ItemLog {
-                name: item.name.clone(),
-                price: note.price,
-                currency_id: note.currency_id,
+            Ok(note) => ItemParseResult::Success(Offer {
+                sell: item.extended.base_type.clone(),
+                buy: note.currency_id,
+                conversion_rate: note.price,
+                stock: item.stack_size.unwrap(),
+                account_name: stash.account_name.clone(),
+                league: stash.league.clone(),
+                public: stash.public,
+                stash_type: stash.stash_type.clone(),
             }),
             Err(e) => ItemParseResult::Error(e),
         }
@@ -111,13 +141,16 @@ struct Note {
 }
 
 pub fn parse_items(response: &StashTabResponse) -> Vec<ItemParseResult> {
-    response
-        .stashes
-        .iter()
-        .map(|x| x.items.clone())
-        .flatten()
-        .map(|i| parse_item(&i))
-        .collect::<Vec<_>>()
+    let mut results = vec![];
+
+    for stash in &response.stashes {
+        for item in &stash.items {
+            let parsed = parse_item(item, stash);
+            results.push(parsed);
+        }
+    }
+
+    results
 }
 
 #[cfg(test)]
