@@ -23,7 +23,7 @@ fn load_river_id(id: &str) -> Result<StashTabResponse, ItemParseError> {
 fn do_loop(id: &str, offers: &mut Vec<Offer>) -> Option<String> {
     match load_river_id(&id) {
         Ok(response) => {
-            for result in parse_items(&response) {
+            for result in parse_items(&response, id) {
                 match result {
                     ItemParseResult::Success(item_log) => offers.push(item_log),
                     ItemParseResult::Error(e) => {
