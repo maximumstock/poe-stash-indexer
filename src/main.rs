@@ -1,34 +1,44 @@
-use serde::Deserialize;
+mod parser;
 
-#[derive(Debug, Deserialize)]
-struct StashTabResponse {
-    next_change_id: String,
-    stashes: Vec<Stash>,
+use parser::{parse_items, ItemParseError, ItemParseResult, StashTabResponse};
+
+#[macro_use]
+extern crate lazy_static;
+
+fn load_river_id(id: &str) -> Result<StashTabResponse, ItemParseError> {
+    let url = format!(
+        "https://www.pathofexile.com/api/public-stash-tabs?id={}",
+        id
+    );
+
+    ureq::get(&url)
+        .call()
+        .into_string()
+        .map(|x| serde_json::from_str::<StashTabResponse>(&x).unwrap())
+        .map_err(|_| ItemParseError::Fetch)
 }
 
-#[derive(Debug, Deserialize)]
-struct Stash {
-    accountName: Option<String>,
-    lastCharacterName: Option<String>,
-    id: String,
-    stash: Option<String>,
-    stashType: String,
-    items: Vec<Item>,
-    public: bool,
-    league: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Item {
-    name: String,
-    note: Option<String>,
-}
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://www.pathofexile.com/api/public-stash-tabs?id=649994034-665472248-633359039-717785899-684526645";
-    // let result: StashTabResponse = ureq::get(url).call().into_json();
-    let response = ureq::get(url).call().into_json().unwrap();
-    let deserialized: StashTabResponse = serde_json::from_value(response).unwrap();
-    // println!("{:?}", deserialized);
-    Ok(())
+fn main() {
+    let mut item_logs = vec![];
+    let mut id = String::from("717821295-732074652-698784848-789924768-78833560");
+    loop {
+        match load_river_id(&id) {
+            Ok(response) => {
+                for result in parse_items(&response) {
+                    match result {
+                        ItemParseResult::Success(item_log) => item_logs.push(item_log),
+                        ItemParseResult::Error(e) => {
+                            println!("Error: {:?}", e);
+                        }
+                        ItemParseResult::Empty => {}
+                    }
+                }
+                println!("Processed stash id {:?}", id);
+                id = response.next_change_id
+            }
+            Err(e) => {
+                println!("Error when fetching id {}: Error: {:?}", id, e);
+            }
+        }
+    }
 }
