@@ -43,7 +43,7 @@ fn do_loop(id: &str, offers: &mut Vec<Offer>) -> Option<String> {
 }
 
 fn save_item_logs(offers: &Vec<Offer>) -> () {
-    let mut file = File::create("db.json").unwrap();
+    let mut file = File::create("data/db.json").unwrap();
     let output = serde_json::to_string_pretty(offers).unwrap();
     file.write(output.as_ref()).unwrap();
 }
@@ -55,7 +55,7 @@ fn main() {
     let default_id = String::from("717821295-732074652-698784848-789924768-78833560");
     let mut id = args.get(1).unwrap_or(&default_id).clone();
 
-    let mut limit = 1000;
+    let mut limit = 100;
     loop {
         if item_logs.len() >= limit {
             println!("Reached limit ({:?}): Saving db.json", limit);
