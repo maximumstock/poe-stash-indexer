@@ -64,19 +64,19 @@ fn main() {
     let connection = PgConnection::establish(&database_url).unwrap();
 
     let args: Vec<String> = env::args().collect();
-    let mut item_logs = vec![];
+    let mut offers = vec![];
 
     let default_id = String::from("717821295-732074652-698784848-789924768-78833560");
     let mut id = args.get(1).unwrap_or(&default_id).clone();
 
     let mut limit = 100;
     loop {
-        if item_logs.len() >= limit {
+        if offers.len() >= limit {
             println!("Reached limit ({:?}): Saving db.json", limit);
-            save_item_logs(&item_logs);
+            save_item_logs(&offers);
             limit = limit + limit;
         }
-        match do_loop(&id, &mut item_logs) {
+        match do_loop(&id, &mut offers) {
             Some(new_id) => id = new_id,
             None => {}
         }
