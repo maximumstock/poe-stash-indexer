@@ -1,3 +1,5 @@
+use super::schema::offers;
+use diesel::Insertable;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -45,17 +47,18 @@ struct ItemExtendedProp {
     base_type: String,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Insertable)]
+#[table_name = "offers"]
 pub struct Offer {
     sell: String,
     buy: String,
     conversion_rate: f32,
-    stock: u32,
+    stock: i64,
     league: Option<String>,
     account_name: Option<String>,
     public: bool,
     stash_type: String,
-    created_at: u64,
+    created_at: std::time::SystemTime,
     change_id: String,
 }
 
@@ -113,7 +116,12 @@ fn parse_note(input: &str) -> Result<Note, ItemParseError> {
     }
 }
 
-fn parse_item(item: &Item, stash: &Stash, id: &str) -> ItemParseResult {
+fn parse_item(
+    item: &Item,
+    stash: &Stash,
+    id: &str,
+    created_at: std::time::SystemTime,
+) -> ItemParseResult {
     if item.note.is_none()
         || !item.name.is_empty()
         || item.stack_size.is_none()
@@ -126,24 +134,19 @@ fn parse_item(item: &Item, stash: &Stash, id: &str) -> ItemParseResult {
                 sell: item.extended.base_type.clone(),
                 buy: note.currency_id,
                 conversion_rate: note.price,
-                stock: item.stack_size.unwrap(),
+                stock: item.stack_size.unwrap() as i64,
                 account_name: stash.account_name.clone(),
                 league: stash.league.clone(),
                 public: stash.public,
                 stash_type: stash.stash_type.clone(),
                 change_id: id.to_owned(),
-                created_at: gen_timestamp(),
+                created_at,
             }),
             Err(e) => ItemParseResult::Error(e),
         }
     }
 }
 
-fn gen_timestamp() -> u64 {
-    let start = std::time::SystemTime::now();
-    let n = start.duration_since(std::time::UNIX_EPOCH).unwrap();
-    n.as_secs()
-}
 #[derive(Debug, PartialEq)]
 struct Note {
     price: f32,
@@ -152,10 +155,11 @@ struct Note {
 
 pub fn parse_items(response: &StashTabResponse, id: &str) -> Vec<ItemParseResult> {
     let mut results = vec![];
+    let created_at = std::time::SystemTime::now();
 
     for stash in &response.stashes {
         for item in &stash.items {
-            let parsed = parse_item(item, stash, id);
+            let parsed = parse_item(item, stash, id, created_at);
             results.push(parsed);
         }
     }
