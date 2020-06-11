@@ -1,6 +1,16 @@
 mod parser;
+mod persistence;
+mod schema;
 
+#[macro_use]
+extern crate diesel;
+extern crate dotenv;
+
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
+use dotenv::dotenv;
 use parser::{parse_items, ItemParseError, ItemParseResult, Offer, StashTabResponse};
+use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -49,7 +59,11 @@ fn save_item_logs(offers: &Vec<Offer>) -> () {
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
+    dotenv().ok();
+    let database_url = env::var("DATABASE_URL").unwrap();
+    let connection = PgConnection::establish(&database_url).unwrap();
+
+    let args: Vec<String> = env::args().collect();
     let mut item_logs = vec![];
 
     let default_id = String::from("717821295-732074652-698784848-789924768-78833560");
