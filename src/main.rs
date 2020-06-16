@@ -10,9 +10,8 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
 use parser::{parse_items, ItemParseError, ItemParseResult, Offer, StashTabResponse};
+use persistence::Persist;
 use std::env;
-use std::fs::File;
-use std::io::prelude::*;
 
 #[macro_use]
 extern crate lazy_static;
@@ -52,28 +51,23 @@ fn do_loop(id: &str, offers: &mut Vec<Offer>) -> Option<String> {
     }
 }
 
-fn save_item_logs(offers: &Vec<Offer>) -> () {
-    let mut file = File::create("data/db.json").unwrap();
-    let output = serde_json::to_string_pretty(offers).unwrap();
-    file.write(output.as_ref()).unwrap();
-}
-
 fn main() {
     dotenv().ok();
     let database_url = env::var("DATABASE_URL").unwrap();
-    let connection = PgConnection::establish(&database_url).unwrap();
+    let connection = PgConnection::establish(&database_url).expect("lul");
+    let persistence = persistence::PgDb::new(&connection);
 
     let args: Vec<String> = env::args().collect();
-    let mut offers = vec![];
 
     let default_id = String::from("717821295-732074652-698784848-789924768-78833560");
     let mut id = args.get(1).unwrap_or(&default_id).clone();
 
     let mut limit = 100;
+    let mut offers = vec![];
     loop {
         if offers.len() >= limit {
-            println!("Reached limit ({:?}): Saving db.json", limit);
-            save_item_logs(&offers);
+            println!("Reached limit ({:?}): Persisting...", limit);
+            persistence.save_offers(&offers);
             limit = limit + limit;
         }
         match do_loop(&id, &mut offers) {
