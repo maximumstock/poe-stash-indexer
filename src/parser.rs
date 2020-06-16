@@ -77,8 +77,8 @@ pub enum ItemParseResult {
 }
 
 fn parse_price(input: &str) -> Result<f32, ItemParseError> {
-    if input.contains("/") {
-        let parts = input.split("/").collect::<Vec<_>>();
+    if input.contains('/') {
+        let parts = input.split('/').collect::<Vec<_>>();
         let numerator = parts[0].parse::<f32>();
         let denominator = parts[1].parse::<f32>();
         match (numerator, denominator) {
@@ -105,14 +105,14 @@ fn parse_note(input: &str) -> Result<Note, ItemParseError> {
     }
 
     let parts = input.split_whitespace().collect::<Vec<_>>();
-    // println!("{:?} - {:?}", parts, parts.len());
 
-    match parts.len() >= 3 {
-        true => Ok(Note {
+    if parts.len() >= 3 {
+        Ok(Note {
             price: parse_price(parts.get(parts.len() - 2).unwrap())?,
             currency_id: String::from(parts.last().unwrap().to_owned()),
-        }),
-        false => Err(ItemParseError::UnknownNoteFormat(input.to_owned())),
+        })
+    } else {
+        Err(ItemParseError::UnknownNoteFormat(input.to_owned()))
     }
 }
 
