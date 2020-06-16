@@ -70,9 +70,8 @@ fn main() {
             persistence.save_offers(&offers);
             limit = limit + limit;
         }
-        match do_loop(&id, &mut offers) {
-            Some(new_id) => id = new_id,
-            None => {}
+        if let Some(new_id) = do_loop(&id, &mut offers) {
+            id = new_id;
         }
     }
 }

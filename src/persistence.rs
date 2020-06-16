@@ -6,15 +6,15 @@ use std::io::Write;
 
 pub trait Persist {
     // TODO return Result
-    fn save_offers(&self, offers: &Vec<Offer>) -> ();
+    fn save_offers(&self, offers: &[Offer]);
 }
 // by default in a dev environment
 pub struct FileDb {}
 impl Persist for FileDb {
-    fn save_offers(&self, offers: &Vec<Offer>) -> () {
+    fn save_offers(&self, offers: &[Offer]) {
         let mut file = File::create("data/db.json").unwrap();
         let output = serde_json::to_string_pretty(offers).unwrap();
-        file.write(output.as_ref()).expect("WRITE failed...");
+        file.write_all(output.as_ref()).expect("WRITE failed...");
     }
 }
 // by default in a prod environment
@@ -27,7 +27,7 @@ impl<'a> PgDb<'a> {
     }
 }
 impl Persist for PgDb<'_> {
-    fn save_offers(&self, offers: &Vec<Offer>) -> () {
+    fn save_offers(&self, offers: &[Offer]) {
         diesel::insert_into(super::schema::offers::table)
             .values(offers)
             .execute(self.conn)
