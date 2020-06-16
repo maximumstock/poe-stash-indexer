@@ -1,32 +1,20 @@
-# https://blog.sedrik.se/posts/my-docker-setup-for-rust/
-FROM ekidd/rust-musl-builder as builder
+# Based on https://hub.docker.com/_/rust
+FROM rust:latest
+RUN cargo install diesel_cli --no-default-features --features postgres
+WORKDIR /usr/src/myapp
 
-WORKDIR /home/rust/
+RUN mkdir src
+RUN echo "fn main() {}" > src/main.rs
 
-# Avoid having to install/build all dependencies by copying
-# the Cargo files and making a dummy src/main.rs
+# Build dependencies
 COPY Cargo.toml .
 COPY Cargo.lock .
-RUN echo "fn main() {}" > src/main.rs
-RUN cargo test
 RUN cargo build
-# --release
 
-# We need to touch our real main.rs file or else docker will use
-# the cached one.
+# Build application
 COPY . .
-RUN sudo touch src/main.rs
-RUN sudo chown -R rust:rust target/debug/.cargo-lock
-
-RUN cargo test
 RUN cargo build
-# --release
+RUN cargo test
 
-# Size optimization
-# RUN strip target/x86_64-unknown-linux-musl/debug/poe-stash-indexer
-
-# Start building the final image
-FROM scratch
-WORKDIR /home/rust/
-COPY --from=builder /home/rust/target/x86_64-unknown-linux-musl/debug/poe-stash-indexer .
-ENTRYPOINT ["./poe-stash-indexer"]
+RUN cp /usr/src/myapp/target/debug/poe-stash-indexer /usr/local/bin/myapp
+# CMD ["myapp"]
