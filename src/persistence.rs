@@ -4,7 +4,8 @@ use diesel::prelude::*;
 use std::fs::File;
 use std::io::Write;
 
-trait Persist {
+pub trait Persist {
+    // TODO return Result
     fn save_offers(&self, offers: &Vec<Offer>) -> ();
 }
 // by default in a dev environment
@@ -19,6 +20,11 @@ impl Persist for FileDb {
 // by default in a prod environment
 pub struct PgDb<'a> {
     conn: &'a PgConnection,
+}
+impl<'a> PgDb<'a> {
+    pub fn new(connection: &'a PgConnection) -> Self {
+        PgDb { conn: connection }
+    }
 }
 impl Persist for PgDb<'_> {
     fn save_offers(&self, offers: &Vec<Offer>) -> () {
