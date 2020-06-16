@@ -1,4 +1,6 @@
-/target
+.DS_Store
 .idea
 poe-stash-indexer.iml
-.DS_Store
+
+target
+data
