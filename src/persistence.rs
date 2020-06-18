@@ -1,36 +1,29 @@
 use super::parser::Offer;
+use super::schema::offers;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use std::fs::File;
-use std::io::Write;
 
-pub trait Persist {
-    // TODO return Result
-    fn save_offers(&self, offers: &[Offer]);
+pub struct PgDb {
+    conn: PgConnection,
 }
-// by default in a dev environment
-pub struct FileDb {}
-impl Persist for FileDb {
-    fn save_offers(&self, offers: &[Offer]) {
-        let mut file = File::create("data/db.json").unwrap();
-        let output = serde_json::to_string_pretty(offers).unwrap();
-        file.write_all(output.as_ref()).expect("WRITE failed...");
+impl PgDb {
+    pub fn new(database_url: &str) -> Self {
+        PgDb {
+            conn: PgConnection::establish(&database_url).expect("lul"),
+        }
     }
-}
-// by default in a prod environment
-pub struct PgDb<'a> {
-    conn: &'a PgConnection,
-}
-impl<'a> PgDb<'a> {
-    pub fn new(connection: &'a PgConnection) -> Self {
-        PgDb { conn: connection }
-    }
-}
-impl Persist for PgDb<'_> {
-    fn save_offers(&self, offers: &[Offer]) {
+
+    pub fn save_offers(&self, offers: &[Offer]) -> QueryResult<usize> {
         diesel::insert_into(super::schema::offers::table)
             .values(offers)
-            .execute(self.conn)
-            .expect("INSERT failed...");
+            .on_conflict_do_nothing()
+            .execute(&self.conn)
+    }
+
+    pub fn get_last_read_change_id(&self) -> QueryResult<String> {
+        offers::table
+            .select(offers::change_id)
+            .order(offers::created_at.desc())
+            .first::<String>(&self.conn)
     }
 }

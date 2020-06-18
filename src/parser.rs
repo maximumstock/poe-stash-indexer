@@ -64,7 +64,6 @@ pub struct Offer {
 
 #[derive(Debug, PartialEq)]
 pub enum ItemParseError {
-    Fetch,
     Price(String),
     UnknownNoteFormat(String),
 }

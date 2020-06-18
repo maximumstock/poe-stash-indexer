@@ -301,6 +301,7 @@ dependencies = [
  "diesel",
  "dotenv",
  "lazy_static",
+ "ratelimit",
  "regex",
  "serde",
  "serde_json",
@@ -348,6 +349,12 @@ checksum = "aa563d17ecb180e500da1cfd2b028310ac758de548efdd203e18f283af693f37"
 dependencies = [
  "proc-macro2",
 ]
+
+[[package]]
+name = "ratelimit"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c4777eb47471c2a42bee8b553b22b8e5c496f657dc6f8b8e29bd69662f31e7e"
 
 [[package]]
 name = "regex"
