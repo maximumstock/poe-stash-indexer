@@ -9,7 +9,7 @@ up:
 	${docker-compose} up -d
 
 logs:
-	${docker-compose} logs -f
+	${docker-compose} logs -f --tail 50
 
 migrate:
 	${docker-compose} exec indexer diesel migration run
