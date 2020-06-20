@@ -7,6 +7,7 @@ CREATE TABLE offers (
   stock BIGINT NOT NULL,
   league TEXT,
   account_name TEXT,
+  category TEXT,
   public BOOLEAN NOT NULL,
   stash_type TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL,

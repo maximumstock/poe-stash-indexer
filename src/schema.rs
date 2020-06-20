@@ -7,6 +7,7 @@ table! {
         stock -> Int8,
         league -> Nullable<Text>,
         account_name -> Nullable<Text>,
+        category -> Text,
         public -> Bool,
         stash_type -> Text,
         created_at -> Timestamp,

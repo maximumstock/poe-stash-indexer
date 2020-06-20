@@ -34,12 +34,6 @@ struct Item {
     extended: ItemExtendedProp,
 }
 
-impl Item {
-    fn is_currency(&self) -> bool {
-        self.extended.category.eq("currency")
-    }
-}
-
 #[derive(Debug, Deserialize, Clone)]
 struct ItemExtendedProp {
     category: String,
@@ -53,9 +47,10 @@ pub struct Offer {
     sell: String,
     buy: String,
     conversion_rate: f32,
-    stock: i64,
+    stock: Option<i64>,
     league: Option<String>,
     account_name: Option<String>,
+    category: String,
     public: bool,
     stash_type: String,
     created_at: std::time::SystemTime,
@@ -121,11 +116,7 @@ fn parse_item(
     id: &str,
     created_at: std::time::SystemTime,
 ) -> ItemParseResult {
-    if item.note.is_none()
-        || !item.name.is_empty()
-        || item.stack_size.is_none()
-        || item.is_currency()
-    {
+    if item.note.is_none() || !item.name.is_empty() || item.stack_size.is_none() {
         ItemParseResult::Empty
     } else {
         match parse_note(item.note.clone().unwrap().as_ref()) {
@@ -133,10 +124,11 @@ fn parse_item(
                 sell: item.extended.base_type.clone(),
                 buy: note.currency_id,
                 conversion_rate: note.price,
-                stock: item.stack_size.unwrap() as i64,
+                stock: item.stack_size.map(|i| i as i64),
                 account_name: stash.account_name.clone(),
                 league: stash.league.clone(),
                 public: stash.public,
+                category: item.extended.category.clone(),
                 stash_type: stash.stash_type.clone(),
                 change_id: id.to_owned(),
                 created_at,
