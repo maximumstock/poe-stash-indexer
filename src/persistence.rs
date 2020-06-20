@@ -1,5 +1,5 @@
-use super::parser::Offer;
-use super::schema::offers;
+use crate::parser::Offer;
+use crate::schema::offers;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 
