@@ -1,4 +1,4 @@
-use super::schema::offers;
+use crate::schema::offers;
 use diesel::Insertable;
 use serde::{Deserialize, Serialize};
 
