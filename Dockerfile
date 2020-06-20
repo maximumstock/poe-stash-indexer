@@ -9,12 +9,12 @@ RUN echo "fn main() {}" > src/main.rs
 # Build dependencies
 COPY Cargo.toml .
 COPY Cargo.lock .
-RUN cargo build
+RUN cargo build --release
 
 # Build application
 COPY . .
-RUN cargo build
-RUN cargo test
+RUN cargo build --release
+RUN cargo test --release
 
-RUN cp /usr/src/myapp/target/debug/poe-stash-indexer /usr/local/bin/myapp
+RUN cp /usr/src/myapp/target/release/poe-stash-indexer /usr/local/bin/myapp
 # CMD ["myapp"]
