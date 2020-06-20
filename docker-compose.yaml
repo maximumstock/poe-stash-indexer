@@ -1,9 +1,9 @@
 version: "3.2"
 services:
   db:
-    build: postgres:latest
+    image: postgres:latest
     volumes:
-      - ./data/db:/var/lib/postgresql/data
+      - ./db/data:/var/lib/postgresql/data
     environment:
       POSTGRES_PASSWORD: "poe"
       POSTGRES_USER: "poe"
@@ -17,7 +17,7 @@ services:
     env_file:
       - .env
     volumes:
-      - "./db/data:/home/rust/data"
+      - "./db:/home/rust/data"
   # api:
   #   build: backend
   #   depends_on:
