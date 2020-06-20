@@ -1,7 +1,7 @@
 version: "3.2"
 services:
   db:
-    image: postgres:11
+    build: postgres:latest
     volumes:
       - ./data/db:/var/lib/postgresql/data
     environment:
@@ -17,7 +17,7 @@ services:
     env_file:
       - .env
     volumes:
-      - "./data:/home/rust/data"
+      - "./db/data:/home/rust/data"
   # api:
   #   build: backend
   #   depends_on:

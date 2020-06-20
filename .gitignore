@@ -3,4 +3,4 @@
 poe-stash-indexer.iml
 
 target
-data
+db/data
