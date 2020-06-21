@@ -15,4 +15,5 @@ lazy_static = "1.4.0"
 diesel = { version = "1.4.4", features = ["postgres", "numeric"] }
 dotenv = "0.15.0"
 ratelimit = "0.4.4"
+minreq = "2.2.0"
 

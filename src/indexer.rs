@@ -1,5 +1,6 @@
 use crate::parser::{parse_items, ItemParseResult, Offer, StashTabResponse};
 use crate::persistence;
+use minreq;
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -29,20 +30,20 @@ impl<'a> Indexer<'a> {
     }
 
     fn load_river_id(&self, id: &str) -> Result<StashTabResponse, IndexerError> {
-        let url = format!(
-            "https://www.pathofexile.com/api/public-stash-tabs?id={}",
-            id
-        );
+        let url = format!("http://www.pathofexile.com/api/public-stash-tabs?id={}", id);
+        let response = minreq::get(&url).send().unwrap();
 
-        let response = ureq::get(&url).call();
-
-        if response.error() {
+        if response.status_code.eq(&429) {
             return Err(IndexerError::RateLimited);
         }
 
-        let txt = response.into_string().unwrap();
-
-        serde_json::from_str::<StashTabResponse>(&txt).map_err(|_| IndexerError::Deserialize)
+        response
+            .as_str()
+            .map_err(|_| IndexerError::Deserialize)
+            .and_then(|txt| {
+                serde_json::from_str::<StashTabResponse>(&txt)
+                    .map_err(|_| IndexerError::Deserialize)
+            })
     }
 
     fn parse(&mut self, response: &StashTabResponse, id: &str) -> Vec<Offer> {
