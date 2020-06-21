@@ -1,6 +1,5 @@
 use crate::parser::{parse_items, ItemParseResult, Offer, StashTabResponse};
 use crate::persistence;
-use minreq;
 use std::time::Duration;
 
 #[derive(Debug)]
