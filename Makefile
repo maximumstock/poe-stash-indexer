@@ -9,7 +9,7 @@ up:
 	${docker-compose} up -d
 
 logs:
-	${docker-compose} logs -f --tail 50
+	${docker-compose} logs -t -f --tail 50
 
 migrate:
 	${docker-compose} exec indexer diesel migration run
@@ -18,6 +18,9 @@ develop:
 	up migrate
 
 shell:
-	${docker-compose} exec -it indexer /bin/bash
+	${docker-compose} exec indexer /bin/bash
 
-.PHONY: up down logs api-migrate develop shell
+db-shell:
+	${docker-compose} exec db /bin/bash
+
+.PHONY: up down logs api-migrate develop shell db-shell
