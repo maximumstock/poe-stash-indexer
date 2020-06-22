@@ -4,9 +4,10 @@ use std::time::Duration;
 
 #[derive(Debug)]
 pub enum IndexerError {
-    Persist,
+    Persist(String),
     RateLimited,
-    Deserialize,
+    Deserialize(String),
+    NonUtf8Response(String),
 }
 
 pub struct Indexer<'a> {
@@ -38,10 +39,10 @@ impl<'a> Indexer<'a> {
 
         response
             .as_str()
-            .map_err(|_| IndexerError::Deserialize)
+            .map_err(|e| IndexerError::NonUtf8Response(e.to_string()))
             .and_then(|txt| {
                 serde_json::from_str::<StashTabResponse>(&txt)
-                    .map_err(|_| IndexerError::Deserialize)
+                    .map_err(|e| IndexerError::Deserialize(e.to_string()))
             })
     }
 
@@ -62,7 +63,7 @@ impl<'a> Indexer<'a> {
     pub fn persist(&mut self, offers: Vec<Offer>) -> Result<usize, IndexerError> {
         self.persistence
             .save_offers(&offers)
-            .map_err(|_| IndexerError::Persist)
+            .map_err(|e| IndexerError::Persist(e.to_string()))
     }
 
     fn retry_change_id(&mut self, change_id: String) {
@@ -71,10 +72,12 @@ impl<'a> Indexer<'a> {
 
     fn handle_error(&mut self, error: &IndexerError, change_id: String) {
         match error {
-            IndexerError::Deserialize => eprintln!("Deserialization failed..."),
-            IndexerError::Persist => {
+            IndexerError::Deserialize(e) => eprintln!("Deserialization failed: {}", e),
+            IndexerError::NonUtf8Response(e) => eprintln!("Encountered non-utf8 response: {}", e),
+            // Recoverable errors
+            IndexerError::Persist(e) => {
                 self.retry_change_id(change_id);
-                eprintln!("Persist failed...");
+                eprintln!("Persist failed: {}", e);
             }
             IndexerError::RateLimited => {
                 self.retry_change_id(change_id);
@@ -85,7 +88,7 @@ impl<'a> Indexer<'a> {
         }
     }
 
-    fn work(&mut self, change_id: String) -> Result<(), IndexerError> {
+    fn work(&mut self, change_id: &str) -> Result<(), IndexerError> {
         self.load_river_id(&change_id)
             .and_then(|response| {
                 let offers = self.parse(&response, &change_id);
@@ -93,28 +96,24 @@ impl<'a> Indexer<'a> {
                 Ok(offers)
             })
             .and_then(|offers| self.persist(offers))
-            .and_then(|n| {
-                println!("Processed stash id {:?}", change_id);
-                if n > 0 {
-                    println!("Persisting {:?} offers", n);
-                }
-                Ok(())
-            })
-            .or_else(|err| {
-                self.handle_error(&err, change_id);
-                Err(err)
-            })
+            .and_then(|_| Ok(()))
     }
 
     pub fn start(&mut self, change_id: String) {
         self.next_change_ids.push_front(change_id);
         loop {
             self.ratelimiter.wait();
-            self.next_change_ids
-                .pop_back()
-                .ok_or(IndexerError::Deserialize)
-                .and_then(|change_id| self.work(change_id))
-                .unwrap_or_else(|_err| ());
+
+            if let Some(next_id) = self.next_change_ids.pop_back() {
+                let result = self.work(&next_id);
+                match result {
+                    Ok(_) => println!("Processed stash id {:?}", next_id),
+                    Err(e) => self.handle_error(&e, next_id),
+                }
+            } else {
+                println!("No work found...sleeping 15s");
+                std::thread::sleep(Duration::from_secs(15));
+            }
         }
     }
 }
