@@ -71,16 +71,12 @@ impl<'a> Indexer<'a> {
     }
 
     fn handle_error(&mut self, error: &IndexerError, change_id: String) {
+        self.retry_change_id(change_id);
         match error {
-            IndexerError::Deserialize(e) => eprintln!("Deserialization failed: {}", e),
             IndexerError::NonUtf8Response(e) => eprintln!("Encountered non-utf8 response: {}", e),
-            // Recoverable errors
-            IndexerError::Persist(e) => {
-                self.retry_change_id(change_id);
-                eprintln!("Persist failed: {}", e);
-            }
+            IndexerError::Deserialize(e) => eprintln!("Deserialization failed: {}", e),
+            IndexerError::Persist(e) => eprintln!("Persist failed: {}", e),
             IndexerError::RateLimited => {
-                self.retry_change_id(change_id);
                 let timeout = Duration::from_secs(60);
                 eprintln!("Rate limited... -> Sleeping {:?}", timeout);
                 std::thread::sleep(timeout);
@@ -111,8 +107,7 @@ impl<'a> Indexer<'a> {
                     Err(e) => self.handle_error(&e, next_id),
                 }
             } else {
-                println!("No work found...sleeping 15s");
-                std::thread::sleep(Duration::from_secs(15));
+                std::process::exit(-1);
             }
         }
     }
