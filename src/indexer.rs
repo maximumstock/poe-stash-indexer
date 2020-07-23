@@ -86,13 +86,13 @@ impl<'a> Indexer<'a> {
 
     fn work(&mut self, change_id: &str) -> Result<(), IndexerError> {
         self.load_river_id(&change_id)
-            .and_then(|response| {
+            .map(|response| {
                 let offers = self.parse(&response, &change_id);
                 self.next_change_ids.push_front(response.next_change_id);
-                Ok(offers)
+                offers
             })
             .and_then(|offers| self.persist(offers))
-            .and_then(|_| Ok(()))
+            .map(|_| ())
     }
 
     pub fn start(&mut self, change_id: String) {
