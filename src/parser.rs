@@ -27,6 +27,8 @@ pub struct Stash {
 struct Item {
     name: String,
     id: String,
+    #[serde(rename(deserialize = "inventoryId"))]
+    inventory_name: Option<String>,
     note: Option<String>,
     #[serde(rename(deserialize = "typeLine"))]
     type_line: String,
@@ -51,6 +53,9 @@ pub struct Offer {
     stock: Option<i64>,
     league: Option<String>,
     account_name: Option<String>,
+    item_id: String,
+    stash_id: String,
+    stash_name: Option<String>,
     category: String,
     public: bool,
     stash_type: String,
@@ -132,6 +137,9 @@ fn parse_item(
                 category: item.extended.category.clone(),
                 stash_type: stash.stash_type.clone(),
                 change_id: id.to_owned(),
+                item_id: item.id.clone(),
+                stash_id: stash.id.clone(),
+                stash_name: item.inventory_name.clone(),
                 created_at,
             }),
             Err(e) => ItemParseResult::Error(e),
