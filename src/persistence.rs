@@ -14,7 +14,7 @@ impl PgDb {
     }
 
     pub fn save_offers(&self, offers: &[Offer]) -> QueryResult<usize> {
-        diesel::insert_into(super::schema::offers::table)
+        diesel::insert_into(offers::table)
             .values(offers)
             .on_conflict_do_nothing()
             .execute(&self.conn)

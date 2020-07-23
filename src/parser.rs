@@ -26,6 +26,7 @@ pub struct Stash {
 #[derive(Clone, Debug, Deserialize)]
 struct Item {
     name: String,
+    id: String,
     note: Option<String>,
     #[serde(rename(deserialize = "typeLine"))]
     type_line: String,
@@ -164,21 +165,21 @@ mod tests {
 
     #[test]
     fn test_parse_price_single_integers() {
-        assert_eq!(parse_price("1").unwrap(), 1 as f32);
+        assert!(parse_price("1").unwrap().eq(&1_f32));
     }
 
     #[test]
     fn test_parse_price_single_floats() {
-        assert_eq!(parse_price("123.2").unwrap(), 123.2 as f32);
-        assert_eq!(parse_price(".2").unwrap(), 0.2 as f32);
+        assert!(parse_price("123.2").unwrap().eq(&123.2_f32));
+        assert!(parse_price(".2").unwrap().eq(&0.2_f32));
     }
 
     #[test]
     fn test_parse_price_fractions() {
-        assert_eq!(parse_price("70/20").unwrap(), 3.5 as f32);
-        assert_eq!(parse_price("7.0/2.0").unwrap(), 3.5 as f32);
-        assert_eq!(parse_price("7/2.0").unwrap(), 3.5 as f32);
-        assert_eq!(parse_price("7.0/2").unwrap(), 3.5 as f32);
+        assert!(parse_price("70/20").unwrap().eq(&3.5_f32));
+        assert!(parse_price("7.0/2.0").unwrap().eq(&3.5_f32));
+        assert!(parse_price("7/2.0").unwrap().eq(&3.5_f32));
+        assert!(parse_price("7.0/2").unwrap().eq(&3.5_f32));
     }
 
     #[test]
@@ -260,7 +261,7 @@ mod tests {
         assert_eq!(
             parse_note("~b/o 1/1 Chaos Orb"),
             Err(ItemParseError::UnknownNoteFormat(String::from(
-                String::from("~b/o 1/1 Chaos Orb")
+                "~b/o 1/1 Chaos Orb"
             )))
         );
     }
