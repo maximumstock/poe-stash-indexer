@@ -14,8 +14,7 @@ logs:
 migrate:
 	${docker-compose} exec indexer diesel migration run
 
-develop:
-	up migrate
+develop: up migrate
 
 shell:
 	${docker-compose} exec indexer /bin/bash
