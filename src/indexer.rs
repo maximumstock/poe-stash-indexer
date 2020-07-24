@@ -1,6 +1,6 @@
 use crate::parser::{parse_items, ItemParseResult, Offer, StashTabResponse};
 use crate::persistence;
-use minreq::Response;
+use reqwest::blocking::Response;
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -8,7 +8,6 @@ pub enum IndexerError {
     Persist(String),
     RateLimited,
     Deserialize(String),
-    NonUtf8Response(String),
 }
 
 #[derive(Debug)]
@@ -56,6 +55,7 @@ pub struct Indexer<'a> {
     persistence: &'a persistence::PgDb,
     next_change_ids: std::collections::VecDeque<String>,
     ratelimiter: ratelimit::Limiter,
+    client: reqwest::blocking::Client,
 }
 
 impl<'a> Indexer<'a> {
@@ -68,6 +68,10 @@ impl<'a> Indexer<'a> {
                 .interval(Duration::from_secs(2))
                 .quantum(1)
                 .build(),
+            client: reqwest::blocking::ClientBuilder::new()
+                .gzip(true)
+                .build()
+                .expect("Creating reqwest client failed"),
         }
     }
 
@@ -75,9 +79,16 @@ impl<'a> Indexer<'a> {
         let start = std::time::Instant::now();
 
         let url = format!("http://www.pathofexile.com/api/public-stash-tabs?id={}", id);
-        let response = minreq::get(&url).send().unwrap();
+        let response = self
+            .client
+            .get(&url)
+            .send()
+            .expect("Fetch request didnt go through");
 
-        if response.status_code.eq(&429) {
+        if response
+            .status()
+            .eq(&reqwest::StatusCode::TOO_MANY_REQUESTS)
+        {
             return Err(IndexerError::RateLimited);
         }
 
@@ -86,33 +97,29 @@ impl<'a> Indexer<'a> {
 
     fn deserialize(
         &self,
-        response: IndexerResult<Response>,
+        step: IndexerResult<Response>,
     ) -> Result<IndexerResult<StashTabResponse>, IndexerError> {
         let start = std::time::Instant::now();
+        let s_fetch = step.s_fetch;
 
-        response
-            .data
-            .as_str()
-            .map_err(|e| IndexerError::NonUtf8Response(e.to_string()))
-            .and_then(|txt| {
-                serde_json::from_str::<StashTabResponse>(&txt)
-                    .map_err(|e| IndexerError::Deserialize(e.to_string()))
-            })
+        step.data
+            .json::<StashTabResponse>()
+            .map_err(|e| IndexerError::Deserialize(e.to_string()))
             .map(|data| {
                 IndexerResult::new(data)
-                    .with_fetch(response.s_fetch)
+                    .with_fetch(s_fetch)
                     .with_deserialize(Some(start.elapsed()))
             })
     }
 
     fn parse(
-        &mut self,
-        result: IndexerResult<StashTabResponse>,
+        &self,
+        step: IndexerResult<StashTabResponse>,
         id: &str,
     ) -> Result<IndexerResult<Vec<Offer>>, IndexerError> {
         let start = std::time::Instant::now();
         let mut offers = vec![];
-        for result in parse_items(&result.data, id) {
+        for result in parse_items(&step.data, id) {
             match result {
                 ItemParseResult::Success(item_log) => offers.push(item_log),
                 ItemParseResult::Error(e) => {
@@ -122,24 +129,24 @@ impl<'a> Indexer<'a> {
             }
         }
         Ok(IndexerResult::new(offers)
-            .with_fetch(result.s_fetch)
-            .with_deserialize(result.s_deserialize)
+            .with_fetch(step.s_fetch)
+            .with_deserialize(step.s_deserialize)
             .with_parse(Some(start.elapsed())))
     }
 
-    pub fn persist(
-        &mut self,
-        result: IndexerResult<Vec<Offer>>,
+    fn persist(
+        &self,
+        step: IndexerResult<Vec<Offer>>,
     ) -> Result<IndexerResult<usize>, IndexerError> {
         let start = std::time::Instant::now();
         self.persistence
-            .save_offers(&result.data)
+            .save_offers(&step.data)
             .map_err(|e| IndexerError::Persist(e.to_string()))
             .map(|x| {
                 IndexerResult::new(x)
-                    .with_fetch(result.s_fetch)
-                    .with_deserialize(result.s_deserialize)
-                    .with_parse(result.s_parse)
+                    .with_fetch(step.s_fetch)
+                    .with_deserialize(step.s_deserialize)
+                    .with_parse(step.s_parse)
                     .with_persist(Some(start.elapsed()))
             })
     }
@@ -151,7 +158,6 @@ impl<'a> Indexer<'a> {
     fn handle_error(&mut self, error: &IndexerError, change_id: String) {
         self.retry_change_id(change_id);
         match error {
-            IndexerError::NonUtf8Response(e) => eprintln!("Encountered non-utf8 response: {}", e),
             IndexerError::Deserialize(e) => eprintln!("Deserialization failed: {}", e),
             IndexerError::Persist(e) => eprintln!("Persist failed: {}", e),
             IndexerError::RateLimited => {
