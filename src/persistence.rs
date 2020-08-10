@@ -23,7 +23,7 @@ impl PgDb {
     pub fn get_last_read_change_id(&self) -> QueryResult<String> {
         offers::table
             .select(offers::change_id)
-            .order(offers::created_at.desc())
+            .order(offers::id.desc())
             .first::<String>(&self.conn)
     }
 }
