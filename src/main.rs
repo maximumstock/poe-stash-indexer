@@ -26,8 +26,13 @@ fn main() {
             id
         }
         None => {
-            eprintln!("Could not find last change id -> Use default");
-            env::var("DEFAULT_CHANGE_ID").expect("No default change id set")
+            let default_change_id =
+                env::var("DEFAULT_CHANGE_ID").expect("No default change id set");
+            eprintln!(
+                "Could not find last change id -> Use default {}",
+                default_change_id
+            );
+            default_change_id
         }
     };
 
