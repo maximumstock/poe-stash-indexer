@@ -76,6 +76,14 @@ pub enum ItemParseResult {
     Empty,
 }
 
+impl Stash {
+    fn is_standard(&self) -> bool {
+        self.league
+            .as_ref()
+            .map_or(false, |l| l.eq("Standard") || l.eq("Hardcore"))
+    }
+}
+
 fn parse_price(input: &str) -> Result<f32, ItemParseError> {
     if input.contains('/') {
         let parts = input.split('/').collect::<Vec<_>>();
@@ -122,7 +130,11 @@ fn parse_item(
     id: &str,
     created_at: std::time::SystemTime,
 ) -> ItemParseResult {
-    if item.note.is_none() || !item.name.is_empty() || item.stack_size.is_none() {
+    if item.note.is_none()
+        || !item.name.is_empty()
+        || item.stack_size.is_none()
+        || stash.is_standard()
+    {
         ItemParseResult::Empty
     } else {
         match parse_note(item.note.clone().unwrap().as_ref()) {
