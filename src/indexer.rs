@@ -1,7 +1,8 @@
 use crate::parser::{parse_items, ItemParseResult, Offer, StashTabResponse};
 use crate::persistence;
-use reqwest::blocking::Response;
+use crate::persistence::Persist;
 use std::time::Duration;
+use ureq::Response;
 
 #[derive(Debug)]
 pub enum IndexerError {
@@ -52,14 +53,13 @@ impl<T> IndexerResult<T> {
 }
 
 pub struct Indexer<'a> {
-    persistence: &'a persistence::PgDb,
+    persistence: &'a dyn persistence::Persist,
     next_change_ids: std::collections::VecDeque<String>,
     ratelimiter: ratelimit::Limiter,
-    client: reqwest::blocking::Client,
 }
 
 impl<'a> Indexer<'a> {
-    pub fn new(persistence: &'a persistence::PgDb) -> Self {
+    pub fn new(persistence: &'a dyn persistence::Persist) -> Self {
         Indexer {
             persistence,
             next_change_ids: std::collections::VecDeque::new(),
@@ -68,10 +68,6 @@ impl<'a> Indexer<'a> {
                 .interval(Duration::from_secs(2))
                 .quantum(1)
                 .build(),
-            client: reqwest::blocking::ClientBuilder::new()
-                .gzip(true)
-                .build()
-                .expect("Creating reqwest client failed"),
         }
     }
 
@@ -79,16 +75,9 @@ impl<'a> Indexer<'a> {
         let start = std::time::Instant::now();
 
         let url = format!("http://www.pathofexile.com/api/public-stash-tabs?id={}", id);
-        let response = self
-            .client
-            .get(&url)
-            .send()
-            .expect("Fetch request didnt go through");
+        let response = ureq::get(&url).call();
 
-        if response
-            .status()
-            .eq(&reqwest::StatusCode::TOO_MANY_REQUESTS)
-        {
+        if response.status() == 429 {
             return Err(IndexerError::RateLimited);
         }
 
@@ -103,7 +92,7 @@ impl<'a> Indexer<'a> {
         let s_fetch = step.s_fetch;
 
         step.data
-            .json::<StashTabResponse>()
+            .into_json_deserialize::<StashTabResponse>()
             .map_err(|e| IndexerError::Deserialize(e.to_string()))
             .map(|data| {
                 IndexerResult::new(data)
