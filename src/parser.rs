@@ -59,7 +59,8 @@ pub struct Offer {
     category: String,
     public: bool,
     stash_type: String,
-    created_at: std::time::SystemTime,
+    // created_at: chrono::NaiveDateTime,
+    created_at: chrono::NaiveDateTime,
     change_id: String,
 }
 
@@ -128,7 +129,7 @@ fn parse_item(
     item: &Item,
     stash: &Stash,
     id: &str,
-    created_at: std::time::SystemTime,
+    created_at: chrono::DateTime<chrono::Utc>,
 ) -> ItemParseResult {
     if item.note.is_none() || item.stack_size.is_none() {
         ItemParseResult::Empty
@@ -148,7 +149,8 @@ fn parse_item(
                 item_id: item.id.clone(),
                 stash_id: stash.id.clone(),
                 stash_name: item.inventory_name.clone(),
-                created_at,
+                // created_at: chrono::NaiveDateTime::from(created_at),
+                created_at: created_at.naive_utc(),
             }),
             Err(e) => ItemParseResult::Error(e),
         }
@@ -163,7 +165,7 @@ struct Note {
 
 pub fn parse_items(response: &StashTabResponse, id: &str) -> Vec<ItemParseResult> {
     let mut results = vec![];
-    let created_at = std::time::SystemTime::now();
+    let created_at = chrono::prelude::Utc::now();
 
     for stash in &response.stashes {
         for item in &stash.items {
