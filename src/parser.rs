@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize)]
 pub struct StashTabResponse {
     pub next_change_id: String,
-    stashes: Vec<Stash>,
+    pub stashes: Vec<Stash>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
