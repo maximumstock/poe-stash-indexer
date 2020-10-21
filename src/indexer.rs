@@ -1,3 +1,4 @@
+use crate::client::RiverClient;
 use crate::parser::{parse_items, ItemParseResult, Offer, StashTabResponse};
 use crate::persistence;
 use crate::persistence::Persist;
@@ -56,12 +57,14 @@ pub struct Indexer<'a> {
     persistence: &'a dyn persistence::Persist,
     next_change_ids: std::collections::VecDeque<String>,
     ratelimiter: ratelimit::Limiter,
+    client: &'a RiverClient,
 }
 
 impl<'a> Indexer<'a> {
-    pub fn new(persistence: &'a dyn persistence::Persist) -> Self {
+    pub fn new(persistence: &'a dyn persistence::Persist, client: &'a RiverClient) -> Self {
         Indexer {
             persistence,
+            client,
             next_change_ids: std::collections::VecDeque::new(),
             ratelimiter: ratelimit::Builder::new()
                 .capacity(2)
