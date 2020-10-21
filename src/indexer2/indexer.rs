@@ -10,28 +10,28 @@ use std::{
     sync::Arc,
     sync::Mutex,
 };
-pub struct Indexer {
-    pending_change_ids: Arc<Mutex<VecDeque<ChangeID>>>,
-    pending_bodies: Arc<Mutex<VecDeque<([u8; 70], Box<dyn Read + Send>)>>>,
-}
+pub struct Indexer {}
+
+type BodyQueue = Arc<Mutex<VecDeque<([u8; 70], Box<dyn Read + Send>)>>>;
+type ChangeIDQueue = Arc<Mutex<VecDeque<ChangeID>>>;
 
 impl Indexer {
     pub fn new() -> Self {
-        Self {
-            pending_bodies: Arc::new(Mutex::new(VecDeque::new())),
-            pending_change_ids: Arc::new(Mutex::new(VecDeque::new())),
-        }
+        Self {}
     }
 
     pub fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let pending_bodies = Arc::new(Mutex::new(VecDeque::new()));
+        let pending_change_ids = Arc::new(Mutex::new(VecDeque::new()));
+
         let first_change_id = RiverClient::fetch_latest_change_id()?;
         println!("Fetched latest change id: {}", first_change_id);
 
-        let pending_change_ids = self.pending_change_ids.clone();
-        let pending_bodies = self.pending_bodies.clone();
-        let pending_bodies2 = self.pending_bodies.clone();
+        let pending_change_ids = pending_change_ids.clone();
+        let pending_bodies = pending_bodies.clone();
+        let pending_bodies2 = pending_bodies.clone();
 
-        self.pending_change_ids
+        pending_change_ids
             .lock()
             .unwrap()
             .push_back(ChangeID::from_str(&first_change_id)?);
@@ -46,9 +46,7 @@ impl Indexer {
             loop {
                 ratelimit.wait();
 
-                let mut id_lock = pending_change_ids.lock().unwrap();
-                let next_change_id = id_lock.pop_front().unwrap();
-                drop(id_lock);
+                let next_change_id = pending_change_ids.lock().unwrap().pop_front().unwrap();
 
                 // Fetch the url...
                 let start = std::time::Instant::now();
@@ -78,13 +76,15 @@ impl Indexer {
                     next_id
                 );
 
-                let mut body_lock = pending_bodies.lock().unwrap();
-                body_lock.push_back((next_id_buffer, Box::new(decoder)));
-                drop(body_lock);
+                pending_bodies
+                    .lock()
+                    .unwrap()
+                    .push_back((next_id_buffer, Box::new(decoder)));
 
-                let mut id_lock = pending_change_ids.lock().unwrap();
-                id_lock.push_back(ChangeID::from_str(&next_id).unwrap());
-                drop(id_lock);
+                pending_change_ids
+                    .lock()
+                    .unwrap()
+                    .push_back(ChangeID::from_str(&next_id).unwrap());
             }
         });
 
@@ -92,8 +92,6 @@ impl Indexer {
             .map(|worker_id| {
                 let pending_bodies = pending_bodies2.clone();
                 std::thread::spawn(move || loop {
-                    // println!("Worker {} looking for work", worker_id);
-
                     let mut lock = pending_bodies.lock().unwrap();
 
                     if let Some(next) = lock.pop_front() {
@@ -121,7 +119,7 @@ impl Indexer {
             })
             .collect::<Vec<_>>();
 
-        fetcher_handle.join().unwrap();
+        fetcher_handle.join().expect("Fetcher thread paniced! :O");
 
         Ok(())
     }
