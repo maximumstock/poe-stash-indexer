@@ -1,4 +1,4 @@
-use super::change_id::ChangeID;
+use crate::change_id::ChangeID;
 use serde::Deserialize;
 use std::str::FromStr;
 
@@ -8,7 +8,7 @@ struct POENinjaGetStats {
 }
 
 #[derive(Debug)]
-pub struct RiverClient {}
+pub(crate) struct RiverClient {}
 
 impl RiverClient {
     pub fn fetch_latest_change_id() -> Result<ChangeID, Box<dyn std::error::Error>> {

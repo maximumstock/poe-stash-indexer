@@ -1,4 +1,3 @@
-use super::{change_id::ChangeID, client::RiverClient, types::StashTabResponse};
 use flate2::bufread::GzDecoder;
 use std::{
     collections::VecDeque,
@@ -9,6 +8,8 @@ use std::{
     sync::Arc,
     sync::Mutex,
 };
+
+use crate::{change_id::ChangeID, client::RiverClient, types::StashTabResponse};
 
 type BodyQueue = Arc<Mutex<VecDeque<([u8; 70], Box<dyn Read + Send>)>>>;
 type ChangeIDQueue = Arc<Mutex<VecDeque<ChangeID>>>;
