@@ -13,6 +13,7 @@ use lib::Indexer;
 extern crate lazy_static;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    pretty_env_logger::init_timed();
     // dotenv().ok();
     // // let database_url = env::var("DATABASE_URL").expect("No database url set");
     // // let persistence = persistence::PgDb::new(&database_url);
@@ -27,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rx = indexer.start_with_latest()?;
 
     while let Ok(x) = rx.recv() {
-        dbg!(x);
+        log::info!("Found {} stash tabs", x);
     }
 
     Ok(())
