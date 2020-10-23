@@ -29,12 +29,6 @@ impl Default for SharedState {
     }
 }
 
-impl SharedState {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
 pub struct Indexer {
     shared_state: SharedState,
 }
@@ -83,7 +77,7 @@ impl Indexer {
         let pending_bodies2 = self.shared_state.body_queue.clone();
         let (tx, rx) = channel::<usize>();
 
-        let fetcher_handle = std::thread::spawn(move || {
+        let _fetcher_handle = std::thread::spawn(move || {
             let mut ratelimit = ratelimit::Builder::new()
                 .capacity(2)
                 .quantum(2)
@@ -136,7 +130,7 @@ impl Indexer {
 
         let pending_bodies = pending_bodies2;
 
-        let worker_handle = std::thread::spawn(move || loop {
+        let _worker_handle = std::thread::spawn(move || loop {
             let mut lock = pending_bodies.lock().unwrap();
 
             if let Some(next) = lock.pop_front() {
