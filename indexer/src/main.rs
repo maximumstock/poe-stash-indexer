@@ -1,8 +1,3 @@
-use indexer2::Indexer;
-
-mod client;
-// mod indexer;
-mod indexer2;
 mod parser;
 mod persistence;
 mod schema;
@@ -10,8 +5,8 @@ mod schema;
 #[macro_use]
 extern crate diesel;
 extern crate dotenv;
-extern crate ratelimit;
 
+use lib::Indexer;
 // use dotenv::dotenv;
 
 #[macro_use]
@@ -29,7 +24,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // indexer.start(latest_change_id);
 
     let indexer = Indexer::new();
-    indexer.start()?;
+    let rx = indexer.start_with_latest()?;
+
+    while let Ok(x) = rx.recv() {
+        dbg!(x);
+    }
 
     Ok(())
 }
