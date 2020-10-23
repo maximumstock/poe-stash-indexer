@@ -41,7 +41,7 @@ impl Default for Indexer {
     }
 }
 
-type IndexerResult = Result<Receiver<usize>, Box<dyn std::error::Error>>;
+type IndexerResult = Result<Receiver<StashTabResponse>, Box<dyn std::error::Error>>;
 
 impl Indexer {
     pub fn new() -> Self {
@@ -85,7 +85,7 @@ impl Indexer {
     ///    as StashTabResponse structs and sending it to the user of the indexer
     ///    instance.
     fn start(&self) -> IndexerResult {
-        let (tx, rx) = channel::<usize>();
+        let (tx, rx) = channel::<StashTabResponse>();
 
         let pending_change_ids = self.shared_state.change_id_queue.clone();
         let pending_bodies = self.shared_state.body_queue.clone();
@@ -163,7 +163,7 @@ impl Indexer {
                     start.elapsed().as_millis()
                 );
 
-                tx.send(deserialized.stashes.len()).unwrap();
+                tx.send(deserialized).unwrap();
             } else {
                 drop(lock);
                 log::debug!("Worker is waiting due to no work");
