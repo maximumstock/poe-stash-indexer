@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
 #[derive(Debug)]
-pub(crate) struct ChangeID {
-    inner: String,
+pub struct ChangeID {
+    pub(crate) inner: String,
 }
 
 impl Display for ChangeID {
@@ -11,16 +11,15 @@ impl Display for ChangeID {
     }
 }
 
-impl ChangeID {
-    pub fn from_str(input: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let is_valid = input
-            .split('-')
-            .map(|x| x.parse::<u32>())
-            .all(|x| x.is_ok());
+impl std::str::FromStr for ChangeID {
+    type Err = Box<dyn std::error::Error>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let is_valid = s.split('-').map(|x| x.parse::<u32>()).all(|x| x.is_ok());
 
         match is_valid {
             true => Ok(Self {
-                inner: input.to_owned(),
+                inner: s.to_owned(),
             }),
             false => Err("derp".into()),
         }
@@ -29,10 +28,12 @@ impl ChangeID {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    use std::str::FromStr;
+
     #[test]
     fn test_from_str_success() {
-        let change_id =
-            super::ChangeID::from_str("850662131-863318628-825558626-931433265-890834941");
+        let change_id = ChangeID::from_str("850662131-863318628-825558626-931433265-890834941");
 
         assert!(change_id.is_ok(),);
         assert_eq!(
