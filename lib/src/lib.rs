@@ -5,3 +5,4 @@ mod types;
 
 pub use change_id::ChangeID;
 pub use indexer::Indexer;
+pub use types::{Stash, StashTabResponse};

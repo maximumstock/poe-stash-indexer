@@ -27,8 +27,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let indexer = Indexer::new();
     let rx = indexer.start_with_latest()?;
 
-    while let Ok(x) = rx.recv() {
-        log::info!("Found {} stash tabs", x);
+    while let Ok(stash_tab_response) = rx.recv() {
+        log::info!("Found {} stash tabs", stash_tab_response.stashes.len());
     }
 
     Ok(())
