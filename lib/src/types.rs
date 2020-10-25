@@ -21,6 +21,14 @@ pub struct Stash {
     pub league: Option<String>,
 }
 
+impl Stash {
+    pub fn is_standard(&self) -> bool {
+        self.league
+            .as_ref()
+            .map_or(false, |l| l.eq("Standard") || l.eq("Hardcore"))
+    }
+}
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct Item {
     pub name: String,
