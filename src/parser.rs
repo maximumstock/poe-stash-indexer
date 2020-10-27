@@ -130,11 +130,7 @@ fn parse_item(
     id: &str,
     created_at: std::time::SystemTime,
 ) -> ItemParseResult {
-    if item.note.is_none()
-        || !item.name.is_empty()
-        || item.stack_size.is_none()
-        || stash.is_standard()
-    {
+    if item.note.is_none() || item.stack_size.is_none() {
         ItemParseResult::Empty
     } else {
         match parse_note(item.note.clone().unwrap().as_ref()) {
