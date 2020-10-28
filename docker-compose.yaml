@@ -10,7 +10,7 @@ services:
       POSTGRES_DB: "poe"
   indexer:
     build:
-      context: ./indexer
+      context: .
       dockerfile: Dockerfile
     command: bash -c "./wait-for-it.sh db:5432 -- diesel setup && myapp"
     depends_on:
