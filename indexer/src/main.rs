@@ -6,15 +6,15 @@ mod schema;
 extern crate diesel;
 extern crate dotenv;
 
+use dotenv::dotenv;
 use lib::Indexer;
-// use dotenv::dotenv;
 
 #[macro_use]
 extern crate lazy_static;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    pretty_env_logger::init_timed();
-    // dotenv().ok();
+    dotenv().ok();
+    pretty_env_logger::init();
     // // let database_url = env::var("DATABASE_URL").expect("No database url set");
     // // let persistence = persistence::PgDb::new(&database_url);
     // let persistence = persistence::CSVLog::new("log.csv");
