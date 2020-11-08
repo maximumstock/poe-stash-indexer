@@ -12,7 +12,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: bash -c "./wait-for-it.sh db:5432 -- diesel setup && myapp"
+    command: bash -c "./wait-for-it.sh db:5432 -- /bin/sh -c 'cd /usr/src/myapp/indexer && diesel setup && diesel migration run' && myapp"
     depends_on:
       - db
     restart: always
