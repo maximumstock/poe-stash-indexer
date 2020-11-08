@@ -9,7 +9,7 @@ use crate::persistence::Persist;
 use crate::schema::stash_records;
 use chrono::prelude::*;
 use dotenv::dotenv;
-use lib::{Indexer, IndexerMessage};
+use river_subscription::{Indexer, IndexerMessage};
 use serde::Serialize;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
