@@ -58,6 +58,8 @@ fn map_to_stash_records(msg: IndexerMessage) -> Vec<StashRecord> {
     payload
         .stashes
         .into_iter()
+        // Ignore stash tabs flagged as private, whose updates are always empty
+        .filter(|stash| stash.public)
         .map(move |stash| StashRecord {
             account_name: stash.account_name,
             last_character_name: stash.last_character_name,
