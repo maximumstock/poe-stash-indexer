@@ -1,7 +1,6 @@
 use crate::schema::stash_records;
 use crate::StashRecord;
-use diesel::ExpressionMethods;
-use diesel::{pg::PgConnection, Connection, QueryDsl, QueryResult, RunQueryDsl};
+use diesel::{pg::PgConnection, Connection, RunQueryDsl};
 
 type PersistResult = Result<usize, Box<dyn std::error::Error>>;
 pub trait Persist {
@@ -18,12 +17,12 @@ impl PgDb {
         }
     }
 
-    pub fn get_last_read_change_id(&self) -> QueryResult<String> {
-        stash_records::table
-            .select(stash_records::change_id)
-            .order(stash_records::created_at.desc())
-            .first::<String>(&self.conn)
-    }
+    // pub fn get_last_read_change_id(&self) -> QueryResult<String> {
+    //     stash_records::table
+    //         .select(stash_records::change_id)
+    //         .order(stash_records::created_at.desc())
+    //         .first::<String>(&self.conn)
+    // }
 }
 
 impl Persist for PgDb {
