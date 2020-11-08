@@ -1,10 +1,10 @@
-use crate::schema::offers;
+use crate::schema::stash_records;
 use diesel::Insertable;
 use lib::{Item, Stash, StashTabResponse};
 use serde::Serialize;
 
 #[derive(Debug, PartialEq, Serialize, Insertable)]
-#[table_name = "offers"]
+#[table_name = "stash_records"]
 pub struct Offer {
     sell: String,
     buy: String,

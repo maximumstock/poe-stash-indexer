@@ -11,8 +11,17 @@ use std::{
 
 use crate::{change_id::ChangeID, poe_ninja_client::PoeNinjaClient, types::StashTabResponse};
 
-type BodyQueue = Arc<Mutex<VecDeque<([u8; 70], Box<dyn Read + Send>)>>>;
-type ChangeIDQueue = Arc<Mutex<VecDeque<ChangeID>>>;
+pub struct Indexer {
+    shared_state: SharedState,
+}
+
+impl Default for Indexer {
+    fn default() -> Self {
+        Self {
+            shared_state: SharedState::default(),
+        }
+    }
+}
 
 #[derive(Clone)]
 struct SharedState {
@@ -29,19 +38,22 @@ impl Default for SharedState {
     }
 }
 
-pub struct Indexer {
-    shared_state: SharedState,
+type ChangeIDQueue = Arc<Mutex<VecDeque<ChangeID>>>;
+type BodyQueue = Arc<Mutex<VecDeque<WorkerTask>>>;
+
+struct WorkerTask {
+    fetch_partial: [u8; 70],
+    change_id: ChangeID,
+    reader: Box<dyn Read + Send>,
 }
 
-impl Default for Indexer {
-    fn default() -> Self {
-        Self {
-            shared_state: SharedState::default(),
-        }
-    }
+pub struct IndexerMessage {
+    pub payload: StashTabResponse,
+    pub change_id: ChangeID,
+    pub created_at: std::time::SystemTime,
 }
 
-type IndexerResult = Result<Receiver<StashTabResponse>, Box<dyn std::error::Error>>;
+type IndexerResult = Result<Receiver<IndexerMessage>, Box<dyn std::error::Error>>;
 
 impl Indexer {
     pub fn new() -> Self {
@@ -85,27 +97,29 @@ impl Indexer {
     ///    as StashTabResponse structs and sending it to the user of the indexer
     ///    instance.
     fn start(&self) -> IndexerResult {
-        let (tx, rx) = channel::<StashTabResponse>();
+        let (tx, rx) = channel::<IndexerMessage>();
 
         let pending_change_ids = self.shared_state.change_id_queue.clone();
         let pending_bodies = self.shared_state.body_queue.clone();
 
         let _fetcher_handle = std::thread::spawn(move || {
+            // Break down rate-limit into quantum of 1, so we never do any bursts,
+            // like we would with for example 2 requests per second.
             let mut ratelimit = ratelimit::Builder::new()
-                .capacity(2)
-                .quantum(2)
-                .interval(std::time::Duration::from_millis(1_000))
+                .capacity(1)
+                .quantum(1)
+                .interval(std::time::Duration::from_millis(500))
                 .build();
 
             loop {
                 ratelimit.wait();
 
-                let next_change_id = pending_change_ids.lock().unwrap().pop_front().unwrap();
+                let change_id = pending_change_ids.lock().unwrap().pop_front().unwrap();
 
                 let start = std::time::Instant::now();
                 let url = format!(
                     "http://www.pathofexile.com/api/public-stash-tabs?id={}",
-                    next_change_id
+                    change_id
                 );
                 let mut request = ureq::request("GET", &url);
                 request.set("Accept-Encoding", "gzip");
@@ -132,15 +146,18 @@ impl Indexer {
                     next_id
                 );
 
-                pending_bodies
-                    .lock()
-                    .unwrap()
-                    .push_back((next_id_buffer, Box::new(decoder)));
+                let next_change_id =
+                    ChangeID::from_str(&next_id).expect("Invalid change_id provided");
 
-                pending_change_ids
-                    .lock()
-                    .unwrap()
-                    .push_back(ChangeID::from_str(&next_id).expect("Invalid change_id provided"));
+                let next_worker_task = WorkerTask {
+                    reader: Box::new(decoder),
+                    fetch_partial: next_id_buffer,
+                    change_id,
+                };
+
+                pending_bodies.lock().unwrap().push_back(next_worker_task);
+
+                pending_change_ids.lock().unwrap().push_back(next_change_id);
             }
         });
 
@@ -150,12 +167,12 @@ impl Indexer {
             let mut lock = pending_bodies.lock().unwrap();
 
             if let Some(next) = lock.pop_front() {
-                let (next_id_buffer, mut reader) = next;
+                let mut task = next;
 
                 let start = std::time::Instant::now();
                 let mut buffer = Vec::new();
-                buffer.write_all(&next_id_buffer).unwrap();
-                reader.read_to_end(&mut buffer).unwrap();
+                buffer.write_all(&task.fetch_partial).unwrap();
+                task.reader.read_to_end(&mut buffer).unwrap();
 
                 let deserialized = serde_json::from_slice::<StashTabResponse>(&buffer).unwrap();
                 log::debug!(
@@ -163,7 +180,13 @@ impl Indexer {
                     start.elapsed().as_millis()
                 );
 
-                tx.send(deserialized).unwrap();
+                let msg = IndexerMessage {
+                    payload: deserialized,
+                    change_id: task.change_id,
+                    created_at: std::time::SystemTime::now(),
+                };
+
+                tx.send(msg).unwrap();
             } else {
                 drop(lock);
                 log::debug!("Worker is waiting due to no work");

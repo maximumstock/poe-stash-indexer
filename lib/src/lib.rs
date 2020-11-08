@@ -4,5 +4,5 @@ mod poe_ninja_client;
 mod types;
 
 pub use change_id::ChangeID;
-pub use indexer::Indexer;
+pub use indexer::{Indexer, IndexerMessage};
 pub use types::*;

@@ -208,6 +208,7 @@ dependencies = [
  "num-integer",
  "num-traits",
  "pq-sys",
+ "serde_json",
 ]
 
 [[package]]
