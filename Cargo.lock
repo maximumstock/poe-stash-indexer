@@ -319,18 +319,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
-name = "lib"
-version = "0.1.0"
-dependencies = [
- "flate2",
- "log",
- "ratelimit",
- "serde",
- "serde_json",
- "ureq",
-]
-
-[[package]]
 name = "libc"
 version = "0.2.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -418,10 +406,10 @@ dependencies = [
  "diesel",
  "dotenv",
  "lazy_static",
- "lib",
  "log",
  "pretty_env_logger",
  "regex",
+ "river-subscription",
  "serde",
  "serde_json",
 ]
@@ -543,6 +531,18 @@ dependencies = [
  "untrusted",
  "web-sys",
  "winapi",
+]
+
+[[package]]
+name = "river-subscription"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "log",
+ "ratelimit",
+ "serde",
+ "serde_json",
+ "ureq",
 ]
 
 [[package]]
