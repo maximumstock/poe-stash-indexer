@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct StashTabResponse {
@@ -29,7 +29,7 @@ impl Stash {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Item {
     pub name: String,
     pub id: String,
@@ -43,7 +43,7 @@ pub struct Item {
     pub extended: ItemExtendedProp,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ItemExtendedProp {
     pub category: String,
     #[serde(rename(deserialize = "baseType"))]

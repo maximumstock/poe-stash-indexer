@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ChangeID {
     pub(crate) inner: String,
 }
@@ -23,6 +23,12 @@ impl std::str::FromStr for ChangeID {
             }),
             false => Err("derp".into()),
         }
+    }
+}
+
+impl Into<String> for ChangeID {
+    fn into(self) -> String {
+        self.inner
     }
 }
 
