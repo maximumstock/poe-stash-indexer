@@ -2,6 +2,8 @@
 
 # poe-stash-indexer
 
+_Note: Very beta, breaking changes might occur_
+
 This project focuses on building tooling around Path of Exile's Public Stash Tab API ([Wiki Documentation](https://pathofexile.gamepedia.com/Public_stash_tab_API)).
 
 Everything is written in [Rust](https://www.rust-lang.org/) (for fun) and is split into several subprojects.
