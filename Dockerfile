@@ -11,7 +11,7 @@ RUN echo "fn main() {}" > indexer/src/main.rs
 COPY indexer/Cargo.toml indexer/Cargo.toml
 COPY indexer/Cargo.lock indexer/Cargo.lock
 
-COPY lib lib
+COPY river-subscription river-subscription
 
 COPY Cargo.toml Cargo.toml
 COPY Cargo.lock Cargo.lock
