@@ -20,3 +20,5 @@ Each subproject is its own crate in this workspace project:
 - [x] Persist stash updates in a PostgreSQL database in the forms of [Stash Records](indexer/migrations/2020-11-07-214742_stash_records/up.sql)
 - [ ] Proper error handling in `river-subscription` with sensitive retry policy
 - [ ] Configurable startup mode: resuming on last change_id vs latest updates
+
+**Note: Around 800 MB - 1 GB is generated per hour of indexing**
