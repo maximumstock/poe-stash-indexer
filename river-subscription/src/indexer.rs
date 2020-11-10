@@ -4,7 +4,7 @@ use std::{
     io::Write,
     io::{BufReader, Read},
     str::FromStr,
-    sync::mpsc::{channel, Receiver},
+    sync::mpsc::{channel, Receiver, Sender},
     sync::Arc,
     sync::Mutex,
 };
@@ -18,28 +18,29 @@ pub struct Indexer {
 impl Default for Indexer {
     fn default() -> Self {
         Self {
-            shared_state: SharedState::default(),
+            shared_state: Arc::new(Mutex::new(State::default())),
         }
     }
 }
 
-#[derive(Clone)]
-struct SharedState {
+type SharedState = Arc<Mutex<State>>;
+
+struct State {
     body_queue: BodyQueue,
     change_id_queue: ChangeIDQueue,
 }
 
-impl Default for SharedState {
+impl Default for State {
     fn default() -> Self {
         Self {
-            body_queue: Arc::new(Mutex::new(VecDeque::new())),
-            change_id_queue: Arc::new(Mutex::new(VecDeque::new())),
+            body_queue: VecDeque::new(),
+            change_id_queue: VecDeque::new(),
         }
     }
 }
 
-type ChangeIDQueue = Arc<Mutex<VecDeque<ChangeID>>>;
-type BodyQueue = Arc<Mutex<VecDeque<WorkerTask>>>;
+type ChangeIDQueue = VecDeque<ChangeID>;
+type BodyQueue = VecDeque<WorkerTask>;
 
 struct WorkerTask {
     fetch_partial: [u8; 70],
@@ -63,9 +64,9 @@ impl Indexer {
     /// Start the indexer with a given change_id
     pub fn start_with_id(&self, change_id: ChangeID) -> IndexerResult {
         self.shared_state
-            .change_id_queue
             .lock()
             .unwrap()
+            .change_id_queue
             .push_back(change_id);
 
         self.start()
@@ -77,9 +78,9 @@ impl Indexer {
         log::info!("Fetched latest change id: {}", latest_change_id);
 
         self.shared_state
-            .change_id_queue
             .lock()
             .unwrap()
+            .change_id_queue
             .push_back(latest_change_id);
 
         self.start()
@@ -99,103 +100,111 @@ impl Indexer {
     fn start(&self) -> IndexerResult {
         let (tx, rx) = channel::<IndexerMessage>();
 
-        let pending_change_ids = self.shared_state.change_id_queue.clone();
-        let pending_bodies = self.shared_state.body_queue.clone();
+        let _fetcher_handle = start_fetcher(self.shared_state.clone());
+        let _worker_handle = start_worker(self.shared_state.clone(), tx);
 
-        let _fetcher_handle = std::thread::spawn(move || {
-            // Break down rate-limit into quantum of 1, so we never do any bursts,
-            // like we would with for example 2 requests per second.
-            let mut ratelimit = ratelimit::Builder::new()
-                .capacity(1)
-                .quantum(1)
-                .interval(std::time::Duration::from_millis(500))
-                .build();
-
-            loop {
-                ratelimit.wait();
-
-                let change_id = pending_change_ids.lock().unwrap().pop_front().unwrap();
-
-                let start = std::time::Instant::now();
-                let url = format!(
-                    "http://www.pathofexile.com/api/public-stash-tabs?id={}",
-                    change_id
-                );
-                let mut request = ureq::request("GET", &url);
-                request.set("Accept-Encoding", "gzip");
-                request.set("Accept", "application/json");
-                let response = request.call();
-                let reader = response.into_reader();
-
-                let mut decoder = GzDecoder::new(BufReader::new(reader));
-                let mut next_id_buffer = [0; 70];
-                decoder.read_exact(&mut next_id_buffer).unwrap();
-                let next_id = String::from_utf8(
-                    next_id_buffer
-                        .iter()
-                        .skip(19)
-                        .take(49)
-                        .cloned()
-                        .collect::<Vec<u8>>(),
-                )
-                .expect("Preemptive deserialization of next change_id failed");
-
-                log::debug!(
-                    "Took {}ms to read next id: {}",
-                    start.elapsed().as_millis(),
-                    next_id
-                );
-
-                let next_change_id =
-                    ChangeID::from_str(&next_id).expect("Invalid change_id provided");
-
-                let next_worker_task = WorkerTask {
-                    reader: Box::new(decoder),
-                    fetch_partial: next_id_buffer,
-                    change_id,
-                };
-
-                pending_bodies.lock().unwrap().push_back(next_worker_task);
-
-                pending_change_ids.lock().unwrap().push_back(next_change_id);
-            }
-        });
-
-        let pending_bodies = self.shared_state.body_queue.clone();
-
-        let _worker_handle = std::thread::spawn(move || loop {
-            let mut lock = pending_bodies.lock().unwrap();
-
-            if let Some(next) = lock.pop_front() {
-                let mut task = next;
-
-                let start = std::time::Instant::now();
-                let mut buffer = Vec::new();
-                buffer.write_all(&task.fetch_partial).unwrap();
-                task.reader.read_to_end(&mut buffer).unwrap();
-
-                let deserialized = serde_json::from_slice::<StashTabResponse>(&buffer).unwrap();
-                log::debug!(
-                    "Took {}ms to read & deserialize body",
-                    start.elapsed().as_millis()
-                );
-
-                let msg = IndexerMessage {
-                    payload: deserialized,
-                    change_id: task.change_id,
-                    created_at: std::time::SystemTime::now(),
-                };
-
-                tx.send(msg).unwrap();
-            } else {
-                drop(lock);
-                log::debug!("Worker is waiting due to no work");
-                std::thread::sleep(std::time::Duration::from_millis(1_000));
-            }
-        });
-
-        // fetcher_handle.join().expect("Fetcher thread paniced! :O");
-        // worker_handle.join().expect("Worker thread paniced! :O");
         Ok(rx)
     }
+}
+
+fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
+    std::thread::spawn(move || {
+        // Break down rate-limit into quantum of 1, so we never do any bursts,
+        // like we would with for example 2 requests per second.
+        let mut ratelimit = ratelimit::Builder::new()
+            .capacity(1)
+            .quantum(1)
+            .interval(std::time::Duration::from_millis(500))
+            .build();
+
+        loop {
+            ratelimit.wait();
+
+            let change_id = shared_state
+                .lock()
+                .unwrap()
+                .change_id_queue
+                .pop_front()
+                .unwrap();
+
+            let start = std::time::Instant::now();
+            let url = format!(
+                "http://www.pathofexile.com/api/public-stash-tabs?id={}",
+                change_id
+            );
+            let mut request = ureq::request("GET", &url);
+            request.set("Accept-Encoding", "gzip");
+            request.set("Accept", "application/json");
+            let response = request.call();
+            let reader = response.into_reader();
+
+            let mut decoder = GzDecoder::new(BufReader::new(reader));
+            let mut next_id_buffer = [0; 70];
+            decoder.read_exact(&mut next_id_buffer).unwrap();
+            let next_id = String::from_utf8(
+                next_id_buffer
+                    .iter()
+                    .skip(19)
+                    .take(49)
+                    .cloned()
+                    .collect::<Vec<u8>>(),
+            )
+            .expect("Preemptive deserialization of next change_id failed");
+
+            log::debug!(
+                "Took {}ms to read next id: {}",
+                start.elapsed().as_millis(),
+                next_id
+            );
+
+            let next_change_id = ChangeID::from_str(&next_id).expect("Invalid change_id provided");
+
+            let next_worker_task = WorkerTask {
+                reader: Box::new(decoder),
+                fetch_partial: next_id_buffer,
+                change_id,
+            };
+
+            let mut lock = shared_state.lock().unwrap();
+            lock.body_queue.push_back(next_worker_task);
+            lock.change_id_queue.push_back(next_change_id);
+            drop(lock);
+        }
+    })
+}
+
+fn start_worker(
+    shared_state: SharedState,
+    tx: Sender<IndexerMessage>,
+) -> std::thread::JoinHandle<()> {
+    std::thread::spawn(move || loop {
+        let mut lock = shared_state.lock().unwrap();
+
+        if let Some(next) = lock.body_queue.pop_front() {
+            let mut task = next;
+
+            let start = std::time::Instant::now();
+            let mut buffer = Vec::new();
+            buffer.write_all(&task.fetch_partial).unwrap();
+            task.reader.read_to_end(&mut buffer).unwrap();
+
+            let deserialized = serde_json::from_slice::<StashTabResponse>(&buffer).unwrap();
+            log::debug!(
+                "Took {}ms to read & deserialize body",
+                start.elapsed().as_millis()
+            );
+
+            let msg = IndexerMessage {
+                payload: deserialized,
+                change_id: task.change_id,
+                created_at: std::time::SystemTime::now(),
+            };
+
+            tx.send(msg).unwrap();
+        } else {
+            drop(lock);
+            log::debug!("Worker is waiting due to no work");
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        }
+    })
 }
