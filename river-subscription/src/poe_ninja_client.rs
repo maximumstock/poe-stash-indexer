@@ -14,7 +14,7 @@ impl PoeNinjaClient {
     pub fn fetch_latest_change_id() -> Result<ChangeID, Box<dyn std::error::Error>> {
         let response = ureq::get("https://poe.ninja/api/Data/GetStats").call();
         let stats: POENinjaGetStats = serde_json::from_reader(response.into_reader())?;
-        Ok(ChangeID::from_str(&stats.next_change_id).unwrap())
+        ChangeID::from_str(&stats.next_change_id)
     }
 }
 
