@@ -39,7 +39,8 @@ impl Default for State {
     }
 }
 
-type ChangeIDQueue = VecDeque<ChangeID>;
+type ChangeIDRequest = (ChangeID, usize);
+type ChangeIDQueue = VecDeque<ChangeIDRequest>;
 type BodyQueue = VecDeque<WorkerTask>;
 
 struct WorkerTask {
@@ -67,7 +68,7 @@ impl Indexer {
             .lock()
             .unwrap()
             .change_id_queue
-            .push_back(change_id);
+            .push_back((change_id, 0));
 
         self.start()
     }
@@ -81,7 +82,7 @@ impl Indexer {
             .lock()
             .unwrap()
             .change_id_queue
-            .push_back(latest_change_id);
+            .push_back((latest_change_id, 0));
 
         self.start()
     }
@@ -118,12 +119,14 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             .build();
 
         loop {
-            let change_id = shared_state
+            let change_id_request = shared_state
                 .lock()
                 .unwrap()
                 .change_id_queue
                 .pop_front()
                 .unwrap();
+
+            let (change_id, _) = change_id_request.clone();
 
             let start = std::time::Instant::now();
             let url = format!(
@@ -140,7 +143,7 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             if response.error() {
                 log::error!("fetcher: HTTP error {}", response.status());
                 log::debug!("fetcher: HTTP response: {:?}", response);
-                reschedule(shared_state.clone(), change_id);
+                reschedule(shared_state.clone(), change_id_request);
                 continue;
             }
 
@@ -153,7 +156,7 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             if decoded.is_err() {
                 log::error!("fetcher: gzip decoding failed: {}", decoded.unwrap_err());
                 log::debug!("fetcher: Retrying change_id {:?}", change_id);
-                reschedule(shared_state.clone(), change_id);
+                reschedule(shared_state.clone(), change_id_request);
                 continue;
             }
 
@@ -183,7 +186,7 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
 
             let mut lock = shared_state.lock().unwrap();
             lock.body_queue.push_back(next_worker_task);
-            lock.change_id_queue.push_back(next_change_id);
+            lock.change_id_queue.push_back((next_change_id, 0));
             drop(lock);
 
             ratelimit.wait();
@@ -191,13 +194,18 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
     })
 }
 
-fn reschedule(shared_state: SharedState, change_id: ChangeID) {
-    log::info!("Rescheduling {}", change_id);
+fn reschedule(shared_state: SharedState, request: ChangeIDRequest) {
+    let new_request = (request.0, request.1 + 1);
+    log::info!(
+        "Rescheduling {} (Retried {} times)",
+        new_request.0,
+        new_request.1
+    );
     shared_state
         .lock()
         .unwrap()
         .change_id_queue
-        .push_back(change_id);
+        .push_back(new_request);
 }
 
 fn start_worker(
