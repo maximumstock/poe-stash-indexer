@@ -143,8 +143,11 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             if response.error() {
                 log::error!("fetcher: HTTP error {}", response.status());
                 log::debug!("fetcher: HTTP response: {:?}", response);
-                reschedule(shared_state.clone(), change_id_request);
-                continue;
+
+                match reschedule(shared_state.clone(), change_id_request) {
+                    Ok(_) => continue,
+                    Err(_) => break,
+                }
             }
 
             let reader = response.into_reader();
@@ -156,8 +159,11 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             if decoded.is_err() {
                 log::error!("fetcher: gzip decoding failed: {}", decoded.unwrap_err());
                 log::debug!("fetcher: Retrying change_id {:?}", change_id);
-                reschedule(shared_state.clone(), change_id_request);
-                continue;
+
+                match reschedule(shared_state.clone(), change_id_request) {
+                    Ok(_) => continue,
+                    Err(_) => break,
+                }
             }
 
             let next_id = String::from_utf8(
@@ -194,7 +200,12 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
     })
 }
 
-fn reschedule(shared_state: SharedState, request: ChangeIDRequest) {
+fn reschedule(shared_state: SharedState, request: ChangeIDRequest) -> Result<(), ()> {
+    if request.1 > 2 {
+        log::error!("Retried too many times...shutting down");
+        return Err(());
+    }
+
     let new_request = (request.0, request.1 + 1);
     log::info!(
         "Rescheduling {} (Retried {} times)",
@@ -206,6 +217,8 @@ fn reschedule(shared_state: SharedState, request: ChangeIDRequest) {
         .unwrap()
         .change_id_queue
         .push_back(new_request);
+
+    Ok(())
 }
 
 fn start_worker(
