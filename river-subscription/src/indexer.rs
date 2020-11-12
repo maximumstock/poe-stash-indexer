@@ -118,8 +118,6 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             .build();
 
         loop {
-            ratelimit.wait();
-
             let change_id = shared_state
                 .lock()
                 .unwrap()
@@ -132,15 +130,33 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
                 "http://www.pathofexile.com/api/public-stash-tabs?id={}",
                 change_id
             );
+
+            log::debug!("Requesting {}", change_id);
             let mut request = ureq::request("GET", &url);
             request.set("Accept-Encoding", "gzip");
             request.set("Accept", "application/json");
             let response = request.call();
+
+            if response.error() {
+                log::error!("fetcher: HTTP error {}", response.status());
+                log::debug!("fetcher: HTTP response: {:?}", response);
+                reschedule(shared_state.clone(), change_id);
+                continue;
+            }
+
             let reader = response.into_reader();
 
             let mut decoder = GzDecoder::new(BufReader::new(reader));
             let mut next_id_buffer = [0; 70];
-            decoder.read_exact(&mut next_id_buffer).unwrap();
+            let decoded = decoder.read_exact(&mut next_id_buffer);
+
+            if decoded.is_err() {
+                log::error!("fetcher: gzip decoding failed: {}", decoded.unwrap_err());
+                log::debug!("fetcher: Retrying change_id {:?}", change_id);
+                reschedule(shared_state.clone(), change_id);
+                continue;
+            }
+
             let next_id = String::from_utf8(
                 next_id_buffer
                     .iter()
@@ -169,8 +185,19 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             lock.body_queue.push_back(next_worker_task);
             lock.change_id_queue.push_back(next_change_id);
             drop(lock);
+
+            ratelimit.wait();
         }
     })
+}
+
+fn reschedule(shared_state: SharedState, change_id: ChangeID) {
+    log::info!("Rescheduling {}", change_id);
+    shared_state
+        .lock()
+        .unwrap()
+        .change_id_queue
+        .push_back(change_id);
 }
 
 fn start_worker(
@@ -188,7 +215,8 @@ fn start_worker(
             buffer.write_all(&task.fetch_partial).unwrap();
             task.reader.read_to_end(&mut buffer).unwrap();
 
-            let deserialized = serde_json::from_slice::<StashTabResponse>(&buffer).unwrap();
+            let deserialized = serde_json::from_slice::<StashTabResponse>(&buffer)
+                .expect("Deserialization of body failed");
             log::debug!(
                 "Took {}ms to read & deserialize body",
                 start.elapsed().as_millis()
@@ -200,11 +228,11 @@ fn start_worker(
                 created_at: std::time::SystemTime::now(),
             };
 
-            tx.send(msg).unwrap();
+            tx.send(msg).expect("Sending IndexerMessage failed");
         } else {
             drop(lock);
             log::debug!("Worker is waiting due to no work");
-            std::thread::sleep(std::time::Duration::from_millis(200));
+            std::thread::sleep(std::time::Duration::from_millis(500));
         }
     })
 }
