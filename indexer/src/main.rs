@@ -1,3 +1,4 @@
+mod filter;
 mod persistence;
 mod schema;
 
@@ -5,6 +6,7 @@ mod schema;
 extern crate diesel;
 extern crate dotenv;
 
+use crate::filter::{filter_items_from_stash, Filter, Item};
 use crate::persistence::Persist;
 use crate::schema::stash_records;
 use chrono::prelude::*;
@@ -22,10 +24,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let indexer = Indexer::new();
     let rx = indexer.start_with_latest()?;
 
+    let filters: Vec<Filter> = vec![Box::new(|item: &Item| {
+        item.extended.category.eq(&"currency")
+    })];
+
     while let Ok(msg) = rx.recv() {
         log::info!("Found {} stash tabs", msg.payload.stashes.len());
-        let stash_records = map_to_stash_records(msg);
-        persistence.save(&stash_records).expect("Persisting failed");
+        let stashes = map_to_stash_records(msg)
+            .into_iter()
+            .map(|stash| {
+                let (filtered_stash, n_total, n_filtered) =
+                    filter_items_from_stash(stash, &filters);
+                // log::debug!("Filtered {} from {} items from stash", n_filtered, n_total);
+                filtered_stash
+            })
+            // Skip stash records without any items
+            .filter(|stash_record| !stash_record.items.as_array().unwrap().is_empty())
+            .collect::<Vec<_>>();
+        persistence.save(&stashes).expect("Persisting failed");
     }
 
     Ok(())
