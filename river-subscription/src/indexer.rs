@@ -142,7 +142,7 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
 
             if response.error() {
                 log::error!("fetcher: HTTP error {}", response.status());
-                log::debug!("fetcher: HTTP response: {:?}", response);
+                log::error!("fetcher: HTTP response: {:?}", response);
 
                 match reschedule(shared_state.clone(), change_id_request) {
                     Ok(_) => continue,
@@ -158,7 +158,6 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
 
             if decoded.is_err() {
                 log::error!("fetcher: gzip decoding failed: {}", decoded.unwrap_err());
-                log::debug!("fetcher: Retrying change_id {:?}", change_id);
 
                 match reschedule(shared_state.clone(), change_id_request) {
                     Ok(_) => continue,
