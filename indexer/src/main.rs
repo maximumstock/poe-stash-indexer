@@ -7,11 +7,12 @@ mod schema;
 extern crate diesel;
 extern crate dotenv;
 
-use crate::filter::{filter_items_from_stash, Filter, Item};
+use crate::filter::{apply_filters, Filter, Item};
 use crate::persistence::Persist;
 use crate::schema::stash_records;
 use chrono::prelude::*;
 use dotenv::dotenv;
+use filter::create_filters;
 use river_subscription::{Indexer, IndexerMessage};
 use serde::Serialize;
 
@@ -28,18 +29,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let indexer = Indexer::new();
     let rx = indexer.start_with_latest()?;
 
-    let filters: Vec<Filter> = vec![Box::new(|item: &Item| {
-        item.extended.category.eq(&"currency")
-    })];
+    let filters: Vec<Filter> = create_filters(&config);
 
     while let Ok(msg) = rx.recv() {
         log::info!("Found {} stash tabs", msg.payload.stashes.len());
         let stashes = map_to_stash_records(msg)
             .into_iter()
             .map(|stash| {
-                let (filtered_stash, n_total, n_filtered) =
-                    filter_items_from_stash(stash, &filters);
-                log::debug!("Filtered {} from {} items from stash", n_filtered, n_total);
+                let (filtered_stash, n_total, n_retained) = apply_filters(stash, &filters);
+
+                let n_removed = n_total - n_retained;
+                if n_removed > 0 {
+                    log::debug!(
+                        "Filter: Removed {} \t Retained {} \t Total {}",
+                        n_removed,
+                        n_retained,
+                        n_total
+                    );
+                }
                 filtered_stash
             })
             // Skip stash records without any items

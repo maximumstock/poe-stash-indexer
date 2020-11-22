@@ -1,12 +1,26 @@
 use serde::Deserialize;
 
-use crate::StashRecord;
+use crate::{config::Configuration, StashRecord};
 
 pub type Filter = Box<dyn Fn(&Item) -> bool>;
 
-pub fn filter_items_from_stash(
+pub fn create_filters(config: &Configuration) -> Vec<Filter> {
+    let mut filter_set: Vec<Filter> = vec![];
+
+    let config = config.clone();
+
+    if !config.exclude.is_empty() {
+        filter_set.push(Box::new(move |item: &Item| {
+            config.exclude.contains(&item.extended.category)
+        }))
+    }
+
+    filter_set
+}
+
+pub fn apply_filters(
     mut stash_record: StashRecord,
-    filters: &Vec<Filter>,
+    filters: &[Filter],
 ) -> (StashRecord, usize, usize) {
     let items =
         serde_json::from_value::<Vec<serde_json::Value>>(stash_record.items.clone()).unwrap();
