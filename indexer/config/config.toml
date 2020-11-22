@@ -15,4 +15,4 @@
 # "monsters"
 # "watchstones"
 # "weapons"
-exclude = []
+exclude = ["monsters", "watchstones"]
