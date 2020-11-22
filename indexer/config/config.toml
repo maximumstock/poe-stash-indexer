@@ -1,0 +1,18 @@
+# All possible item categories as their API qualifiers
+#
+# "accessories"
+# "armour"
+# "cards"
+# "currency"
+# "flasks"
+# "gems"
+# "heistequipment"
+# "heistmission"
+# "jewels"
+# "leaguestones"
+# "maps"
+# "misc"
+# "monsters"
+# "watchstones"
+# "weapons"
+exclude = []

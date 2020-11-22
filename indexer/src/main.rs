@@ -1,3 +1,4 @@
+mod config;
 mod filter;
 mod persistence;
 mod schema;
@@ -18,6 +19,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
     pretty_env_logger::init_timed();
 
+    let config =
+        config::Settings::new().expect("Your configuration file is malformed. Please check.");
+
     let database_url = std::env::var("DATABASE_URL").expect("No database url set");
     let persistence = persistence::PgDb::new(&database_url);
 
@@ -33,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let stashes = map_to_stash_records(msg)
             .into_iter()
             .map(|stash| {
-                let (filtered_stash, n_total, n_filtered) =
+                let (filtered_stash, _n_total, _n_filtered) =
                     filter_items_from_stash(stash, &filters);
                 // log::debug!("Filtered {} from {} items from stash", n_filtered, n_total);
                 filtered_stash
