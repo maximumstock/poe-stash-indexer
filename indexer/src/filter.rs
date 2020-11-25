@@ -9,9 +9,9 @@ pub fn create_filters(config: &Configuration) -> Vec<Filter> {
 
     let config = config.clone();
 
-    if !config.exclude.is_empty() {
+    if !config.include.is_empty() {
         filter_set.push(Box::new(move |item: &Item| {
-            config.exclude.contains(&item.extended.category)
+            config.include.contains(&item.extended.category)
         }))
     }
 
