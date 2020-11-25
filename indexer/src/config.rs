@@ -5,7 +5,7 @@ const CONFIG_FILE_PATH: &str = "./indexer/config/config.toml";
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Configuration {
-    pub exclude: Vec<String>,
+    pub include: Vec<String>,
 }
 
 impl Configuration {
@@ -22,7 +22,7 @@ impl Configuration {
 
 impl Default for Configuration {
     fn default() -> Self {
-        Self { exclude: vec![] }
+        Self { include: vec![] }
     }
 }
 
@@ -35,8 +35,8 @@ impl ConfigurationBuilder {
         ConfigurationBuilder::default()
     }
 
-    pub fn with_exclude(mut self, exclude: Vec<String>) -> Self {
-        self.configuration.exclude = exclude;
+    pub fn with_include(mut self, include: Vec<String>) -> Self {
+        self.configuration.include = include;
         self
     }
 
@@ -57,12 +57,12 @@ impl Default for ConfigurationBuilder {
 mod test {
     use super::{Configuration, ConfigurationBuilder};
     #[test]
-    fn test_configuration_builder_exclude() {
+    fn test_configuration_builder_include() {
         let configuration = ConfigurationBuilder::new()
-            .with_exclude(vec!["currency".into(), "maps".into()])
+            .with_include(vec!["currency".into(), "maps".into()])
             .build();
         assert_eq!(
-            configuration.exclude,
+            configuration.include,
             vec!["currency".to_string(), "maps".to_string()]
         );
     }
@@ -70,6 +70,6 @@ mod test {
     #[test]
     fn test_configuration_read_default_config() {
         let default_config = Configuration::read().expect("Reading default configuration failed");
-        assert_eq!(default_config.exclude.len(), 0);
+        assert_eq!(default_config.include.len(), 0);
     }
 }
