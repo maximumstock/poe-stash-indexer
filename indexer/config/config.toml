@@ -16,5 +16,5 @@
 # "watchstones"
 # "weapons"
 [filter]
-item_categories = ["currency"] # by default, all categories are included
-leagues = ["Heist"] # by default, all leagues are included
+item_categories = [] # by default, all categories are included
+leagues = [] # by default, all leagues are included
