@@ -7,12 +7,11 @@ mod schema;
 extern crate diesel;
 extern crate dotenv;
 
-use crate::filter::{apply_filters, Filter, Item};
+use crate::filter::filter_stash_record;
 use crate::persistence::Persist;
 use crate::schema::stash_records;
 use chrono::prelude::*;
 use dotenv::dotenv;
-use filter::create_filters;
 use river_subscription::{Indexer, IndexerMessage};
 use serde::Serialize;
 
@@ -29,25 +28,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let indexer = Indexer::new();
     let rx = indexer.start_with_latest()?;
 
-    let filters: Vec<Filter> = create_filters(&config);
-
     while let Ok(msg) = rx.recv() {
-        log::info!("Found {} stash tabs", msg.payload.stashes.len());
+        log::info!(
+            "Processing {} ({} stashes)",
+            msg.change_id,
+            msg.payload.stashes.len()
+        );
         let stashes = map_to_stash_records(msg)
             .into_iter()
-            .map(|stash| {
-                let (filtered_stash, n_total, n_retained) = apply_filters(stash, &filters);
-
-                let n_removed = n_total - n_retained;
-                if n_removed > 0 {
-                    log::debug!(
-                        "Filter: Removed {} \t Retained {} \t Total {}",
-                        n_removed,
-                        n_retained,
-                        n_total
-                    );
+            .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
+                filter::FilterResult::Block { reason, .. } => {
+                    log::debug!("Filter: Blocked stash, reason: {}", reason);
+                    None
                 }
-                filtered_stash
+                filter::FilterResult::Pass => Some(stash),
+                filter::FilterResult::Filter {
+                    n_total,
+                    n_retained,
+                } => {
+                    let n_removed = n_total - n_retained;
+                    if n_removed > 0 {
+                        log::debug!(
+                            "Filter: Removed {} \t Retained {} \t Total {}",
+                            n_removed,
+                            n_retained,
+                            n_total
+                        );
+                    }
+                    Some(stash)
+                }
             })
             // Skip stash records without any items
             .filter(|stash_record| !stash_record.items.as_array().unwrap().is_empty())

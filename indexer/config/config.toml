@@ -15,4 +15,6 @@
 # "monsters"
 # "watchstones"
 # "weapons"
-include = [] # by default, all categories are included
+[filter]
+item_categories = ["currency"] # by default, all categories are included
+leagues = ["Heist"] # by default, all leagues are included

@@ -2,43 +2,55 @@ use serde::Deserialize;
 
 use crate::{config::Configuration, StashRecord};
 
-pub type Filter = Box<dyn Fn(&Item) -> bool>;
-
-pub fn create_filters(config: &Configuration) -> Vec<Filter> {
-    let mut filter_set: Vec<Filter> = vec![];
-
-    let config = config.clone();
-
-    if !config.include.is_empty() {
-        filter_set.push(Box::new(move |item: &Item| {
-            config.include.contains(&item.extended.category)
-        }))
-    }
-
-    filter_set
+pub enum FilterResult {
+    Filter { n_total: usize, n_retained: usize },
+    Block { reason: String },
+    Pass,
 }
 
-pub fn apply_filters(
-    mut stash_record: StashRecord,
-    filters: &[Filter],
-) -> (StashRecord, usize, usize) {
-    let items =
-        serde_json::from_value::<Vec<serde_json::Value>>(stash_record.items.clone()).unwrap();
-    let n_items = items.len();
+pub fn filter_stash_record(stash_record: &mut StashRecord, config: &Configuration) -> FilterResult {
+    // League filtering
+    let league = stash_record.league.clone();
+    let allowed_leagues = config.filter.leagues.clone().unwrap_or_default();
 
-    let filtered = items
-        .into_iter()
-        .filter(|item| {
-            serde_json::from_value::<Item>(item.clone())
-                .map_or(true, |fi| filters.iter().any(|f| f(&fi)))
-        })
-        .collect::<Vec<_>>();
+    if league.is_some()
+        && !allowed_leagues.is_empty()
+        && !allowed_leagues.contains(&league.clone().unwrap())
+    {
+        return FilterResult::Block {
+            reason: format!("League \"{}\" blocked", league.unwrap()),
+        };
+    }
 
-    let n_filtered = filtered.len();
+    // Item filtering
+    let allowed_item_categories = config.filter.item_categories.clone().unwrap_or_default();
 
-    stash_record.items = serde_json::to_value(filtered).unwrap();
+    if !allowed_item_categories.is_empty() {
+        let items =
+            serde_json::from_value::<Vec<serde_json::Value>>(stash_record.items.clone()).unwrap();
 
-    (stash_record, n_items, n_items - n_filtered)
+        let n_items = items.len();
+
+        let filtered = items
+            .into_iter()
+            .filter(|item| {
+                serde_json::from_value::<Item>(item.clone()).map_or(true, |i| {
+                    allowed_item_categories.contains(&i.extended.category)
+                })
+            })
+            .collect::<Vec<_>>();
+
+        let n_filtered = filtered.len();
+
+        stash_record.items = serde_json::to_value(filtered).unwrap();
+
+        return FilterResult::Filter {
+            n_total: n_items,
+            n_retained: n_filtered,
+        };
+    }
+
+    FilterResult::Pass
 }
 
 #[derive(Debug, Deserialize)]
@@ -52,4 +64,14 @@ pub struct Item {
 pub struct ItemExtendedProp {
     pub category: String,
     pub base_type: String,
+}
+
+// @todo add tests
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_league_filter() {}
+
+    #[test]
+    fn test_item_category_filter() {}
 }
