@@ -21,16 +21,9 @@ impl Configuration {
         s.try_into()
     }
 
+    #[allow(dead_code)]
     pub fn builder() -> ConfigurationBuilder {
         ConfigurationBuilder::new()
-    }
-
-    pub fn has_categories_filter(&self) -> bool {
-        self.filter.item_categories.is_some()
-    }
-
-    pub fn has_leagues_filter(&self) -> bool {
-        self.filter.leagues.is_some()
     }
 }
 
@@ -46,19 +39,23 @@ impl Default for Configuration {
 }
 
 pub struct ConfigurationBuilder {
+    #[allow(dead_code)]
     configuration: Configuration,
 }
 
 impl ConfigurationBuilder {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         ConfigurationBuilder::default()
     }
 
-    pub fn with_item_categories(mut self, categories: Vec<String>) -> Self {
+    #[allow(dead_code)]
+    pub fn with_categories(mut self, categories: Vec<String>) -> Self {
         self.configuration.filter.item_categories = Some(categories);
         self
     }
 
+    #[allow(dead_code)]
     pub fn build(self) -> Configuration {
         self.configuration
     }
@@ -74,11 +71,11 @@ impl Default for ConfigurationBuilder {
 
 #[cfg(test)]
 mod test {
-    use super::{Configuration, ConfigurationBuilder};
+    use super::ConfigurationBuilder;
     #[test]
     fn test_configuration_builder_include() {
         let configuration = ConfigurationBuilder::new()
-            .with_item_categories(vec!["currency".into(), "maps".into()])
+            .with_categories(vec!["currency".into(), "maps".into()])
             .build();
         assert_eq!(
             configuration.filter.item_categories,
