@@ -5,7 +5,13 @@ const CONFIG_FILE_PATH: &str = "./indexer/config/config.toml";
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Configuration {
-    pub include: Vec<String>,
+    pub filter: Filter,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Filter {
+    pub item_categories: Option<Vec<String>>,
+    pub leagues: Option<Vec<String>>,
 }
 
 impl Configuration {
@@ -18,11 +24,24 @@ impl Configuration {
     pub fn builder() -> ConfigurationBuilder {
         ConfigurationBuilder::new()
     }
+
+    pub fn has_categories_filter(&self) -> bool {
+        self.filter.item_categories.is_some()
+    }
+
+    pub fn has_leagues_filter(&self) -> bool {
+        self.filter.leagues.is_some()
+    }
 }
 
 impl Default for Configuration {
     fn default() -> Self {
-        Self { include: vec![] }
+        Self {
+            filter: Filter {
+                item_categories: None,
+                leagues: None,
+            },
+        }
     }
 }
 
@@ -35,8 +54,8 @@ impl ConfigurationBuilder {
         ConfigurationBuilder::default()
     }
 
-    pub fn with_include(mut self, include: Vec<String>) -> Self {
-        self.configuration.include = include;
+    pub fn with_item_categories(mut self, categories: Vec<String>) -> Self {
+        self.configuration.filter.item_categories = Some(categories);
         self
     }
 
@@ -59,17 +78,11 @@ mod test {
     #[test]
     fn test_configuration_builder_include() {
         let configuration = ConfigurationBuilder::new()
-            .with_include(vec!["currency".into(), "maps".into()])
+            .with_item_categories(vec!["currency".into(), "maps".into()])
             .build();
         assert_eq!(
-            configuration.include,
-            vec!["currency".to_string(), "maps".to_string()]
+            configuration.filter.item_categories,
+            Some(vec!["currency".to_string(), "maps".to_string()])
         );
-    }
-
-    #[test]
-    fn test_configuration_read_default_config() {
-        let default_config = Configuration::read().expect("Reading default configuration failed");
-        assert_eq!(default_config.include.len(), 0);
     }
 }
