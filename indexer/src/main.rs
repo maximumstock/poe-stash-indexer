@@ -1,3 +1,5 @@
+mod config;
+mod filter;
 mod persistence;
 mod schema;
 
@@ -5,6 +7,7 @@ mod schema;
 extern crate diesel;
 extern crate dotenv;
 
+use crate::filter::filter_stash_record;
 use crate::persistence::Persist;
 use crate::schema::stash_records;
 use chrono::prelude::*;
@@ -16,6 +19,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
     pretty_env_logger::init_timed();
 
+    let config =
+        config::Configuration::read().expect("Your configuration file is malformed. Please check.");
+
     let database_url = std::env::var("DATABASE_URL").expect("No database url set");
     let persistence = persistence::PgDb::new(&database_url);
 
@@ -23,9 +29,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rx = indexer.start_with_latest()?;
 
     while let Ok(msg) = rx.recv() {
-        log::info!("Found {} stash tabs", msg.payload.stashes.len());
-        let stash_records = map_to_stash_records(msg);
-        persistence.save(&stash_records).expect("Persisting failed");
+        log::info!(
+            "Processing {} ({} stashes)",
+            msg.change_id,
+            msg.payload.stashes.len()
+        );
+        let stashes = map_to_stash_records(msg)
+            .into_iter()
+            .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
+                filter::FilterResult::Block { reason, .. } => {
+                    log::debug!("Filter: Blocked stash, reason: {}", reason);
+                    None
+                }
+                filter::FilterResult::Pass => Some(stash),
+                filter::FilterResult::Filter {
+                    n_total,
+                    n_retained,
+                } => {
+                    let n_removed = n_total - n_retained;
+                    if n_removed > 0 {
+                        log::debug!(
+                            "Filter: Removed {} \t Retained {} \t Total {}",
+                            n_removed,
+                            n_retained,
+                            n_total
+                        );
+                    }
+                    Some(stash)
+                }
+            })
+            // Skip stash records without any items
+            .filter(|stash_record| !stash_record.items.as_array().unwrap().is_empty())
+            .collect::<Vec<_>>();
+        persistence.save(&stashes).expect("Persisting failed");
     }
 
     Ok(())
