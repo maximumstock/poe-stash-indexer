@@ -15,6 +15,12 @@ pub struct Indexer {
     shared_state: SharedState,
 }
 
+impl Indexer {
+    pub fn stop(&mut self) {
+        self.shared_state.lock().unwrap().should_stop = true;
+    }
+}
+
 impl Default for Indexer {
     fn default() -> Self {
         Self {
@@ -28,6 +34,7 @@ type SharedState = Arc<Mutex<State>>;
 struct State {
     body_queue: BodyQueue,
     change_id_queue: ChangeIDQueue,
+    should_stop: bool,
 }
 
 impl Default for State {
@@ -35,6 +42,7 @@ impl Default for State {
         Self {
             body_queue: VecDeque::new(),
             change_id_queue: VecDeque::new(),
+            should_stop: false,
         }
     }
 }
@@ -119,6 +127,10 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             .build();
 
         loop {
+            if shared_state.lock().unwrap().should_stop {
+                break;
+            }
+
             let change_id_request = shared_state
                 .lock()
                 .unwrap()
@@ -226,6 +238,10 @@ fn start_worker(
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || loop {
         let mut lock = shared_state.lock().unwrap();
+
+        if lock.should_stop {
+            break;
+        }
 
         if let Some(next) = lock.body_queue.pop_front() {
             let mut task = next;
