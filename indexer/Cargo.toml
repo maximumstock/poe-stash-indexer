@@ -22,4 +22,5 @@ river-subscription = { path = "../river-subscription" }
 log = "0.4.11"
 pretty_env_logger = "0.4.0"
 config = "0.10.1"
+signal-hook = "0.2.1"
 
