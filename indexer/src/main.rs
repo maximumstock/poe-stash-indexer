@@ -64,6 +64,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         persistence.save(&stashes).expect("Persisting failed");
     }
 
+    log::info!("Shutting down indexer...");
+
     Ok(())
 }
 
