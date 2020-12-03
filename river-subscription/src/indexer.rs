@@ -210,6 +210,8 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
 
             ratelimit.wait();
         }
+
+        shared_state.lock().unwrap().should_stop = true;
     })
 }
 
