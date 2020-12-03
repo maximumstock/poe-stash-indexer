@@ -121,12 +121,14 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
         // Break down rate-limit into quantum of 1, so we never do any bursts,
         // like we would with for example 2 requests per second.
         let mut ratelimit = ratelimit::Builder::new()
-            .capacity(1)
-            .quantum(1)
-            .interval(std::time::Duration::from_millis(500))
+            .capacity(2)
+            .quantum(2)
+            .interval(std::time::Duration::from_millis(1000))
             .build();
 
         loop {
+            std::thread::sleep(std::time::Duration::from_millis(250));
+
             if shared_state.lock().unwrap().should_stop {
                 break;
             }
