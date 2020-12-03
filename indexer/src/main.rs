@@ -7,9 +7,12 @@ mod schema;
 extern crate diesel;
 extern crate dotenv;
 
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::SystemTime,
 };
 
 use crate::filter::filter_stash_record;
@@ -17,7 +20,7 @@ use crate::persistence::Persist;
 use crate::schema::stash_records;
 use chrono::prelude::*;
 use dotenv::dotenv;
-use river_subscription::{Indexer, IndexerMessage};
+use river_subscription::{ChangeID, Indexer, IndexerMessage, StashTabResponse};
 use serde::Serialize;
 use signal_hook::SIGINT;
 
@@ -40,46 +43,51 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     while let Ok(msg) = rx.recv() {
         if signal_flag.load(Ordering::Relaxed) {
             log::info!("CTRL+C detected -> shutting down...");
-            // Todo: Make this shutdown cleaner: Right now we effectively just
-            // shutdown the thread by breaking the loop, hence everything else dies.
-            // Ideally, we'd wait until we get a IndexerMessage::Exit or similar.
             indexer.stop();
-            break;
         }
 
-        log::info!(
-            "Processing {} ({} stashes)",
-            msg.change_id,
-            msg.payload.stashes.len()
-        );
-        let stashes = map_to_stash_records(msg)
-            .into_iter()
-            .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
-                filter::FilterResult::Block { reason, .. } => {
-                    log::debug!("Filter: Blocked stash, reason: {}", reason);
-                    None
-                }
-                filter::FilterResult::Pass => Some(stash),
-                filter::FilterResult::Filter {
-                    n_total,
-                    n_retained,
-                } => {
-                    let n_removed = n_total - n_retained;
-                    if n_removed > 0 {
-                        log::debug!(
-                            "Filter: Removed {} \t Retained {} \t Total {}",
-                            n_removed,
+        match msg {
+            IndexerMessage::Stop => break,
+            IndexerMessage::Tick {
+                change_id,
+                payload,
+                created_at,
+            } => {
+                log::info!(
+                    "Processing {} ({} stashes)",
+                    change_id,
+                    payload.stashes.len()
+                );
+                let stashes = map_to_stash_records(change_id, created_at, payload)
+                    .into_iter()
+                    .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
+                        filter::FilterResult::Block { reason, .. } => {
+                            log::debug!("Filter: Blocked stash, reason: {}", reason);
+                            None
+                        }
+                        filter::FilterResult::Pass => Some(stash),
+                        filter::FilterResult::Filter {
+                            n_total,
                             n_retained,
-                            n_total
-                        );
-                    }
-                    Some(stash)
-                }
-            })
-            // Skip stash records without any items
-            .filter(|stash_record| !stash_record.items.as_array().unwrap().is_empty())
-            .collect::<Vec<_>>();
-        persistence.save(&stashes).expect("Persisting failed");
+                        } => {
+                            let n_removed = n_total - n_retained;
+                            if n_removed > 0 {
+                                log::debug!(
+                                    "Filter: Removed {} \t Retained {} \t Total {}",
+                                    n_removed,
+                                    n_retained,
+                                    n_total
+                                );
+                            }
+                            Some(stash)
+                        }
+                    })
+                    // Skip stash records without any items
+                    .filter(|stash_record| !stash_record.items.as_array().unwrap().is_empty())
+                    .collect::<Vec<_>>();
+                persistence.save(&stashes).expect("Persisting failed");
+            }
+        }
     }
 
     log::info!("Shutting down indexer...");
@@ -103,12 +111,11 @@ pub struct StashRecord {
     league: Option<String>,
 }
 
-fn map_to_stash_records(msg: IndexerMessage) -> Vec<StashRecord> {
-    let IndexerMessage {
-        change_id,
-        created_at,
-        payload,
-    } = msg;
+fn map_to_stash_records(
+    change_id: ChangeID,
+    created_at: SystemTime,
+    payload: StashTabResponse,
+) -> Vec<StashRecord> {
     let next_change_id = payload.next_change_id;
 
     payload

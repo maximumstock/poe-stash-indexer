@@ -57,10 +57,13 @@ struct WorkerTask {
     reader: Box<dyn Read + Send>,
 }
 
-pub struct IndexerMessage {
-    pub payload: StashTabResponse,
-    pub change_id: ChangeID,
-    pub created_at: std::time::SystemTime,
+pub enum IndexerMessage {
+    Tick {
+        payload: StashTabResponse,
+        change_id: ChangeID,
+        created_at: std::time::SystemTime,
+    },
+    Stop,
 }
 
 type IndexerResult = Result<Receiver<IndexerMessage>, Box<dyn std::error::Error>>;
@@ -121,13 +124,13 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
         // Break down rate-limit into quantum of 1, so we never do any bursts,
         // like we would with for example 2 requests per second.
         let mut ratelimit = ratelimit::Builder::new()
-            .capacity(2)
-            .quantum(2)
-            .interval(std::time::Duration::from_millis(1000))
+            .capacity(1)
+            .quantum(1)
+            .interval(std::time::Duration::from_millis(500))
             .build();
 
         loop {
-            std::thread::sleep(std::time::Duration::from_millis(250));
+            std::thread::sleep(std::time::Duration::from_millis(400));
 
             if shared_state.lock().unwrap().should_stop {
                 break;
@@ -244,6 +247,7 @@ fn start_worker(
         let mut lock = shared_state.lock().unwrap();
 
         if lock.should_stop {
+            tx.send(IndexerMessage::Stop).unwrap();
             break;
         }
 
@@ -262,7 +266,7 @@ fn start_worker(
                 start.elapsed().as_millis()
             );
 
-            let msg = IndexerMessage {
+            let msg = IndexerMessage::Tick {
                 payload: deserialized,
                 change_id: task.change_id,
                 created_at: std::time::SystemTime::now(),
