@@ -130,8 +130,6 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             .build();
 
         loop {
-            std::thread::sleep(std::time::Duration::from_millis(400));
-
             if shared_state.lock().unwrap().should_stop {
                 break;
             }
