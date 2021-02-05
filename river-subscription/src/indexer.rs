@@ -226,7 +226,7 @@ fn reschedule(shared_state: SharedState, request: ChangeIDRequest) -> Result<(),
     log::info!(
         "Rescheduling {} (Retried {} times)",
         new_request.0,
-        new_request.1
+        request.1
     );
     shared_state
         .lock()
