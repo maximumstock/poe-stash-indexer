@@ -2,5 +2,6 @@
 
 members = [
     "indexer",
-    "river-subscription"
+    "river-subscription",
+    "stash-differ"
 ]
