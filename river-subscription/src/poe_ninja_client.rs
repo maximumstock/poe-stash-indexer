@@ -24,6 +24,6 @@ mod test {
     fn test_fetch_latest_change_id() {
         let latest_change_id = super::PoeNinjaClient::fetch_latest_change_id();
         assert!(latest_change_id.is_ok());
-        assert_eq!(latest_change_id.unwrap().inner.len(), 53);
+        assert!(latest_change_id.unwrap().inner.len() > 50);
     }
 }
