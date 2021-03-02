@@ -4,4 +4,3 @@ poe-stash-indexer.iml
 
 target
 db/data
-*.csv
