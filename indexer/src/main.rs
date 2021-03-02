@@ -8,6 +8,7 @@ extern crate diesel;
 extern crate dotenv;
 
 use std::{
+    str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -15,6 +16,7 @@ use std::{
     time::SystemTime,
 };
 
+use crate::config::{Configuration, RestartMode};
 use crate::filter::filter_stash_record;
 use crate::persistence::Persist;
 use crate::schema::stash_records;
@@ -22,14 +24,13 @@ use chrono::prelude::*;
 use dotenv::dotenv;
 use river_subscription::{ChangeID, Indexer, IndexerMessage, StashTabResponse};
 use serde::Serialize;
-use signal_hook::SIGINT;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
     pretty_env_logger::init_timed();
 
     let config =
-        config::Configuration::read().expect("Your configuration file is malformed. Please check.");
+        Configuration::read().expect("Your configuration file is malformed. Please check.");
 
     log::debug!("{:#?}", config);
 
@@ -37,10 +38,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let persistence = persistence::PgDb::new(&database_url);
 
     let mut indexer = Indexer::new();
-    let rx = indexer.start_with_latest();
+    let rx = match config.restart_mode {
+        RestartMode::Fresh => indexer.start_with_latest(),
+        RestartMode::Resume => {
+            let last_change_id = persistence
+                .get_next_change_id()
+                .expect("Could not access last read change_id");
+            indexer.start_with_id(ChangeID::from_str(&last_change_id).unwrap())
+        }
+    };
 
     let signal_flag = Arc::new(AtomicBool::new(false));
-    signal_hook::flag::register(SIGINT, signal_flag.clone())?;
+    signal_hook::flag::register(signal_hook::consts::SIGINT, signal_flag.clone())?;
 
     while let Ok(msg) = rx.recv() {
         if signal_flag.load(Ordering::Relaxed) {
@@ -97,7 +106,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[derive(Serialize, Insertable)]
+#[derive(Serialize, Insertable, Queryable)]
 #[table_name = "stash_records"]
 pub struct StashRecord {
     created_at: NaiveDateTime,
