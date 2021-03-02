@@ -1,3 +1,4 @@
+restart_mode = "Resume" # either Resume or Fresh
 # All possible item categories as their API qualifiers
 #
 # "accessories"
