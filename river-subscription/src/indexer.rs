@@ -75,6 +75,8 @@ impl Indexer {
 
     /// Start the indexer with a given change_id
     pub fn start_with_id(&self, change_id: ChangeID) -> IndexerResult {
+        log::info!("Resuming at change id: {}", change_id);
+
         self.shared_state
             .lock()
             .unwrap()
