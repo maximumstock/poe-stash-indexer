@@ -1,7 +1,7 @@
 use config::{Config, ConfigError, File};
 use serde::Deserialize;
 
-const CONFIG_FILE_PATH: &str = "./indexer/config/config.toml";
+const CONFIG_FILE_PATH: &str = "./config/config.toml";
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Configuration {
