@@ -1,8 +1,11 @@
-use crate::schema::stash_records;
+use diesel::{Connection, PgConnection, QueryDsl, QueryResult, RunQueryDsl};
+
+use crate::diesel::ExpressionMethods;
+use crate::schema::stash_records::dsl::*;
 use crate::StashRecord;
-use diesel::{pg::PgConnection, Connection, RunQueryDsl};
 
 type PersistResult = Result<usize, Box<dyn std::error::Error>>;
+
 pub trait Persist {
     fn save(&self, payload: &[StashRecord]) -> PersistResult;
 }
@@ -10,6 +13,7 @@ pub trait Persist {
 pub struct PgDb {
     conn: PgConnection,
 }
+
 impl PgDb {
     pub fn new(database_url: &str) -> Self {
         PgDb {
@@ -17,17 +21,17 @@ impl PgDb {
         }
     }
 
-    // pub fn get_last_read_change_id(&self) -> QueryResult<String> {
-    //     stash_records::table
-    //         .select(stash_records::change_id)
-    //         .order(stash_records::created_at.desc())
-    //         .first::<String>(&self.conn)
-    // }
+    pub fn get_next_change_id(&self) -> QueryResult<String> {
+        stash_records
+            .select(next_change_id)
+            .order(change_id.desc())
+            .first::<String>(&self.conn)
+    }
 }
 
 impl Persist for PgDb {
     fn save(&self, records: &[StashRecord]) -> PersistResult {
-        diesel::insert_into(stash_records::table)
+        diesel::insert_into(stash_records)
             .values(records)
             .on_conflict_do_nothing()
             .execute(&self.conn)
