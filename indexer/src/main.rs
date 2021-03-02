@@ -31,6 +31,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config =
         config::Configuration::read().expect("Your configuration file is malformed. Please check.");
 
+    log::debug!("{:#?}", config);
+
     let database_url = std::env::var("DATABASE_URL").expect("No database url set");
     let persistence = persistence::PgDb::new(&database_url);
 
