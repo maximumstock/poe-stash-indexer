@@ -66,7 +66,7 @@ pub enum IndexerMessage {
     Stop,
 }
 
-type IndexerResult = Result<Receiver<IndexerMessage>, Box<dyn std::error::Error>>;
+type IndexerResult = Receiver<IndexerMessage>;
 
 impl Indexer {
     pub fn new() -> Self {
@@ -86,7 +86,8 @@ impl Indexer {
 
     /// Start the indexer with the latest change_id from poe.ninja
     pub fn start_with_latest(&self) -> IndexerResult {
-        let latest_change_id = PoeNinjaClient::fetch_latest_change_id()?;
+        let latest_change_id = PoeNinjaClient::fetch_latest_change_id()
+            .expect("Fetching lastest change_id from poe.ninja failed");
         log::info!("Fetched latest change id: {}", latest_change_id);
 
         self.shared_state
@@ -115,7 +116,7 @@ impl Indexer {
         let _fetcher_handle = start_fetcher(self.shared_state.clone());
         let _worker_handle = start_worker(self.shared_state.clone(), tx);
 
-        Ok(rx)
+        rx
     }
 }
 

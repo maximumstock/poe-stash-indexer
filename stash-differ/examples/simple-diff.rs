@@ -1,6 +1,6 @@
 use stash_differ::{SampleImporter, StashDiffer};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
     let stash_records = SampleImporter::from_file("./sample_raw.csv");
 
     stash_records
@@ -10,6 +10,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let events = StashDiffer::diff(&before, &after);
             dbg!(events);
         });
-
-    Ok(())
 }

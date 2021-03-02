@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let persistence = persistence::PgDb::new(&database_url);
 
     let mut indexer = Indexer::new();
-    let rx = indexer.start_with_latest()?;
+    let rx = indexer.start_with_latest();
 
     let signal_flag = Arc::new(AtomicBool::new(false));
     signal_hook::flag::register(SIGINT, signal_flag.clone())?;
