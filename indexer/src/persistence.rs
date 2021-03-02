@@ -24,7 +24,7 @@ impl PgDb {
     pub fn get_next_change_id(&self) -> QueryResult<String> {
         stash_records
             .select(next_change_id)
-            .order(change_id.desc())
+            .order(created_at.desc())
             .first::<String>(&self.conn)
     }
 }
