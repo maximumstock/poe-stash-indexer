@@ -33,8 +33,6 @@ impl Stash {
 pub struct Item {
     pub name: String,
     pub id: String,
-    #[serde(rename(deserialize = "inventoryId"))]
-    pub inventory_name: Option<String>,
     pub note: Option<String>,
     #[serde(rename(deserialize = "typeLine"))]
     pub type_line: String,
