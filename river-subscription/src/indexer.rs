@@ -137,6 +137,16 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
                 break;
             }
 
+            let body_queue_size = shared_state.lock().unwrap().body_queue.len();
+
+            if body_queue_size > 2 {
+                log::debug!(
+                    "Skip fetching, enough bodies queued up: {}",
+                    body_queue_size
+                );
+                continue;
+            }
+
             let change_id_request = shared_state
                 .lock()
                 .unwrap()
