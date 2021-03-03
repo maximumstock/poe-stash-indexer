@@ -9,6 +9,7 @@ Each subproject is its own crate in this workspace project:
 
 - `river-subscription` - a library for listening to the Stash Tab API river
 - `indexer` - `river-subscription`-client that saves API river snapshots to a Postgres database
+- `stash-differ` - a work-in-progress CLI tool to generate diff events between stash snapshots
 
 You can run the indexer via `cargo run [--release]` from within the folder `indexer`.
 

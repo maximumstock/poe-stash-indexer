@@ -8,17 +8,64 @@ impl StashDiffer {
     pub fn diff(before: &StashRecord, after: &StashRecord) -> Vec<DiffEvent> {
         let mut events = vec![];
 
-        for item in before.items.iter() {
-            if after.items.iter().find(|i| item.id.eq(&i.id)).is_none() {
-                events.push(DiffEvent::ItemRemoved);
+        // Check for removed items
+        for before_item in before.items.iter() {
+            if after
+                .items
+                .iter()
+                .find(|i| before_item.id.eq(&i.id))
+                .is_none()
+            {
+                events.push(DiffEvent::ItemRemoved(Diff {
+                    before: (),
+                    after: (),
+                    id: before_item.id.clone(),
+                    name: before_item.type_line.clone(),
+                }));
                 continue;
             }
         }
 
-        for item in after.items.iter() {
-            if before.items.iter().find(|i| item.id.eq(&i.id)).is_none() {
-                events.push(DiffEvent::ItemAdded);
+        // Check for added items
+        for after_item in after.items.iter() {
+            if before
+                .items
+                .iter()
+                .find(|i| after_item.id.eq(&i.id))
+                .is_none()
+            {
+                events.push(DiffEvent::ItemAdded(Diff {
+                    before: (),
+                    after: (),
+                    id: after_item.id.clone(),
+                    name: after_item.type_line.clone(),
+                }));
                 continue;
+            }
+        }
+
+        // Check for changed items
+        for before_item in after.items.iter() {
+            if let Some(after_item) = before.items.iter().find(|i| before_item.id.eq(&i.id)) {
+                // Check for changed notes
+                if before_item.note.ne(&after_item.note) {
+                    events.push(DiffEvent::ItemNoteChanged(Diff {
+                        id: after_item.id.clone(),
+                        name: after_item.type_line.clone(),
+                        before: before_item.note.clone(),
+                        after: after_item.note.clone(),
+                    }));
+                }
+
+                // Check for changed stack_sizes
+                if before_item.stack_size.ne(&after_item.stack_size) {
+                    events.push(DiffEvent::ItemStackSizeChanged(Diff {
+                        id: after_item.id.clone(),
+                        name: after_item.type_line.clone(),
+                        before: before_item.stack_size,
+                        after: after_item.stack_size,
+                    }));
+                }
             }
         }
 
@@ -26,10 +73,20 @@ impl StashDiffer {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum DiffEvent {
-    ItemAdded,
-    ItemRemoved,
+    ItemAdded(Diff<()>),
+    ItemRemoved(Diff<()>),
+    ItemNoteChanged(Diff<Option<String>>),
+    ItemStackSizeChanged(Diff<Option<u32>>),
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct Diff<T> {
+    id: String,
+    name: String,
+    before: T,
+    after: T,
 }
 
 pub struct SampleImporter;
@@ -72,4 +129,26 @@ pub struct StashRecord {
 #[derive(Debug, Deserialize)]
 pub struct Item {
     id: String,
+    type_line: String,
+    note: Option<String>,
+    stack_size: Option<u32>,
+}
+
+#[derive(Debug)]
+pub struct DiffStats {
+    pub added: u32,
+    pub removed: u32,
+    pub note: u32,
+    pub stack_size: u32,
+}
+
+impl Default for DiffStats {
+    fn default() -> Self {
+        DiffStats {
+            added: 0,
+            removed: 0,
+            note: 0,
+            stack_size: 0,
+        }
+    }
 }
