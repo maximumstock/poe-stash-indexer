@@ -4,6 +4,7 @@ use std::{
     io::Write,
     io::{BufReader, Read},
     str::FromStr,
+    string::FromUtf8Error,
     sync::mpsc::{channel, Receiver, Sender},
     sync::Arc,
     sync::Mutex,
@@ -52,7 +53,7 @@ type ChangeIDQueue = VecDeque<ChangeIDRequest>;
 type BodyQueue = VecDeque<WorkerTask>;
 
 struct WorkerTask {
-    fetch_partial: [u8; 70],
+    fetch_partial: [u8; 100],
     change_id: ChangeID,
     reader: Box<dyn Read + Send>,
 }
@@ -171,7 +172,7 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             let reader = response.into_reader();
 
             let mut decoder = GzDecoder::new(BufReader::new(reader));
-            let mut next_id_buffer = [0; 70];
+            let mut next_id_buffer = [0; 100];
             let decoded = decoder.read_exact(&mut next_id_buffer);
 
             if decoded.is_err() {
@@ -183,15 +184,8 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
                 }
             }
 
-            let next_id = String::from_utf8(
-                next_id_buffer
-                    .iter()
-                    .skip(19)
-                    .take(49)
-                    .cloned()
-                    .collect::<Vec<u8>>(),
-            )
-            .expect("Preemptive deserialization of next change_id failed");
+            let next_id = parse_change_id_from_bytes(&next_id_buffer)
+                .expect("Preemptive deserialization of next change_id failed");
 
             log::debug!(
                 "Took {}ms to read next id: {}",
@@ -280,4 +274,26 @@ fn start_worker(
             std::thread::sleep(std::time::Duration::from_millis(500));
         }
     })
+}
+
+fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error> {
+    String::from_utf8(
+        bytes
+            .split(|b| (*b as char).eq(&'"'))
+            .nth(3)
+            .unwrap()
+            .to_vec(),
+    )
+}
+
+#[cfg(test)]
+mod test {
+    use super::parse_change_id_from_bytes;
+
+    #[test]
+    fn test_parse_change_id_from_bytes() {
+        let input = "{\"next_change_id\": \"abc-def-ghi-jkl-mno\", \"stashes\": []}".as_bytes();
+        let result = parse_change_id_from_bytes(&input);
+        assert_eq!(result, Ok("abc-def-ghi-jkl-mno".into()));
+    }
 }
