@@ -38,13 +38,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let persistence = persistence::PgDb::new(&database_url);
 
     let mut indexer = Indexer::new();
-    let rx = match config.restart_mode {
-        RestartMode::Fresh => indexer.start_with_latest(),
-        RestartMode::Resume => {
-            let last_change_id = persistence
-                .get_next_change_id()
-                .expect("Could not access last read change_id");
-            indexer.start_with_id(ChangeID::from_str(&last_change_id).unwrap())
+    let last_change_id: diesel::result::QueryResult<String> = persistence.get_next_change_id();
+    let rx = match (&config.restart_mode, last_change_id) {
+        (RestartMode::Fresh, _) => indexer.start_with_latest(),
+        (RestartMode::Resume, Ok(id)) => indexer.start_with_id(ChangeID::from_str(&id).unwrap()),
+        (RestartMode::Resume, Err(_)) => {
+            log::info!("No previous data found, falling back to RestartMode::Fresh");
+            indexer.start_with_latest()
         }
     };
 
