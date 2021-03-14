@@ -138,6 +138,8 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
                 break;
             }
 
+            ratelimit.wait();
+
             let change_id_request = shared_state
                 .lock()
                 .unwrap()
@@ -205,8 +207,6 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             lock.body_queue.push_back(next_worker_task);
             lock.change_id_queue.push_back((next_change_id, 0));
             drop(lock);
-
-            ratelimit.wait();
         }
 
         shared_state.lock().unwrap().should_stop = true;
