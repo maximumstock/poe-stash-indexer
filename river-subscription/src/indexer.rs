@@ -38,6 +38,12 @@ struct State {
     should_stop: bool,
 }
 
+impl State {
+    fn stop(&mut self) {
+        self.should_stop = true;
+    }
+}
+
 impl Default for State {
     fn default() -> Self {
         Self {
@@ -53,7 +59,7 @@ type ChangeIDQueue = VecDeque<ChangeIDRequest>;
 type BodyQueue = VecDeque<WorkerTask>;
 
 struct WorkerTask {
-    fetch_partial: [u8; 100],
+    fetch_partial: [u8; 80],
     change_id: ChangeID,
     reader: Box<dyn Read + Send>,
 }
@@ -174,15 +180,22 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             let reader = response.into_reader();
 
             let mut decoder = GzDecoder::new(BufReader::new(reader));
-            let mut next_id_buffer = [0; 100];
-            let decoded = decoder.read_exact(&mut next_id_buffer);
+            let mut next_id_buffer = [0; 80];
 
-            if decoded.is_err() {
-                log::error!("fetcher: gzip decoding failed: {}", decoded.unwrap_err());
+            match decoder.read_exact(&mut next_id_buffer) {
+                Ok(_) => {}
+                Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => {
+                    log::error!("UnexpectedEof: {:?}", next_id_buffer);
+                    shared_state.lock().unwrap().stop();
+                    continue;
+                }
+                Err(err) => {
+                    log::error!("fetcher: gzip decoding failed: {}", err);
 
-                match reschedule(shared_state.clone(), change_id_request) {
-                    Ok(_) => continue,
-                    Err(_) => break,
+                    match reschedule(shared_state.clone(), change_id_request.clone()) {
+                        Ok(_) => continue 'outer,
+                        Err(_) => break 'outer,
+                    }
                 }
             }
 
@@ -209,7 +222,7 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             drop(lock);
         }
 
-        shared_state.lock().unwrap().should_stop = true;
+        shared_state.lock().unwrap().stop();
     })
 }
 
