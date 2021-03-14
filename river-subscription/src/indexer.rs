@@ -193,8 +193,8 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
                     log::error!("fetcher: gzip decoding failed: {}", err);
 
                     match reschedule(shared_state.clone(), change_id_request.clone()) {
-                        Ok(_) => continue 'outer,
-                        Err(_) => break 'outer,
+                        Ok(_) => continue,
+                        Err(_) => break,
                     }
                 }
             }
