@@ -1,9 +1,9 @@
-use crate::change_id::ChangeID;
+use crate::change_id::ChangeId;
 use serde::Deserialize;
 use std::str::FromStr;
 
 #[derive(Debug, Deserialize)]
-struct POENinjaGetStats {
+struct PoeNinjaGetStats {
     next_change_id: String,
 }
 
@@ -11,10 +11,10 @@ struct POENinjaGetStats {
 pub(crate) struct PoeNinjaClient {}
 
 impl PoeNinjaClient {
-    pub fn fetch_latest_change_id() -> Result<ChangeID, Box<dyn std::error::Error>> {
+    pub fn fetch_latest_change_id() -> Result<ChangeId, Box<dyn std::error::Error>> {
         let response = ureq::get("https://poe.ninja/api/Data/GetStats").call();
-        let stats: POENinjaGetStats = serde_json::from_reader(response.into_reader())?;
-        ChangeID::from_str(&stats.next_change_id)
+        let stats: PoeNinjaGetStats = serde_json::from_reader(response.into_reader())?;
+        ChangeId::from_str(&stats.next_change_id)
     }
 }
 
