@@ -26,9 +26,9 @@ impl std::str::FromStr for ChangeId {
     }
 }
 
-impl Into<String> for ChangeId {
-    fn into(self) -> String {
-        self.inner
+impl From<ChangeId> for String {
+    fn from(change_id: ChangeId) -> Self {
+        change_id.inner 
     }
 }
 
