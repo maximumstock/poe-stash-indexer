@@ -28,7 +28,7 @@ impl std::str::FromStr for ChangeId {
 
 impl From<ChangeId> for String {
     fn from(change_id: ChangeId) -> Self {
-        change_id.inner 
+        change_id.inner
     }
 }
 
