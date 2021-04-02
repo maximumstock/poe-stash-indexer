@@ -10,7 +10,7 @@ use std::{
     sync::Mutex,
 };
 
-use crate::{change_id::ChangeID, poe_ninja_client::PoeNinjaClient, types::StashTabResponse};
+use crate::{change_id::ChangeId, poe_ninja_client::PoeNinjaClient, types::StashTabResponse};
 
 pub struct Indexer {
     shared_state: SharedState,
@@ -34,7 +34,7 @@ type SharedState = Arc<Mutex<State>>;
 
 struct State {
     body_queue: BodyQueue,
-    change_id_queue: ChangeIDQueue,
+    change_id_queue: ChangeIdQueue,
     should_stop: bool,
 }
 
@@ -54,20 +54,20 @@ impl Default for State {
     }
 }
 
-type ChangeIDRequest = (ChangeID, usize);
-type ChangeIDQueue = VecDeque<ChangeIDRequest>;
+type ChangeIdRequest = (ChangeId, usize);
+type ChangeIdQueue = VecDeque<ChangeIdRequest>;
 type BodyQueue = VecDeque<WorkerTask>;
 
 struct WorkerTask {
     fetch_partial: [u8; 80],
-    change_id: ChangeID,
+    change_id: ChangeId,
     reader: Box<dyn Read + Send>,
 }
 
 pub enum IndexerMessage {
     Tick {
         payload: StashTabResponse,
-        change_id: ChangeID,
+        change_id: ChangeId,
         created_at: std::time::SystemTime,
     },
     Stop,
@@ -81,7 +81,7 @@ impl Indexer {
     }
 
     /// Start the indexer with a given change_id
-    pub fn start_with_id(&self, change_id: ChangeID) -> IndexerResult {
+    pub fn start_with_id(&self, change_id: ChangeId) -> IndexerResult {
         log::info!("Resuming at change id: {}", change_id);
 
         self.shared_state
@@ -208,7 +208,7 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
                 next_id
             );
 
-            let next_change_id = ChangeID::from_str(&next_id).expect("Invalid change_id provided");
+            let next_change_id = ChangeId::from_str(&next_id).expect("Invalid change_id provided");
 
             let next_worker_task = WorkerTask {
                 reader: Box::new(decoder),
@@ -226,7 +226,7 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
     })
 }
 
-fn reschedule(shared_state: SharedState, request: ChangeIDRequest) -> Result<(), ()> {
+fn reschedule(shared_state: SharedState, request: ChangeIdRequest) -> Result<(), ()> {
     if request.1 > 2 {
         log::error!("Retried too many times...shutting down");
         return Err(());
