@@ -1,17 +1,17 @@
 use std::fmt::Display;
 
 #[derive(Debug, Clone)]
-pub struct ChangeID {
+pub struct ChangeId {
     pub(crate) inner: String,
 }
 
-impl Display for ChangeID {
+impl Display for ChangeId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.inner)
     }
 }
 
-impl std::str::FromStr for ChangeID {
+impl std::str::FromStr for ChangeId {
     type Err = Box<dyn std::error::Error>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -26,7 +26,7 @@ impl std::str::FromStr for ChangeID {
     }
 }
 
-impl Into<String> for ChangeID {
+impl Into<String> for ChangeId {
     fn into(self) -> String {
         self.inner
     }
@@ -39,7 +39,7 @@ mod test {
 
     #[test]
     fn test_from_str_success() {
-        let change_id = ChangeID::from_str("850662131-863318628-825558626-931433265-890834941");
+        let change_id = ChangeId::from_str("850662131-863318628-825558626-931433265-890834941");
 
         assert!(change_id.is_ok(),);
         assert_eq!(
@@ -51,7 +51,7 @@ mod test {
     #[test]
     fn test_from_str_err() {
         assert!(
-            super::ChangeID::from_str("850662A31-863318628-825558626-931433265-890834941").is_err(),
+            super::ChangeId::from_str("850662A31-863318628-825558626-931433265-890834941").is_err(),
         );
     }
 }
