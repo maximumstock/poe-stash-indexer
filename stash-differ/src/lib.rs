@@ -45,8 +45,8 @@ impl StashDiffer {
         }
 
         // Check for changed items
-        for before_item in after.items.iter() {
-            if let Some(after_item) = before.items.iter().find(|i| before_item.id.eq(&i.id)) {
+        for after_item in after.items.iter() {
+            if let Some(before_item) = before.items.iter().find(|i| after_item.id.eq(&i.id)) {
                 // Check for changed notes
                 if before_item.note.ne(&after_item.note) {
                     events.push(DiffEvent::ItemNoteChanged(Diff {
