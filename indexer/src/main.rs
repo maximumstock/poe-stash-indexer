@@ -38,6 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let persistence = persistence::PgDb::new(&database_url);
 
     let mut indexer = Indexer::new();
+    let mut tick = 0;
     let last_change_id: diesel::result::QueryResult<String> = persistence.get_next_change_id();
     let rx = match (&config.restart_mode, last_change_id) {
         (RestartMode::Fresh, _) => indexer.start_with_latest(),
@@ -69,7 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     change_id,
                     payload.stashes.len()
                 );
-                let stashes = map_to_stash_records(change_id, created_at, payload)
+                let stashes = map_to_stash_records(change_id, created_at, tick, payload)
                     .into_iter()
                     .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
                         filter::FilterResult::Block { reason, .. } => {
@@ -97,6 +98,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .filter(|stash_record| !stash_record.items.as_array().unwrap().is_empty())
                     .collect::<Vec<_>>();
                 persistence.save(&stashes).expect("Persisting failed");
+                tick += 1;
             }
         }
     }
@@ -109,6 +111,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[derive(Serialize, Insertable, Queryable)]
 #[table_name = "stash_records"]
 pub struct StashRecord {
+    tick: i64,
     created_at: NaiveDateTime,
     change_id: String,
     next_change_id: String,
@@ -122,9 +125,11 @@ pub struct StashRecord {
     league: Option<String>,
 }
 
+// TODO: Refactor via IntoIterator or sth to go from StashTabResponse to Vec<StashRecord>
 fn map_to_stash_records(
     change_id: ChangeId,
     created_at: SystemTime,
+    tick: i64,
     payload: StashTabResponse,
 ) -> Vec<StashRecord> {
     let next_change_id = payload.next_change_id;
@@ -135,6 +140,7 @@ fn map_to_stash_records(
         // Ignore stash tabs flagged as private, whose updates are always empty
         .filter(|stash| stash.public)
         .map(move |stash| StashRecord {
+            tick,
             account_name: stash.account_name,
             last_character_name: stash.last_character_name,
             stash_id: stash.id,

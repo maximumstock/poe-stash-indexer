@@ -1,5 +1,6 @@
 table! {
     stash_records (change_id, stash_id) {
+        tick -> BigInt,
         created_at -> Timestamp,
         change_id -> Text,
         next_change_id -> Text,
