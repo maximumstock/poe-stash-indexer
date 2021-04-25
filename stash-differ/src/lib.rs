@@ -105,20 +105,20 @@ type AccountName = String;
 type ItemId = String;
 /// The cumulative state of all stashes for a given `account_name`
 pub struct Stash {
-    account_name: AccountName,
+    // account_name: AccountName,
     content: HashMap<ItemId, Item>,
 }
 
 impl From<&[StashRecord]> for Stash {
     fn from(stash_records: &[StashRecord]) -> Self {
         Self {
-            account_name: stash_records
-                .first()
-                .unwrap()
-                .account_name
-                .as_ref()
-                .unwrap()
-                .clone(),
+            // account_name: stash_records
+            //     .first()
+            //     .unwrap()
+            //     .account_name
+            //     .as_ref()
+            //     .unwrap()
+            //     .clone(),
             content: stash_records
                 .iter()
                 .flat_map(|sr| &sr.items)
