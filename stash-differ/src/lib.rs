@@ -186,6 +186,23 @@ pub struct DiffStats {
     pub stack_size: u32,
 }
 
+impl From<&[DiffEvent]> for DiffStats {
+    fn from(events: &[DiffEvent]) -> Self {
+        let mut stats = DiffStats::default();
+
+        for ev in events {
+            match ev {
+                DiffEvent::ItemAdded(_) => stats.added += 1,
+                DiffEvent::ItemRemoved(_) => stats.removed += 1,
+                DiffEvent::ItemNoteChanged(_) => stats.note += 1,
+                DiffEvent::ItemStackSizeChanged(_) => stats.stack_size += 1,
+            }
+        }
+
+        stats
+    }
+}
+
 impl Default for DiffStats {
     fn default() -> Self {
         DiffStats {
