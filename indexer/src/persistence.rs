@@ -1,8 +1,9 @@
-use diesel::{Connection, PgConnection, QueryDsl, QueryResult, RunQueryDsl};
+use chrono::NaiveDateTime;
+use diesel::{dsl::max, Connection, PgConnection, QueryDsl, QueryResult, RunQueryDsl};
 
-use crate::diesel::ExpressionMethods;
 use crate::schema::stash_records::dsl::*;
 use crate::StashRecord;
+use crate::{diesel::ExpressionMethods, schema};
 
 type PersistResult = Result<usize, Box<dyn std::error::Error>>;
 
@@ -17,15 +18,27 @@ pub struct PgDb {
 impl PgDb {
     pub fn new(database_url: &str) -> Self {
         PgDb {
-            conn: PgConnection::establish(&database_url).expect("lul"),
+            conn: PgConnection::establish(&database_url).expect("Could not connect to database"),
         }
     }
 
-    pub fn get_next_change_id(&self) -> QueryResult<String> {
+    pub fn get_latest_created_at(&self) -> QueryResult<Option<NaiveDateTime>> {
+        use schema::stash_records::dsl::*;
+
         stash_records
-            .select(next_change_id)
-            .order(created_at.desc())
-            .first::<String>(&self.conn)
+            .select(max(created_at))
+            .first::<Option<NaiveDateTime>>(&self.conn)
+    }
+
+    pub fn get_next_change_id(&self) -> QueryResult<String> {
+        if let Ok(Some(last_created_at)) = self.get_latest_created_at() {
+            stash_records
+                .select(next_change_id)
+                .filter(created_at.eq(&last_created_at))
+                .first(&self.conn)
+        } else {
+            Err(diesel::result::Error::NotFound)
+        }
     }
 }
 
@@ -38,33 +51,3 @@ impl Persist for PgDb {
             .map_err(|e| e.into())
     }
 }
-
-// pub struct CSVLog<'a> {
-//     filepath: &'a str,
-// }
-
-// impl<'a> CSVLog<'a> {
-//     pub fn new(filepath: &'a str) -> Self {
-//         Self { filepath }
-//     }
-// }
-
-// fn prepare_file(filepath: &str) -> Result<std::fs::File, Box<dyn std::error::Error>> {
-//     std::fs::OpenOptions::new()
-//         .append(true)
-//         .create(true)
-//         .open(&filepath)
-//         .map_err(|e| e.into())
-// }
-
-// impl Persist for CSVLog<'_> {
-//     fn save_offers(&self, offers: &[Offer]) -> PersistResult {
-//         let file = prepare_file(&self.filepath)?;
-//         let mut writer = csv::Writer::from_writer(BufWriter::new(file));
-//         for o in offers {
-//             writer.serialize(o)?;
-//         }
-//         writer.flush()?;
-//         Ok(offers.len())
-//     }
-// }
