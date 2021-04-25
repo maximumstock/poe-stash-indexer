@@ -7,11 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.123", features = ["derive"] }
+serde = { version = "1.0.125", features = ["derive"] }
 serde_json = "1.0.64"
-regex = "1.4.3"
+regex = "1.4.6"
 # lazy_static = "1.4.0"
-diesel = { version = "1.4.5", features = ["postgres", "numeric", "chrono", "serde_json"] }
+diesel = { version = "1.4.6", features = ["postgres", "chrono", "serde_json"] }
 dotenv = "0.15.0"
 # ratelimit = "0.4.4"
 # flate2 = "1.0.18"
@@ -21,6 +21,6 @@ chrono = { version = "0.4.19", features = ["serde"] }
 river-subscription = { path = "../river-subscription" }
 log = "0.4.14"
 pretty_env_logger = "0.4.0"
-config = "0.10.1"
-signal-hook = "0.3.6"
+config = "0.11.0"
+signal-hook = "0.3.8"
 
