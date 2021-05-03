@@ -94,10 +94,8 @@ impl<'r> sqlx::FromRow<'r, PgRow> for StashRecord {
             account_name: row.try_get::<Option<String>, &str>("account_name")?,
             league: row.try_get::<Option<String>, &str>("league")?,
             items: row
-                .try_get("items")
-                .map(serde_json::from_value::<Vec<Item>>)
-                .expect("JSON deserialization failed")
-                .unwrap(),
+                .try_get::<sqlx::types::Json<Vec<Item>>, &str>("items")?
+                .0,
             created_at: row.try_get("created_at")?,
         })
     }
