@@ -1,10 +1,11 @@
 use std::collections::{HashMap, VecDeque};
 
-use futures::future::FutureExt;
 use serde::Serialize;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 use stash_differ::{DiffStats, LeagueStore, StashRecord};
+
+const PAGE_SIZE: i64 = 5000;
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
@@ -15,17 +16,10 @@ async fn main() -> Result<(), sqlx::Error> {
 
     // fishtank Ritual
     let fishtank = "postgres://poe:poe@fishtank:5432/poe";
-    // first Ritual chunk, created_at = 2021-01-15
-    let fishtank_change_id = "933167925-944185125-905522013-1020175612-28136316";
     let fishtank_league = "Ritual";
 
-    // // localhost
-    // let localhost = "postgres://poe:poe@localhost:5432/poe";
-    // let localhost_change_id = "874427962-886797677-848596200-956890878-915966255";
-    // let localhost_league = "Ritual";
-
     let db_url = fishtank;
-    let initial_change_id = fishtank_change_id;
+    // let initial_change_id = fishtank_change_id;
     let league = fishtank_league;
 
     let pool = PgPoolOptions::new()
@@ -38,44 +32,32 @@ async fn main() -> Result<(), sqlx::Error> {
         .from_path("diff_stats.csv")
         .unwrap();
 
-    let mut queue = VecDeque::<String>::new();
-    queue.push_back(initial_change_id.into());
+    let mut queue = VecDeque::<(i64, i64)>::new();
+    queue.push_back((0, PAGE_SIZE));
     let mut store = LeagueStore::new();
     let mut tick = 0;
 
-    while let Some(change_id) = queue.pop_front() {
-        let next_change_id = fetch_next_change_id(&pool, &change_id).await?;
-        let stash_records = fetch_stash_records(&pool, &change_id, &league).await?;
+    while let Some(page) = queue.pop_front() {
+        println!("Fetching next page: {:?}", page);
 
-        if stash_records.is_empty() {
-            println!(
-                "No data for {:?} -> Jumping to successor {:?}",
-                change_id, next_change_id
-            );
-            queue.push_back(next_change_id);
-            continue;
-        }
-
-        let account_stash_data = group_stash_records_by_account_name(&stash_records);
+        let stash_records = fetch_stash_records_paginated(&pool, page.0, page.1, league).await?;
+        let grouped_stashes = group_stash_records_by_account_name(&stash_records);
 
         println!(
-            "Processing {} accounts in chunk #{}",
-            account_stash_data.len(),
-            tick
+            "Processing {} accounts in page #{} - last timestamp: {}",
+            grouped_stashes.len(),
+            tick,
+            stash_records.last().unwrap().created_at
         );
 
         // Collect DiffEvents for each account and create Records from them
-        account_stash_data
+        grouped_stashes
             .iter()
             .flat_map(|(account_name, stash_records)| {
-                if let Some(events) = store.ingest_account(account_name, stash_records) {
-                    // println!(
-                    //     "\t\t{:?} diff events for account {:?}",
-                    //     events.len(),
-                    //     account_name
-                    // );
+                let stash = stash_records.as_slice().into();
+                if let Some(events) = store.ingest_account(account_name, stash) {
                     let diff_stats: DiffStats = events.as_slice().into();
-                    Some(Record {
+                    Some(CsvRecord {
                         account_name,
                         tick,
                         n_added: diff_stats.added,
@@ -94,37 +76,28 @@ async fn main() -> Result<(), sqlx::Error> {
             });
 
         println!("Store size: {:?} elements", store.inner.len());
-        let next_change_id = stash_records.get(0).unwrap().next_change_id.clone();
-        queue.push_back(next_change_id);
+        queue.push_back((page.1, page.1 + PAGE_SIZE));
         tick += 1;
     }
 
     Ok(())
 }
 
-async fn fetch_stash_records(
+async fn fetch_stash_records_paginated(
     pool: &Pool<Postgres>,
-    change_id: &str,
+    start: i64,
+    end: i64,
     league: &str,
 ) -> Result<Vec<StashRecord>, sqlx::Error> {
-    sqlx::query_as::< _, StashRecord>(
-        "SELECT change_id, next_change_id, stash_id, account_name, league, items FROM stash_records WHERE change_id = $1 and league = $2"
+    sqlx::query_as::<_, StashRecord>(
+        "SELECT change_id, next_change_id, stash_id, account_name, league, items, created_at
+             FROM stash_records
+             WHERE league = $1 and int8range($2, $3, '[]') @> int8range(id, id, '[]')",
     )
-    .bind(change_id)
     .bind(league)
-    .fetch_all(pool).await
-}
-
-async fn fetch_next_change_id(
-    pool: &Pool<Postgres>,
-    change_id: &str,
-) -> Result<String, sqlx::Error> {
-    sqlx::query_as::< _, StashRecord>(
-        "SELECT change_id, next_change_id, stash_id, account_name, league, items FROM stash_records WHERE change_id = $1"
-    )
-    .bind(change_id)
-    .fetch_one(pool)
-    .map(|x| x.map(|sr| sr.next_change_id))
+    .bind(start)
+    .bind(end)
+    .fetch_all(pool)
     .await
 }
 
@@ -145,7 +118,7 @@ fn group_stash_records_by_account_name(
 }
 
 #[derive(Serialize, Debug)]
-struct Record<'a> {
+struct CsvRecord<'a> {
     account_name: &'a String,
     tick: usize,
     n_added: u32,

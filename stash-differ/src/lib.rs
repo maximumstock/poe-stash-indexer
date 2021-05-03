@@ -74,6 +74,7 @@ pub struct StashRecord {
     pub items: Vec<Item>,
     pub account_name: Option<String>,
     pub league: Option<String>,
+    pub created_at: sqlx::types::chrono::NaiveDateTime,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -97,6 +98,7 @@ impl<'r> sqlx::FromRow<'r, PgRow> for StashRecord {
                 .map(serde_json::from_value::<Vec<Item>>)
                 .expect("JSON deserialization failed")
                 .unwrap(),
+            created_at: row.try_get("created_at")?,
         })
     }
 }
@@ -146,19 +148,15 @@ impl LeagueStore {
         Self::default()
     }
 
-    pub fn ingest_account(
-        &mut self,
-        account_name: &str,
-        stash_records: &[StashRecord],
-    ) -> Option<Vec<DiffEvent>> {
-        let current: Stash = stash_records.into();
-        if let Some(previous) = self.inner.get(account_name) {
+    pub fn ingest_account(&mut self, account_name: &str, stash: Stash) -> Option<Vec<DiffEvent>> {
+        let ret = if let Some(previous) = self.inner.get(account_name) {
             // we can diff
-            Some(StashDiffer::diff(&previous, &current))
+            Some(StashDiffer::diff(&previous, &stash))
         } else {
-            self.inner.insert(account_name.into(), current);
             None
-        }
+        };
+        self.inner.insert(account_name.into(), stash);
+        ret
     }
 }
 
