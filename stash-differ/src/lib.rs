@@ -202,6 +202,7 @@ impl Default for DiffStats {
 
 pub struct StashRecordIterator<'a> {
     pool: &'a Pool<Postgres>,
+    runtime: &'a tokio::runtime::Runtime,
     league: &'a str,
     page_size: i64,
     page: (i64, i64),
@@ -209,9 +210,10 @@ pub struct StashRecordIterator<'a> {
 }
 
 impl<'a> StashRecordIterator<'a> {
-    pub fn new(pool: &'a Pool<Postgres>, page_size: i64, league: &'a str) -> Self {
+    pub fn new(pool: &'a Pool<Postgres>, runtime: &'a tokio::runtime::Runtime, page_size: i64, league: &'a str) -> Self {
         Self {
             pool,
+            runtime,
             league,
             page_size,
             page: (0, page_size),
@@ -231,10 +233,14 @@ impl<'a> StashRecordIterator<'a> {
             .len()
     }
 
-    async fn load_data(&mut self) -> Result<(), sqlx::Error> {
-        let next_page =
-            fetch_stash_records_paginated(&self.pool, self.page.0, self.page.1, self.league)
-                .await?;
+    fn load_data(&mut self) -> Result<(), sqlx::Error> {
+        let next_page = self.runtime.block_on(fetch_stash_records_paginated(
+            &self.pool,
+            self.page.0,
+            self.page.1,
+            self.league,
+        ))?;
+
         self.buffer.extend(next_page);
         self.page = (self.page.1, self.page.1 + self.page_size);
         Ok(())
@@ -266,9 +272,9 @@ impl<'a> StashRecordIterator<'a> {
         Some(data)
     }
 
-    pub async fn next(&mut self) -> Option<Vec<StashRecord>> {
+    pub fn next_chunk(&mut self) -> Option<Vec<StashRecord>> {
         while self.needs_data() {
-            self.load_data().await.expect("Fetching next page failed");
+            self.load_data().expect("Fetching next page failed");
         }
 
         self.extract_first_chunk()

@@ -5,8 +5,9 @@ use stash_differ::{
     group_stash_records_by_account_name, DiffStats, LeagueStore, StashRecordIterator,
 };
 
-#[tokio::main]
-async fn main() -> Result<(), sqlx::Error> {
+fn main() -> Result<(), sqlx::Error> {
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+
     // fishtank Ultimatum
     // let fishtank = "postgres://poe:poe@fishtank:5432/poe-ultimatum";
     // let fishtank_change_id = "1126516147-1133722327-1092891193-1225428360-1174941189";
@@ -20,10 +21,12 @@ async fn main() -> Result<(), sqlx::Error> {
     // let initial_change_id = fishtank_change_id;
     let league = fishtank_league;
 
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(db_url)
-        .await?;
+    let pool = runtime.block_on(async {
+        PgPoolOptions::new()
+            .max_connections(5)
+            .connect(db_url)
+            .await
+    })?;
 
     let mut csv_writer = csv::WriterBuilder::new()
         .has_headers(true)
@@ -33,9 +36,9 @@ async fn main() -> Result<(), sqlx::Error> {
     let mut store = LeagueStore::new();
     let mut tick = 0;
 
-    let mut iterator = StashRecordIterator::new(&pool, 10000, league);
+    let mut iterator = StashRecordIterator::new(&pool, &runtime, 10000, league);
 
-    while let Some(chunk) = iterator.next().await {
+    while let Some(chunk) = iterator.next_chunk() {
         // println!("Chunk length {}", chunk.len());
         let grouped_stashes = group_stash_records_by_account_name(&chunk);
 
