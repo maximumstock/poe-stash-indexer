@@ -147,12 +147,10 @@ impl LeagueStore {
     }
 
     pub fn ingest_account(&mut self, account_name: &str, stash: Stash) -> Option<Vec<DiffEvent>> {
-        let ret = if let Some(previous) = self.inner.get(account_name) {
-            // we can diff
-            Some(StashDiffer::diff(&previous, &stash))
-        } else {
-            None
-        };
+        let ret = self
+            .inner
+            .get(account_name)
+            .map(|previous| StashDiffer::diff(&previous, &stash));
         self.inner.insert(account_name.into(), stash);
         ret
     }
