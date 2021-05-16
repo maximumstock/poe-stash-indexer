@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use sqlx::{postgres::PgRow, Row};
+use sqlx::{postgres::PgRow, Pool, Postgres, Row};
 use std::collections::{HashMap, HashSet};
 
 pub struct StashDiffer;
@@ -105,20 +105,12 @@ type AccountName = String;
 type ItemId = String;
 /// The cumulative state of all stashes for a given `account_name`
 pub struct Stash {
-    // account_name: AccountName,
     content: HashMap<ItemId, Item>,
 }
 
 impl From<&[StashRecord]> for Stash {
     fn from(stash_records: &[StashRecord]) -> Self {
         Self {
-            // account_name: stash_records
-            //     .first()
-            //     .unwrap()
-            //     .account_name
-            //     .as_ref()
-            //     .unwrap()
-            //     .clone(),
             content: stash_records
                 .iter()
                 .flat_map(|sr| &sr.items)
@@ -206,4 +198,113 @@ impl Default for DiffStats {
             stack_size: 0,
         }
     }
+}
+
+pub struct StashRecordIterator<'a> {
+    pool: &'a Pool<Postgres>,
+    league: &'a str,
+    page_size: i64,
+    page: (i64, i64),
+    buffer: Vec<StashRecord>,
+}
+
+impl<'a> StashRecordIterator<'a> {
+    pub fn new(pool: &'a Pool<Postgres>, page_size: i64, league: &'a str) -> Self {
+        Self {
+            pool,
+            league,
+            page_size,
+            page: (0, page_size),
+            buffer: Vec::new(),
+        }
+    }
+
+    fn needs_data(&self) -> bool {
+        self.count_available_chunks() < 2
+    }
+
+    fn count_available_chunks(&self) -> usize {
+        self.buffer
+            .iter()
+            .map(|i| &i.change_id)
+            .collect::<HashSet<_>>()
+            .len()
+    }
+
+    async fn load_data(&mut self) -> Result<(), sqlx::Error> {
+        let next_page =
+            fetch_stash_records_paginated(&self.pool, self.page.0, self.page.1, self.league)
+                .await?;
+        self.buffer.extend(next_page);
+        self.page = (self.page.1, self.page.1 + self.page_size);
+        Ok(())
+    }
+
+    fn extract_first_chunk(&mut self) -> Option<Vec<StashRecord>> {
+        if self.count_available_chunks() < 2 {
+            panic!("Expected to have more data");
+        }
+
+        let next_change_id = &self
+            .buffer
+            .first()
+            .expect("No data where some was expected")
+            .change_id
+            .clone();
+
+        let mut data = vec![];
+
+        while !self.buffer.is_empty() {
+            if self.buffer[0].change_id.eq(next_change_id) {
+                let v = self.buffer.remove(0);
+                data.push(v);
+            } else {
+                break;
+            }
+        }
+
+        Some(data)
+    }
+
+    pub async fn next(&mut self) -> Option<Vec<StashRecord>> {
+        while self.needs_data() {
+            self.load_data().await.expect("Fetching next page failed");
+        }
+
+        self.extract_first_chunk()
+    }
+}
+
+async fn fetch_stash_records_paginated(
+    pool: &Pool<Postgres>,
+    start: i64,
+    end: i64,
+    league: &str,
+) -> Result<Vec<StashRecord>, sqlx::Error> {
+    sqlx::query_as::<_, StashRecord>(
+        "SELECT change_id, next_change_id, stash_id, account_name, league, items, created_at
+             FROM stash_records
+             WHERE league = $1 and int8range($2, $3, '[]') @> int8range(id, id, '[]')",
+    )
+    .bind(league)
+    .bind(start)
+    .bind(end)
+    .fetch_all(pool)
+    .await
+}
+
+pub fn group_stash_records_by_account_name(
+    stash_records: &[StashRecord],
+) -> HashMap<String, Vec<StashRecord>> {
+    let mut out = HashMap::new();
+
+    for sr in stash_records {
+        if let Some(account_name) = &sr.account_name {
+            out.entry(account_name.clone())
+                .or_insert_with(Vec::new)
+                .push(sr.clone())
+        }
+    }
+
+    out
 }

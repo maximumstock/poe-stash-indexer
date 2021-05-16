@@ -1,11 +1,9 @@
-use std::collections::{HashMap, VecDeque};
-
 use serde::Serialize;
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{Pool, Postgres};
-use stash_differ::{DiffStats, LeagueStore, StashRecord};
 
-const PAGE_SIZE: i64 = 5000;
+use stash_differ::{
+    group_stash_records_by_account_name, DiffStats, LeagueStore, StashRecordIterator,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
@@ -32,23 +30,23 @@ async fn main() -> Result<(), sqlx::Error> {
         .from_path("diff_stats.csv")
         .unwrap();
 
-    let mut queue = VecDeque::<(i64, i64)>::new();
-    queue.push_back((0, PAGE_SIZE));
     let mut store = LeagueStore::new();
     let mut tick = 0;
 
-    while let Some(page) = queue.pop_front() {
-        println!("Fetching next page: {:?}", page);
+    let mut iterator = StashRecordIterator::new(&pool, 10000, league);
 
-        let stash_records = fetch_stash_records_paginated(&pool, page.0, page.1, league).await?;
-        let grouped_stashes = group_stash_records_by_account_name(&stash_records);
+    while let Some(chunk) = iterator.next().await {
+        // println!("Chunk length {}", chunk.len());
+        let grouped_stashes = group_stash_records_by_account_name(&chunk);
 
-        println!(
-            "Processing {} accounts in page #{} - last timestamp: {}",
-            grouped_stashes.len(),
-            tick,
-            stash_records.last().unwrap().created_at
-        );
+        if tick % 50 == 0 {
+            println!(
+                "Processing {} accounts in page #{} - last timestamp: {}",
+                grouped_stashes.len(),
+                tick,
+                chunk.last().unwrap().created_at
+            );
+        }
 
         // Collect DiffEvents for each account and create Records from them
         grouped_stashes
@@ -75,46 +73,10 @@ async fn main() -> Result<(), sqlx::Error> {
                     .unwrap_or_else(|_| panic!("Error when serializing record {:?}", r));
             });
 
-        println!("Store size: {:?} elements", store.inner.len());
-        queue.push_back((page.1, page.1 + PAGE_SIZE));
         tick += 1;
     }
 
     Ok(())
-}
-
-async fn fetch_stash_records_paginated(
-    pool: &Pool<Postgres>,
-    start: i64,
-    end: i64,
-    league: &str,
-) -> Result<Vec<StashRecord>, sqlx::Error> {
-    sqlx::query_as::<_, StashRecord>(
-        "SELECT change_id, next_change_id, stash_id, account_name, league, items, created_at
-             FROM stash_records
-             WHERE league = $1 and int8range($2, $3, '[]') @> int8range(id, id, '[]')",
-    )
-    .bind(league)
-    .bind(start)
-    .bind(end)
-    .fetch_all(pool)
-    .await
-}
-
-fn group_stash_records_by_account_name(
-    stash_records: &[StashRecord],
-) -> HashMap<String, Vec<StashRecord>> {
-    let mut out = HashMap::new();
-
-    for sr in stash_records {
-        if let Some(account_name) = &sr.account_name {
-            out.entry(account_name.clone())
-                .or_insert_with(Vec::new)
-                .push(sr.clone())
-        }
-    }
-
-    out
 }
 
 #[derive(Serialize, Debug)]
