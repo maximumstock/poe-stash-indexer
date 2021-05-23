@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use sqlx::{postgres::PgRow, Pool, Postgres, Row};
-use std::collections::{HashMap, HashSet};
+use std::{collections::{HashMap, HashSet, VecDeque}, iter::Sum};
 
 pub struct StashDiffer;
 
@@ -138,13 +138,14 @@ impl LeagueStore {
         Self::default()
     }
 
-    pub fn ingest_account(&mut self, account_name: &str, stash: Stash) -> Option<Vec<DiffEvent>> {
-        let ret = self
-            .inner
+    pub fn diff_account(&self, account_name: &str, stash: &Stash) -> Option<Vec<DiffEvent>> {
+        self.inner
             .get(account_name)
-            .map(|previous| StashDiffer::diff(&previous, &stash));
-        self.inner.insert(account_name.into(), stash);
-        ret
+            .map(|previous| StashDiffer::diff(&previous, &stash))
+    }
+
+    pub fn update_account(&mut self, account_name: &str, stash: Stash) -> Option<Stash> {
+        self.inner.insert(account_name.into(), stash)
     }
 }
 
@@ -170,6 +171,21 @@ pub struct DiffStats {
     pub removed: u32,
     pub note: u32,
     pub stack_size: u32,
+}
+
+impl<'a> Sum<&'a DiffStats> for DiffStats {
+    fn sum<I: Iterator<Item = &'a DiffStats>>(iter: I) -> Self {
+        let mut stats = DiffStats::default();
+
+        for ds in iter {
+            stats.added += ds.added;
+            stats.removed += ds.removed;
+            stats.note += ds.note;
+            stats.stack_size += ds.stack_size;
+        }
+
+        stats
+    }
 }
 
 impl From<&[DiffEvent]> for DiffStats {
@@ -206,23 +222,30 @@ pub struct StashRecordIterator<'a> {
     league: &'a str,
     page_size: i64,
     page: (i64, i64),
-    buffer: Vec<StashRecord>,
+    buffer: VecDeque<StashRecord>,
+    available_chunks: usize,
 }
 
 impl<'a> StashRecordIterator<'a> {
-    pub fn new(pool: &'a Pool<Postgres>, runtime: &'a tokio::runtime::Runtime, page_size: i64, league: &'a str) -> Self {
+    pub fn new(
+        pool: &'a Pool<Postgres>,
+        runtime: &'a tokio::runtime::Runtime,
+        page_size: i64,
+        league: &'a str,
+    ) -> Self {
         Self {
             pool,
             runtime,
             league,
             page_size,
             page: (0, page_size),
-            buffer: Vec::new(),
+            buffer: VecDeque::new(),
+            available_chunks: 0,
         }
     }
 
     fn needs_data(&self) -> bool {
-        self.count_available_chunks() < 2
+        self.available_chunks < 2
     }
 
     fn count_available_chunks(&self) -> usize {
@@ -243,33 +266,36 @@ impl<'a> StashRecordIterator<'a> {
 
         self.buffer.extend(next_page);
         self.page = (self.page.1, self.page.1 + self.page_size);
+        self.available_chunks = self.count_available_chunks();
         Ok(())
     }
 
-    fn extract_first_chunk(&mut self) -> Option<Vec<StashRecord>> {
-        if self.count_available_chunks() < 2 {
+    fn extract_first_chunk(&mut self) -> Vec<StashRecord> {
+        if self.needs_data() {
             panic!("Expected to have more data");
         }
 
         let next_change_id = &self
             .buffer
-            .first()
+            .front()
             .expect("No data where some was expected")
             .change_id
             .clone();
 
         let mut data = vec![];
 
-        while !self.buffer.is_empty() {
-            if self.buffer[0].change_id.eq(next_change_id) {
-                let v = self.buffer.remove(0);
+        while let Some(next) = self.buffer.front() {
+            if next.change_id.eq(next_change_id) {
+                let v = self.buffer.pop_front().expect("taking first stash record from queue");
                 data.push(v);
             } else {
                 break;
             }
         }
 
-        Some(data)
+        self.available_chunks -= 1;
+
+        data
     }
 
     pub fn next_chunk(&mut self) -> Option<Vec<StashRecord>> {
@@ -277,7 +303,7 @@ impl<'a> StashRecordIterator<'a> {
             self.load_data().expect("Fetching next page failed");
         }
 
-        self.extract_first_chunk()
+        Some(self.extract_first_chunk())
     }
 }
 

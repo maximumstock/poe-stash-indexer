@@ -1,48 +1,36 @@
+use std::sync::mpsc::{self, Receiver, SyncSender};
+
 use serde::Serialize;
 use sqlx::postgres::PgPoolOptions;
 
 use stash_differ::{
-    group_stash_records_by_account_name, DiffStats, LeagueStore, StashRecordIterator,
+    group_stash_records_by_account_name, DiffStats, LeagueStore, StashRecord, StashRecordIterator,
 };
 
 fn main() -> Result<(), sqlx::Error> {
-    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let (tx, rx) = mpsc::sync_channel::<Vec<StashRecord>>(5);
+    let producer = std::thread::spawn(|| producer(tx));
+    let consumer = std::thread::spawn(|| consumer(rx));
 
-    // fishtank Ultimatum
-    // let fishtank = "postgres://poe:poe@fishtank:5432/poe-ultimatum";
-    // let fishtank_change_id = "1126516147-1133722327-1092891193-1225428360-1174941189";
-    // let fishtank_league = "Ultimatum";
+    producer.join().unwrap();
+    consumer.join().unwrap();
 
-    // fishtank Ritual
-    let fishtank = "postgres://poe:poe@fishtank:5432/poe";
-    let fishtank_league = "Ritual";
+    Ok(())
+}
 
-    let db_url = fishtank;
-    // let initial_change_id = fishtank_change_id;
-    let league = fishtank_league;
-
-    let pool = runtime.block_on(async {
-        PgPoolOptions::new()
-            .max_connections(5)
-            .connect(db_url)
-            .await
-    })?;
-
+fn consumer(rx: Receiver<Vec<StashRecord>>) {
     let mut csv_writer = csv::WriterBuilder::new()
         .has_headers(true)
         .from_path("diff_stats.csv")
         .unwrap();
-
     let mut store = LeagueStore::new();
     let mut tick = 0;
 
-    let mut iterator = StashRecordIterator::new(&pool, &runtime, 10000, league);
-
-    while let Some(chunk) = iterator.next_chunk() {
+    while let Ok(chunk) = rx.recv() {
         // println!("Chunk length {}", chunk.len());
         let grouped_stashes = group_stash_records_by_account_name(&chunk);
 
-        if tick % 50 == 0 {
+        if tick % 500 == 0 {
             println!(
                 "Processing {} accounts in page #{} - last timestamp: {}",
                 grouped_stashes.len(),
@@ -56,19 +44,20 @@ fn main() -> Result<(), sqlx::Error> {
             .iter()
             .flat_map(|(account_name, stash_records)| {
                 let stash = stash_records.as_slice().into();
-                if let Some(events) = store.ingest_account(account_name, stash) {
-                    let diff_stats: DiffStats = events.as_slice().into();
-                    Some(CsvRecord {
+                let diff_stats = store.diff_account(account_name, &stash).map(|events| {
+                    let stats: DiffStats = events.as_slice().into();
+
+                    CsvRecord {
                         account_name,
                         tick,
-                        n_added: diff_stats.added,
-                        n_removed: diff_stats.removed,
-                        n_note_changed: diff_stats.note,
-                        n_stack_size_changed: diff_stats.stack_size,
-                    })
-                } else {
-                    None
-                }
+                        n_added: stats.added,
+                        n_removed: stats.removed,
+                        n_note_changed: stats.note,
+                        n_stack_size_changed: stats.stack_size,
+                    }
+                });
+                store.update_account(account_name, stash);
+                diff_stats
             })
             .for_each(|r| {
                 csv_writer
@@ -78,8 +67,28 @@ fn main() -> Result<(), sqlx::Error> {
 
         tick += 1;
     }
+}
 
-    Ok(())
+fn producer(tx: SyncSender<Vec<StashRecord>>) {
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let fishtank = "postgres://poe:poe@fishtank:5432/poe";
+    let fishtank_league = "Ritual";
+    let db_url = fishtank;
+    let league = fishtank_league;
+    let pool = runtime
+        .block_on(async {
+            PgPoolOptions::new()
+                .max_connections(5)
+                .connect(db_url)
+                .await
+        })
+        .unwrap();
+
+    let mut iterator = StashRecordIterator::new(&pool, &runtime, 1000, league);
+
+    while let Some(next) = iterator.next_chunk() {
+        tx.send(next).expect("sending failed");
+    }
 }
 
 #[derive(Serialize, Debug)]
