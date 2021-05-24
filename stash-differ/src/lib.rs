@@ -1,6 +1,10 @@
 use serde::Deserialize;
 use sqlx::{postgres::PgRow, Pool, Postgres, Row};
-use std::{collections::{HashMap, HashSet, VecDeque}, iter::Sum};
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    iter::Sum,
+    ops::AddAssign,
+};
 
 pub struct StashDiffer;
 
@@ -139,9 +143,17 @@ impl LeagueStore {
     }
 
     pub fn diff_account(&self, account_name: &str, stash: &Stash) -> Option<Vec<DiffEvent>> {
-        self.inner
-            .get(account_name)
-            .map(|previous| StashDiffer::diff(&previous, &stash))
+        if let Some(previous) = self.inner.get(account_name) {
+            let events = StashDiffer::diff(&previous, &stash);
+
+            if events.is_empty() {
+                None
+            } else {
+                Some(events)
+            }
+        } else {
+            None
+        }
     }
 
     pub fn update_account(&mut self, account_name: &str, stash: Stash) -> Option<Stash> {
@@ -165,12 +177,23 @@ pub struct Diff<T> {
     after: T,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct DiffStats {
     pub added: u32,
     pub removed: u32,
     pub note: u32,
     pub stack_size: u32,
+}
+
+impl AddAssign for DiffStats {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = Self {
+            added: self.added + rhs.added,
+            removed: self.removed + rhs.removed,
+            note: self.note + rhs.note,
+            stack_size: self.stack_size + rhs.stack_size,
+        }
+    }
 }
 
 impl<'a> Sum<&'a DiffStats> for DiffStats {
@@ -286,7 +309,10 @@ impl<'a> StashRecordIterator<'a> {
 
         while let Some(next) = self.buffer.front() {
             if next.change_id.eq(next_change_id) {
-                let v = self.buffer.pop_front().expect("taking first stash record from queue");
+                let v = self
+                    .buffer
+                    .pop_front()
+                    .expect("taking first stash record from queue");
                 data.push(v);
             } else {
                 break;

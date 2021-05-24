@@ -1,4 +1,8 @@
-use std::sync::mpsc::{self, Receiver, SyncSender};
+use chrono::{prelude::*, Duration};
+use std::{
+    collections::HashMap,
+    sync::mpsc::{self, Receiver, SyncSender},
+};
 
 use serde::Serialize;
 use sqlx::postgres::PgPoolOptions;
@@ -25,9 +29,18 @@ fn consumer(rx: Receiver<Vec<StashRecord>>) {
         .unwrap();
     let mut store = LeagueStore::new();
     let mut tick = 0;
+    let mut diff_stats: HashMap<String, DiffStats> = HashMap::new();
+    let mut start_time: Option<NaiveDateTime> = None;
+
+    const AGGREGATE_WINDOW: i64 = 60 * 30;
 
     while let Ok(chunk) = rx.recv() {
-        // println!("Chunk length {}", chunk.len());
+        let encountered_timestamp = chunk.first().unwrap().created_at;
+
+        if start_time.is_none() {
+            start_time = Some(encountered_timestamp + Duration::seconds(AGGREGATE_WINDOW));
+        }
+
         let grouped_stashes = group_stash_records_by_account_name(&chunk);
 
         if tick % 500 == 0 {
@@ -41,29 +54,48 @@ fn consumer(rx: Receiver<Vec<StashRecord>>) {
 
         // Collect DiffEvents for each account and create Records from them
         grouped_stashes
-            .iter()
+            .into_iter()
             .flat_map(|(account_name, stash_records)| {
                 let stash = stash_records.as_slice().into();
-                let diff_stats = store.diff_account(account_name, &stash).map(|events| {
+                let res = store.diff_account(&account_name, &stash);
+                store.update_account(&account_name.as_str(), stash);
+                res.map(|events| {
                     let stats: DiffStats = events.as_slice().into();
-
-                    CsvRecord {
-                        account_name,
-                        tick,
-                        n_added: stats.added,
-                        n_removed: stats.removed,
-                        n_note_changed: stats.note,
-                        n_stack_size_changed: stats.stack_size,
-                    }
-                });
-                store.update_account(account_name, stash);
-                diff_stats
+                    (account_name, stats)
+                })
             })
-            .for_each(|r| {
-                csv_writer
-                    .serialize(&r)
-                    .unwrap_or_else(|_| panic!("Error when serializing record {:?}", r));
+            .for_each(|(account_name, ds)| {
+                // TODO: Refactor this into some aggregator struct that holds
+                // the corresponding state to make this more explicit
+                diff_stats
+                    .entry(account_name)
+                    .and_modify(|e| *e += ds)
+                    .or_insert(ds);
             });
+
+        // Flush accumulated aggregates
+        if start_time
+            .map(|s| s < encountered_timestamp)
+            .unwrap_or(false)
+        {
+            println!("Flushing...");
+            diff_stats.iter().for_each(|(account_name, stats)| {
+                let record = CsvRecord {
+                    account_name,
+                    tick,
+                    n_added: stats.added,
+                    n_removed: stats.removed,
+                    n_note_changed: stats.note,
+                    n_stack_size_changed: stats.stack_size,
+                };
+                csv_writer
+                    .serialize(&record)
+                    .unwrap_or_else(|_| panic!("Error when serializing record {:?}", record));
+            });
+            diff_stats.clear();
+
+            start_time = Some(encountered_timestamp + Duration::seconds(AGGREGATE_WINDOW));
+        }
 
         tick += 1;
     }
