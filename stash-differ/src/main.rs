@@ -40,9 +40,10 @@ fn consumer(rx: Receiver<Vec<StashRecord>>) {
         .from_path("diff_stats.csv")
         .unwrap();
     let mut store = LeagueStore::new();
-    let mut tick = 0;
+    let mut aggregation_tick = 0;
     let mut diff_stats: HashMap<String, DiffStats> = HashMap::new();
     let mut start_time: Option<NaiveDateTime> = None;
+    let mut page_idx = 0;
 
     const AGGREGATE_WINDOW: i64 = 60 * 30;
 
@@ -55,11 +56,11 @@ fn consumer(rx: Receiver<Vec<StashRecord>>) {
 
         let grouped_stashes = group_stash_records_by_account_name(&chunk);
 
-        if tick % 5000 == 0 {
+        if page_idx % 5000 == 0 {
             info!(
                 "Processing {} accounts in page #{} - last timestamp: {}",
                 grouped_stashes.len(),
-                tick,
+                page_idx,
                 chunk.last().unwrap().created_at
             );
         }
@@ -93,7 +94,8 @@ fn consumer(rx: Receiver<Vec<StashRecord>>) {
             diff_stats.iter().for_each(|(account_name, stats)| {
                 let record = CsvRecord {
                     account_name,
-                    tick,
+                    tick: aggregation_tick,
+                    last_timestamp: encountered_timestamp.timestamp(),
                     n_added: stats.added,
                     n_removed: stats.removed,
                     n_note_changed: stats.note,
@@ -106,9 +108,10 @@ fn consumer(rx: Receiver<Vec<StashRecord>>) {
             diff_stats.clear();
 
             start_time = Some(encountered_timestamp + Duration::seconds(AGGREGATE_WINDOW));
+            aggregation_tick += 1;
         }
 
-        tick += 1;
+        page_idx += 1;
     }
 }
 
@@ -137,6 +140,7 @@ fn producer(tx: SyncSender<Vec<StashRecord>>) {
 #[derive(Serialize, Debug)]
 struct CsvRecord<'a> {
     account_name: &'a String,
+    last_timestamp: i64,
     tick: usize,
     n_added: u32,
     n_removed: u32,
