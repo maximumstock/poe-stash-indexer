@@ -1379,6 +1379,7 @@ dependencies = [
 name = "stash-differ"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "csv",
  "futures",
  "serde 1.0.125",
