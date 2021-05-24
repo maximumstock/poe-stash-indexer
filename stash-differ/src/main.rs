@@ -1,4 +1,11 @@
+mod db;
+mod differ;
+mod stash;
+mod store;
+
 use chrono::{prelude::*, Duration};
+use db::StashRecordIterator;
+use stash::StashRecord;
 use std::{
     collections::HashMap,
     sync::mpsc::{self, Receiver, SyncSender},
@@ -7,9 +14,7 @@ use std::{
 use serde::Serialize;
 use sqlx::postgres::PgPoolOptions;
 
-use stash_differ::{
-    group_stash_records_by_account_name, DiffStats, LeagueStore, StashRecord, StashRecordIterator,
-};
+use crate::{db::group_stash_records_by_account_name, differ::DiffStats, store::LeagueStore};
 
 fn main() -> Result<(), sqlx::Error> {
     let (tx, rx) = mpsc::sync_channel::<Vec<StashRecord>>(5);
