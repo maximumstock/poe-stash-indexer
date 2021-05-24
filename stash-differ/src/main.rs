@@ -1,3 +1,6 @@
+extern crate log;
+extern crate pretty_env_logger;
+
 mod db;
 mod differ;
 mod stash;
@@ -5,18 +8,22 @@ mod store;
 
 use chrono::{prelude::*, Duration};
 use db::StashRecordIterator;
+use dotenv::dotenv;
+use log::info;
+use serde::Serialize;
+use sqlx::postgres::PgPoolOptions;
 use stash::StashRecord;
 use std::{
     collections::HashMap,
     sync::mpsc::{self, Receiver, SyncSender},
 };
 
-use serde::Serialize;
-use sqlx::postgres::PgPoolOptions;
-
 use crate::{db::group_stash_records_by_account_name, differ::DiffStats, store::LeagueStore};
 
 fn main() -> Result<(), sqlx::Error> {
+    dotenv().ok();
+    pretty_env_logger::init();
+
     let (tx, rx) = mpsc::sync_channel::<Vec<StashRecord>>(5);
     let producer = std::thread::spawn(|| producer(tx));
     let consumer = std::thread::spawn(|| consumer(rx));
@@ -48,8 +55,8 @@ fn consumer(rx: Receiver<Vec<StashRecord>>) {
 
         let grouped_stashes = group_stash_records_by_account_name(&chunk);
 
-        if tick % 500 == 0 {
-            println!(
+        if tick % 5000 == 0 {
+            info!(
                 "Processing {} accounts in page #{} - last timestamp: {}",
                 grouped_stashes.len(),
                 tick,
@@ -83,7 +90,6 @@ fn consumer(rx: Receiver<Vec<StashRecord>>) {
             .map(|s| s < encountered_timestamp)
             .unwrap_or(false)
         {
-            println!("Flushing...");
             diff_stats.iter().for_each(|(account_name, stats)| {
                 let record = CsvRecord {
                     account_name,
