@@ -54,14 +54,14 @@ fn consumer(rx: Receiver<Vec<StashRecord>>) {
             start_time = Some(encountered_timestamp + Duration::seconds(AGGREGATE_WINDOW));
         }
 
-        let grouped_stashes = group_stash_records_by_account_name(&chunk);
+        let grouped_stashes = group_stash_records_by_account_name(chunk);
 
         if page_idx % 5000 == 0 {
             info!(
-                "Processing {} accounts in page #{} - last timestamp: {}",
+                "Processing {} accounts in page #{} - timestamp: {}",
                 grouped_stashes.len(),
                 page_idx,
-                chunk.last().unwrap().created_at
+                encountered_timestamp
             );
         }
 

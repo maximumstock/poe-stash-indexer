@@ -117,7 +117,7 @@ async fn fetch_stash_records_paginated(
 }
 
 pub fn group_stash_records_by_account_name(
-    stash_records: &[StashRecord],
+    stash_records: Vec<StashRecord>,
 ) -> HashMap<String, Vec<StashRecord>> {
     let mut out = HashMap::new();
 
@@ -125,7 +125,7 @@ pub fn group_stash_records_by_account_name(
         if let Some(account_name) = &sr.account_name {
             out.entry(account_name.clone())
                 .or_insert_with(Vec::new)
-                .push(sr.clone())
+                .push(sr)
         }
     }
 
