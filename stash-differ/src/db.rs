@@ -70,7 +70,7 @@ impl<'a> StashRecordIterator<'a> {
             .change_id
             .clone();
 
-        let mut data = vec![];
+        let mut chunk = vec![];
 
         while let Some(next) = self.buffer.front() {
             if next.change_id.eq(next_change_id) {
@@ -78,7 +78,7 @@ impl<'a> StashRecordIterator<'a> {
                     .buffer
                     .pop_front()
                     .expect("taking first stash record from queue");
-                data.push(v);
+                chunk.push(v);
             } else {
                 break;
             }
@@ -86,7 +86,7 @@ impl<'a> StashRecordIterator<'a> {
 
         self.available_chunks -= 1;
 
-        data
+        chunk
     }
 
     pub fn next_chunk(&mut self) -> Option<Vec<StashRecord>> {
