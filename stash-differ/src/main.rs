@@ -24,8 +24,11 @@ fn main() -> Result<(), sqlx::Error> {
     dotenv().ok();
     pretty_env_logger::init();
 
+    let database_url = std::env::var("DATABASE_URL").expect("Missing DATABASE_URL environment variable");
+    let league = std::env::var("LEAGUE").expect("Missing LEAGUE environment variable");
+
     let (tx, rx) = mpsc::sync_channel::<Vec<StashRecord>>(5);
-    let producer = std::thread::spawn(|| producer(tx));
+    let producer = std::thread::spawn(move || producer(tx, database_url.as_ref(), league.as_ref()));
     let consumer = std::thread::spawn(|| consumer(rx));
 
     producer.join().unwrap();
@@ -115,17 +118,13 @@ fn consumer(rx: Receiver<Vec<StashRecord>>) {
     }
 }
 
-fn producer(tx: SyncSender<Vec<StashRecord>>) {
+fn producer(tx: SyncSender<Vec<StashRecord>>, database_url: &str, league: &str) {
     let runtime = tokio::runtime::Runtime::new().unwrap();
-    let fishtank = "postgres://poe:poe@fishtank:5432/poe";
-    let fishtank_league = "Ritual";
-    let db_url = fishtank;
-    let league = fishtank_league;
     let pool = runtime
         .block_on(async {
             PgPoolOptions::new()
                 .max_connections(5)
-                .connect(db_url)
+                .connect(database_url)
                 .await
         })
         .unwrap();
