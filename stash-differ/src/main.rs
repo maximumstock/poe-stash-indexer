@@ -24,7 +24,8 @@ fn main() -> Result<(), sqlx::Error> {
     dotenv().ok();
     pretty_env_logger::init();
 
-    let database_url = std::env::var("DATABASE_URL").expect("Missing DATABASE_URL environment variable");
+    let database_url =
+        std::env::var("DATABASE_URL").expect("Missing DATABASE_URL environment variable");
     let league = std::env::var("LEAGUE").expect("Missing LEAGUE environment variable");
 
     let (tx, rx) = mpsc::sync_channel::<Vec<StashRecord>>(5);
