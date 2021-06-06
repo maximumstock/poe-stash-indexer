@@ -10,13 +10,12 @@ pub struct Stash {
     pub content: HashMap<ItemId, Item>,
 }
 
-impl From<&[StashRecord]> for Stash {
-    fn from(stash_records: &[StashRecord]) -> Self {
+impl From<Vec<StashRecord>> for Stash {
+    fn from(stash_records: Vec<StashRecord>) -> Self {
         Self {
             content: stash_records
-                .iter()
-                .flat_map(|sr| &sr.items)
-                .cloned()
+                .into_iter()
+                .flat_map(|sr| sr.items)
                 .map(|i| (i.id.clone(), i))
                 .collect(),
         }

@@ -1,4 +1,4 @@
-use std::{collections::HashSet, ops::AddAssign};
+use std::ops::AddAssign;
 
 use crate::stash::Stash;
 
@@ -8,57 +8,44 @@ impl StashDiffer {
     pub fn diff(before: &Stash, after: &Stash) -> Vec<DiffEvent> {
         let mut events = vec![];
 
-        let before_item_ids = before.content.keys().collect::<HashSet<_>>();
-        let after_item_ids = after.content.keys().collect::<HashSet<_>>();
+        for (item_id, before_item) in before.content.iter() {
+            if let Some(after_item) = after.content.get(item_id) {
+                // Check for changed notes
+                if before_item.note.ne(&after_item.note) {
+                    events.push(DiffEvent::ItemNoteChanged(Diff {
+                        id: after_item.id.clone(),
+                        name: after_item.type_line.clone(),
+                        before: before_item.note.clone(),
+                        after: after_item.note.clone(),
+                    }));
+                }
 
-        let removed_item_ids = before_item_ids.difference(&after_item_ids);
-        let added_item_ids = after_item_ids.difference(&before_item_ids);
-        let changed_item_ids = after_item_ids.intersection(&before_item_ids);
-
-        // Check for removed items
-        for &item_id in removed_item_ids {
-            let item = before.content.get(item_id).unwrap();
-            events.push(DiffEvent::ItemRemoved(Diff {
-                before: (),
-                after: (),
-                id: item.id.clone(),
-                name: item.type_line.clone(),
-            }));
-        }
-
-        // Check for added items
-        for &item_id in added_item_ids {
-            let item = after.content.get(item_id).unwrap();
-            events.push(DiffEvent::ItemAdded(Diff {
-                before: (),
-                after: (),
-                id: item.id.clone(),
-                name: item.type_line.clone(),
-            }));
-        }
-
-        // Check for changed items
-        for &item_id in changed_item_ids {
-            let before_item = before.content.get(item_id).unwrap();
-            let after_item = after.content.get(item_id).unwrap();
-
-            // Check for changed notes
-            if before_item.note.ne(&after_item.note) {
-                events.push(DiffEvent::ItemNoteChanged(Diff {
-                    id: after_item.id.clone(),
-                    name: after_item.type_line.clone(),
-                    before: before_item.note.clone(),
-                    after: after_item.note.clone(),
+                // Check for changed stack_sizes
+                if before_item.stack_size.ne(&after_item.stack_size) {
+                    events.push(DiffEvent::ItemStackSizeChanged(Diff {
+                        id: after_item.id.clone(),
+                        name: after_item.type_line.clone(),
+                        before: before_item.stack_size,
+                        after: after_item.stack_size,
+                    }));
+                }
+            } else {
+                events.push(DiffEvent::ItemRemoved(Diff {
+                    before: (),
+                    after: (),
+                    id: before_item.id.clone(),
+                    name: before_item.type_line.clone(),
                 }));
             }
+        }
 
-            // Check for changed stack_sizes
-            if before_item.stack_size.ne(&after_item.stack_size) {
-                events.push(DiffEvent::ItemStackSizeChanged(Diff {
+        for (item_id, after_item) in after.content.iter() {
+            if before.content.get(item_id).is_none() {
+                events.push(DiffEvent::ItemAdded(Diff {
+                    before: (),
+                    after: (),
                     id: after_item.id.clone(),
                     name: after_item.type_line.clone(),
-                    before: before_item.stack_size,
-                    after: after_item.stack_size,
                 }));
             }
         }

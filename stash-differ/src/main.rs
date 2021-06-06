@@ -73,10 +73,10 @@ fn consumer(rx: Receiver<Vec<StashRecord>>) {
         grouped_stashes
             .into_iter()
             .flat_map(|(account_name, stash_records)| {
-                let stash = stash_records.as_slice().into();
-                let res = store.diff_account(&account_name, &stash);
-                store.update_account(&account_name.as_str(), stash);
-                res.map(|events| {
+                let stash = stash_records.into();
+                let diff_events = store.diff_account(&account_name, &stash);
+                store.update_account(account_name.as_ref(), stash);
+                diff_events.map(|events| {
                     let stats: DiffStats = events.as_slice().into();
                     (account_name, stats)
                 })
@@ -130,7 +130,7 @@ fn producer(tx: SyncSender<Vec<StashRecord>>, database_url: &str, league: &str) 
         })
         .unwrap();
 
-    let mut iterator = StashRecordIterator::new(&pool, &runtime, 1000, league);
+    let mut iterator = StashRecordIterator::new(&pool, &runtime, 10000, league);
 
     while let Some(next) = iterator.next_chunk() {
         tx.send(next).expect("sending failed");
