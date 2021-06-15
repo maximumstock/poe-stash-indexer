@@ -70,6 +70,7 @@ impl<'a> StashRecordIterator<'a> {
             .change_id
             .clone();
 
+        // TODO can we allocate this just once?
         let mut chunk = vec![];
 
         while let Some(next) = self.buffer.front() {

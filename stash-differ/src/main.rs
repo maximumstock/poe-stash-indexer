@@ -15,10 +15,25 @@ use sqlx::postgres::PgPoolOptions;
 use stash::StashRecord;
 use std::{
     collections::HashMap,
-    sync::mpsc::{self, Receiver, SyncSender},
+    collections::VecDeque,
+    sync::{Arc, Condvar, Mutex},
 };
 
 use crate::{db::group_stash_records_by_account_name, differ::DiffStats, store::LeagueStore};
+
+struct State {
+    queue: VecDeque<Vec<StashRecord>>,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        State {
+            queue: VecDeque::default(),
+        }
+    }
+}
+
+type SharedState = Arc<(Mutex<State>, Condvar)>;
 
 fn main() -> Result<(), sqlx::Error> {
     dotenv().ok();
@@ -28,9 +43,14 @@ fn main() -> Result<(), sqlx::Error> {
         std::env::var("DATABASE_URL").expect("Missing DATABASE_URL environment variable");
     let league = std::env::var("LEAGUE").expect("Missing LEAGUE environment variable");
 
-    let (tx, rx) = mpsc::sync_channel::<Vec<StashRecord>>(5);
-    let producer = std::thread::spawn(move || producer(tx, database_url.as_ref(), league.as_ref()));
-    let consumer = std::thread::spawn(|| consumer(rx));
+    let shared_state = SharedState::default();
+    let shared_state2 = shared_state.clone();
+
+    // dont use a channel to avoid unnecessary copies
+    let producer =
+        std::thread::spawn(move || producer(shared_state, database_url.as_ref(), league.as_ref()));
+
+    let consumer = std::thread::spawn(|| consumer(shared_state2));
 
     producer.join().unwrap();
     consumer.join().unwrap();
@@ -38,7 +58,7 @@ fn main() -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-fn consumer(rx: Receiver<Vec<StashRecord>>) {
+fn consumer(shared_state: SharedState) {
     let mut csv_writer = csv::WriterBuilder::new()
         .has_headers(true)
         .from_path("diff_stats.csv")
@@ -50,76 +70,83 @@ fn consumer(rx: Receiver<Vec<StashRecord>>) {
     let mut page_idx = 0;
 
     const AGGREGATE_WINDOW: i64 = 60 * 30;
+    let (state, cvar) = &*shared_state;
 
-    while let Ok(chunk) = rx.recv() {
-        let encountered_timestamp = chunk.first().unwrap().created_at;
+    let mut lock = state.lock().unwrap();
 
-        if start_time.is_none() {
-            start_time = Some(encountered_timestamp + Duration::seconds(AGGREGATE_WINDOW));
-        }
+    loop {
+        lock = cvar.wait_while(lock, |s| s.queue.is_empty()).unwrap();
 
-        let grouped_stashes = group_stash_records_by_account_name(chunk);
+        if let Some(chunk) = lock.queue.pop_front() {
+            let encountered_timestamp = chunk.first().unwrap().created_at;
 
-        if page_idx % 5000 == 0 {
-            info!(
-                "Processing {} accounts in page #{} - timestamp: {}",
-                grouped_stashes.len(),
-                page_idx,
-                encountered_timestamp
-            );
-        }
+            if start_time.is_none() {
+                start_time = Some(encountered_timestamp + Duration::seconds(AGGREGATE_WINDOW));
+            }
 
-        // Collect DiffEvents for each account and create Records from them
-        grouped_stashes
-            .into_iter()
-            .flat_map(|(account_name, stash_records)| {
-                let stash = stash_records.into();
-                let diff_events = store.diff_account(&account_name, &stash);
-                store.update_account(account_name.as_ref(), stash);
-                diff_events.map(|events| {
-                    let stats: DiffStats = events.as_slice().into();
-                    (account_name, stats)
+            let grouped_stashes = group_stash_records_by_account_name(chunk);
+
+            if page_idx % 5000 == 0 {
+                info!(
+                    "Processing {} accounts in page #{} - timestamp: {}",
+                    grouped_stashes.len(),
+                    page_idx,
+                    encountered_timestamp
+                );
+            }
+
+            // Collect DiffEvents for each account and create Records from them
+            grouped_stashes
+                .into_iter()
+                .flat_map(|(account_name, stash_records)| {
+                    let stash = stash_records.into();
+                    let diff_events = store.diff_account(&account_name, &stash);
+                    store.update_account(account_name.as_ref(), stash);
+                    diff_events.map(|events| {
+                        let stats: DiffStats = events.as_slice().into();
+                        (account_name, stats)
+                    })
                 })
-            })
-            .for_each(|(account_name, ds)| {
-                // TODO: Refactor this into some aggregator struct that holds
-                // the corresponding state to make this more explicit
-                diff_stats
-                    .entry(account_name)
-                    .and_modify(|e| *e += ds)
-                    .or_insert(ds);
-            });
+                .for_each(|(account_name, ds)| {
+                    // TODO: Refactor this into some aggregator struct that holds
+                    // the corresponding state to make this more explicit
+                    diff_stats
+                        .entry(account_name)
+                        .and_modify(|e| *e += ds)
+                        .or_insert(ds);
+                });
 
-        // Flush accumulated aggregates
-        if start_time
-            .map(|s| s < encountered_timestamp)
-            .unwrap_or(false)
-        {
-            diff_stats.iter().for_each(|(account_name, stats)| {
-                let record = CsvRecord {
-                    account_name,
-                    tick: aggregation_tick,
-                    last_timestamp: encountered_timestamp.timestamp(),
-                    n_added: stats.added,
-                    n_removed: stats.removed,
-                    n_note_changed: stats.note,
-                    n_stack_size_changed: stats.stack_size,
-                };
-                csv_writer
-                    .serialize(&record)
-                    .unwrap_or_else(|_| panic!("Error when serializing record {:?}", record));
-            });
-            diff_stats.clear();
+            // Flush accumulated aggregates
+            if start_time
+                .map(|s| s < encountered_timestamp)
+                .unwrap_or(false)
+            {
+                diff_stats.iter().for_each(|(account_name, stats)| {
+                    let record = CsvRecord {
+                        account_name,
+                        tick: aggregation_tick,
+                        last_timestamp: encountered_timestamp.timestamp(),
+                        n_added: stats.added,
+                        n_removed: stats.removed,
+                        n_note_changed: stats.note,
+                        n_stack_size_changed: stats.stack_size,
+                    };
+                    csv_writer
+                        .serialize(&record)
+                        .unwrap_or_else(|_| panic!("Error when serializing record {:?}", record));
+                });
+                diff_stats.clear();
 
-            start_time = Some(encountered_timestamp + Duration::seconds(AGGREGATE_WINDOW));
-            aggregation_tick += 1;
+                start_time = Some(encountered_timestamp + Duration::seconds(AGGREGATE_WINDOW));
+                aggregation_tick += 1;
+            }
+
+            page_idx += 1;
         }
-
-        page_idx += 1;
     }
 }
 
-fn producer(tx: SyncSender<Vec<StashRecord>>, database_url: &str, league: &str) {
+fn producer(shared_state: SharedState, database_url: &str, league: &str) {
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let pool = runtime
         .block_on(async {
@@ -133,7 +160,9 @@ fn producer(tx: SyncSender<Vec<StashRecord>>, database_url: &str, league: &str) 
     let mut iterator = StashRecordIterator::new(&pool, &runtime, 10000, league);
 
     while let Some(next) = iterator.next_chunk() {
-        tx.send(next).expect("sending failed");
+        let (lock, cvar) = &*shared_state;
+        lock.lock().unwrap().queue.push_back(next);
+        cvar.notify_all();
     }
 }
 
