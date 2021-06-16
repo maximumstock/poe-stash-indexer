@@ -21,16 +21,9 @@ use std::{
 
 use crate::{db::group_stash_records_by_account_name, differ::DiffStats, store::LeagueStore};
 
+#[derive(Default)]
 struct State {
     queue: VecDeque<Vec<StashRecord>>,
-}
-
-impl Default for State {
-    fn default() -> Self {
-        State {
-            queue: VecDeque::default(),
-        }
-    }
 }
 
 type SharedState = Arc<(Mutex<State>, Condvar)>;
@@ -46,7 +39,6 @@ fn main() -> Result<(), sqlx::Error> {
     let shared_state = SharedState::default();
     let shared_state2 = shared_state.clone();
 
-    // dont use a channel to avoid unnecessary copies
     let producer =
         std::thread::spawn(move || producer(shared_state, database_url.as_ref(), league.as_ref()));
 
@@ -59,17 +51,19 @@ fn main() -> Result<(), sqlx::Error> {
 }
 
 fn consumer(shared_state: SharedState) {
+    const AGGREGATE_WINDOW: i64 = 60 * 30;
+
     let mut csv_writer = csv::WriterBuilder::new()
         .has_headers(true)
         .from_path("diff_stats.csv")
         .unwrap();
+
     let mut store = LeagueStore::new();
     let mut aggregation_tick = 0;
     let mut diff_stats: HashMap<String, DiffStats> = HashMap::new();
     let mut start_time: Option<NaiveDateTime> = None;
     let mut page_idx = 0;
 
-    const AGGREGATE_WINDOW: i64 = 60 * 30;
     let (state, cvar) = &*shared_state;
 
     let mut lock = state.lock().unwrap();
@@ -161,8 +155,12 @@ fn producer(shared_state: SharedState, database_url: &str, league: &str) {
 
     while let Some(next) = iterator.next_chunk() {
         let (lock, cvar) = &*shared_state;
-        lock.lock().unwrap().queue.push_back(next);
-        cvar.notify_all();
+        let queue = &mut lock.lock().unwrap().queue;
+        queue.push_back(next);
+
+        if queue.len() > 3 {
+            cvar.notify_all();
+        }
     }
 }
 
