@@ -72,10 +72,10 @@ fn consumer(shared_state: SharedState) {
         lock = cvar.wait_while(lock, |s| s.queue.is_empty()).unwrap();
 
         if let Some(chunk) = lock.queue.pop_front() {
-            let encountered_timestamp = chunk.first().unwrap().created_at;
+            let chunk_first_timestamp = chunk.first().unwrap().created_at;
 
             if start_time.is_none() {
-                start_time = Some(encountered_timestamp + Duration::seconds(AGGREGATE_WINDOW));
+                start_time = Some(chunk_first_timestamp + Duration::seconds(AGGREGATE_WINDOW));
             }
 
             let grouped_stashes = group_stash_records_by_account_name(chunk);
@@ -85,7 +85,7 @@ fn consumer(shared_state: SharedState) {
                     "Processing {} accounts in page #{} - timestamp: {}",
                     grouped_stashes.len(),
                     page_idx,
-                    encountered_timestamp
+                    chunk_first_timestamp
                 );
             }
 
@@ -102,24 +102,22 @@ fn consumer(shared_state: SharedState) {
                     })
                 })
                 .for_each(|(account_name, ds)| {
-                    // TODO: Refactor this into some aggregator struct that holds
-                    // the corresponding state to make this more explicit
                     diff_stats
                         .entry(account_name)
                         .and_modify(|e| *e += ds)
                         .or_insert(ds);
                 });
 
-            // Flush accumulated aggregates
+            // Flush accumulated aggregates when a new aggregation window begins
             if start_time
-                .map(|s| s < encountered_timestamp)
+                .map(|s| s < chunk_first_timestamp)
                 .unwrap_or(false)
             {
                 diff_stats.iter().for_each(|(account_name, stats)| {
                     let record = CsvRecord {
                         account_name,
                         tick: aggregation_tick,
-                        last_timestamp: encountered_timestamp.timestamp(),
+                        last_timestamp: chunk_first_timestamp.timestamp(),
                         n_added: stats.added,
                         n_removed: stats.removed,
                         n_note_changed: stats.note,
@@ -130,8 +128,7 @@ fn consumer(shared_state: SharedState) {
                         .unwrap_or_else(|_| panic!("Error when serializing record {:?}", record));
                 });
                 diff_stats.clear();
-
-                start_time = Some(encountered_timestamp + Duration::seconds(AGGREGATE_WINDOW));
+                start_time = Some(chunk_first_timestamp + Duration::seconds(AGGREGATE_WINDOW));
                 aggregation_tick += 1;
             }
 
@@ -159,7 +156,7 @@ fn producer(shared_state: SharedState, database_url: &str, league: &str) {
         queue.push_back(next);
 
         if queue.len() > 3 {
-            cvar.notify_all();
+            cvar.notify_one();
         }
     }
 }
