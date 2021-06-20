@@ -9,6 +9,7 @@ use std::{
     sync::Arc,
     sync::Mutex,
 };
+use ureq::Error;
 
 use crate::{change_id::ChangeId, poe_ninja_client::PoeNinjaClient, types::StashTabResponse};
 
@@ -166,13 +167,13 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             );
 
             log::debug!("Requesting {}", change_id);
-            let mut request = ureq::request("GET", &url);
-            request.set("Accept-Encoding", "gzip");
-            request.set("Accept", "application/json");
+            let request = ureq::request("GET", &url)
+                .set("Accept-Encoding", "gzip")
+                .set("Accept", "application/json");
             let response = request.call();
 
-            if response.error() {
-                log::error!("fetcher: HTTP error {}", response.status());
+            if let Err(Error::Status(status, response)) = response {
+                log::error!("fetcher: HTTP error {}", status);
                 log::error!("fetcher: HTTP response: {:?}", response);
 
                 match reschedule(shared_state.clone(), change_id_request) {
@@ -181,8 +182,7 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
                 }
             }
 
-            let reader = response.into_reader();
-
+            let reader = response.unwrap().into_reader();
             let mut decoder = GzDecoder::new(BufReader::new(reader));
             let mut next_id_buffer = [0; 80];
 
