@@ -1,6 +1,5 @@
 table! {
     stash_records (id) {
-        id -> BigInt,
         created_at -> Timestamp,
         change_id -> Text,
         next_change_id -> Text,
@@ -12,5 +11,7 @@ table! {
         last_character_name -> Nullable<Text>,
         stash_name -> Nullable<Text>,
         league -> Nullable<Text>,
+        id -> Int8,
+        chunk_id -> Int8,
     }
 }
