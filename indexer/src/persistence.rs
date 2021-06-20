@@ -3,7 +3,7 @@ use diesel::{dsl::max, Connection, PgConnection, QueryDsl, QueryResult, RunQuery
 
 use crate::diesel::ExpressionMethods;
 use crate::schema::stash_records::dsl::*;
-use crate::StashRecord;
+use crate::stash_record::StashRecord;
 
 type PersistResult = Result<usize, Box<dyn std::error::Error>>;
 

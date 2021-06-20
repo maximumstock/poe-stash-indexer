@@ -2,6 +2,7 @@ mod config;
 mod filter;
 mod persistence;
 mod schema;
+mod stash_record;
 
 #[macro_use]
 extern crate diesel;
@@ -13,17 +14,17 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    time::SystemTime,
 };
 
-use crate::config::{Configuration, RestartMode};
 use crate::filter::filter_stash_record;
 use crate::persistence::Persist;
-use crate::schema::stash_records;
-use chrono::prelude::*;
+use crate::{
+    config::{Configuration, RestartMode},
+    stash_record::map_to_stash_records,
+};
+
 use dotenv::dotenv;
-use river_subscription::{ChangeId, Indexer, IndexerMessage, StashTabResponse};
-use serde::Serialize;
+use river_subscription::{ChangeId, Indexer, IndexerMessage};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
@@ -111,51 +112,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Shutting down indexer...");
 
     Ok(())
-}
-
-#[derive(Serialize, Insertable, Queryable)]
-#[table_name = "stash_records"]
-pub struct StashRecord {
-    created_at: NaiveDateTime,
-    change_id: String,
-    next_change_id: String,
-    stash_id: String,
-    stash_type: String,
-    items: serde_json::Value,
-    public: bool,
-    account_name: Option<String>,
-    last_character_name: Option<String>,
-    stash_name: Option<String>,
-    league: Option<String>,
-    chunk_id: i64,
-}
-
-fn map_to_stash_records(
-    change_id: ChangeId,
-    created_at: SystemTime,
-    payload: StashTabResponse,
-    chunk_id: i64,
-) -> Vec<StashRecord> {
-    let next_change_id = payload.next_change_id;
-
-    payload
-        .stashes
-        .into_iter()
-        // Ignore stash tabs flagged as private, whose updates are always empty
-        .filter(|stash| stash.public)
-        .map(move |stash| StashRecord {
-            account_name: stash.account_name,
-            last_character_name: stash.last_character_name,
-            stash_id: stash.id,
-            stash_name: stash.stash,
-            stash_type: stash.stash_type,
-            items: serde_json::to_value(stash.items).expect("Serialization failed"),
-            public: stash.public,
-            league: stash.league,
-            change_id: change_id.clone().into(),
-            created_at: DateTime::<Utc>::from(created_at).naive_utc(),
-            next_change_id: next_change_id.clone(),
-            chunk_id,
-        })
-        .collect::<Vec<_>>()
 }
