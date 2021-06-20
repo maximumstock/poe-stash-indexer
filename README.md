@@ -2,8 +2,8 @@
 
 # poe-stash-indexer
 
-This project focuses on building tooling around Path of Exile's Public Stash Tab API
-([Wiki Documentation](https://pathofexile.gamepedia.com/Public_stash_tab_API)).
+This project focuses on building tooling to gather and analyse data from Path of
+Exile's Public Stash Tab API ([Wiki Documentation](https://pathofexile.gamepedia.com/Public_stash_tab_API)):
 
 - `river-subscription` - a library for listening to the Stash Tab API river
 - `indexer` - `river-subscription`-client that saves API river snapshots to a Postgres database
