@@ -28,6 +28,12 @@ impl PgDb {
             .first::<Option<NaiveDateTime>>(&self.conn)
     }
 
+    pub fn get_next_chunk_id(&self) -> QueryResult<Option<i64>> {
+        stash_records
+            .select(max(chunk_id))
+            .first::<Option<i64>>(&self.conn)
+    }
+
     pub fn get_next_change_id(&self) -> QueryResult<String> {
         match self.get_latest_created_at() {
             Ok(Some(last_created_at)) => stash_records

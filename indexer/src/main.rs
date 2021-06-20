@@ -39,6 +39,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut indexer = Indexer::new();
     let last_change_id: diesel::result::QueryResult<String> = persistence.get_next_change_id();
+    let mut next_chunk_id = persistence
+        .get_next_chunk_id()
+        .expect("Failed to read last chunk id")
+        .map(|id| id + 1)
+        .unwrap_or(0);
     let rx = match (&config.restart_mode, last_change_id) {
         (RestartMode::Fresh, _) => indexer.start_with_latest(),
         (RestartMode::Resume, Ok(id)) => indexer.start_with_id(ChangeId::from_str(&id).unwrap()),
@@ -69,7 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     change_id,
                     payload.stashes.len()
                 );
-                let stashes = map_to_stash_records(change_id, created_at, payload)
+                let stashes = map_to_stash_records(change_id, created_at, payload, next_chunk_id)
                     .into_iter()
                     .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
                         filter::FilterResult::Block { reason, .. } => {
@@ -99,6 +104,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 persistence.save(&stashes).expect("Persisting failed");
             }
         }
+
+        next_chunk_id += 1;
     }
 
     log::info!("Shutting down indexer...");
@@ -120,12 +127,14 @@ pub struct StashRecord {
     last_character_name: Option<String>,
     stash_name: Option<String>,
     league: Option<String>,
+    chunk_id: i64,
 }
 
 fn map_to_stash_records(
     change_id: ChangeId,
     created_at: SystemTime,
     payload: StashTabResponse,
+    chunk_id: i64,
 ) -> Vec<StashRecord> {
     let next_change_id = payload.next_change_id;
 
@@ -146,6 +155,7 @@ fn map_to_stash_records(
             change_id: change_id.clone().into(),
             created_at: DateTime::<Utc>::from(created_at).naive_utc(),
             next_change_id: next_change_id.clone(),
+            chunk_id,
         })
         .collect::<Vec<_>>()
 }
