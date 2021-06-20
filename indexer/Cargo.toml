@@ -24,3 +24,6 @@ pretty_env_logger = "0.4.0"
 config = "0.11.0"
 signal-hook = "0.3.8"
 
+[[bin]]
+name = "indexer"
+path = "src/main.rs"
