@@ -20,6 +20,10 @@ impl Indexer {
     pub fn stop(&mut self) {
         self.shared_state.lock().unwrap().should_stop = true;
     }
+
+    pub fn is_stopping(&self) -> bool {
+        self.shared_state.lock().unwrap().should_stop
+    }
 }
 
 impl Default for Indexer {

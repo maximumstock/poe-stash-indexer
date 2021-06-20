@@ -57,7 +57,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     signal_hook::flag::register(signal_hook::consts::SIGINT, signal_flag.clone())?;
 
     while let Ok(msg) = rx.recv() {
-        if signal_flag.load(Ordering::Relaxed) {
+        if signal_flag.load(Ordering::Relaxed) && !indexer.is_stopping() {
             log::info!("CTRL+C detected -> shutting down...");
             indexer.stop();
         }
