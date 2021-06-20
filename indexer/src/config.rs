@@ -23,8 +23,9 @@ pub enum RestartMode {
 impl Configuration {
     pub fn read() -> Result<Self, ConfigError> {
         let mut s = Config::new();
-        s.merge(File::with_name(CONFIG_FILE_PATH))?;
-        s.try_into()
+        // Its fine if the file does not exist
+        let _ = s.merge(File::with_name(CONFIG_FILE_PATH));
+        Ok(s.try_into().unwrap_or_default())
     }
 
     #[allow(dead_code)]
