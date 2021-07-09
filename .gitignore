@@ -1,6 +1,4 @@
 .DS_Store
 .idea
 poe-stash-indexer.iml
-
 target
-db/data

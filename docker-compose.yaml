@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+
+  db:
+    image: postgres:12
+    environment:
+      POSTGRES_PASSWORD: "poe"
+      POSTGRES_USER: "poe"
+      POSTGRES_DB: "poe"
+
+  indexer:
+    build:
+      context: .
+      dockerfile: indexer/Dockerfile
+    #command: bash -c "sleep 3 && cd indexer && diesel setup && diesel migration run && ls -la ../target/debug && ./bin"
+    command: "./bin"
+    depends_on:
+      - db
+    restart: "no"
+    environment:
+      DATABASE_URL: "postgres://poe:poe@db:5432/poe"
+      RUST_LOG: "info,ureq=warn"
