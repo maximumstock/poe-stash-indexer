@@ -23,6 +23,4 @@ COPY river-subscription river-subscription
 WORKDIR /home/poe-stash-indexer/indexer
 RUN cargo build
 
-#RUN apt-get install tree -y
 RUN cp target/debug/indexer bin
-RUN ls -lah .
