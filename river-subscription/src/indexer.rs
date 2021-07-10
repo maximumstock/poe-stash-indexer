@@ -19,6 +19,7 @@ pub struct Indexer {
 
 impl Indexer {
     pub fn stop(&mut self) {
+        println!("Stopping indexer");
         self.shared_state.lock().unwrap().should_stop = true;
     }
 
