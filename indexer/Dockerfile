@@ -1,26 +1,18 @@
 # Based on https://hub.docker.com/_/rust
-FROM rust:1.53-slim-buster
+FROM rust:1.53-slim-buster as builder
 RUN apt-get update
 RUN apt-get install libpq-dev -y
-
 RUN cargo install diesel_cli --no-default-features --features postgres
-WORKDIR /home/poe-stash-indexer
+RUN cargo install cargo-watch
 
-# Build dependencies
-COPY indexer indexer
-COPY river-subscription river-subscription
-#RUN mkdir -p indexer/src
-#RUN echo "fn main() {}" > indexer/src/main.rs
-#COPY indexer/Cargo.toml indexer/Cargo.toml
-#COPY indexer/Cargo.lock indexer/Cargo.lock
-# COPY Cargo.toml Cargo.toml
-# COPY Cargo.lock Cargo.lock
-# COPY stash-differ stash-differ
+WORKDIR /usr/local/src/poe-stash-indexer
+COPY indexer ./indexer
+COPY river-subscription ./river-subscription
 
-#RUN cd indexer && cargo build --release
-
-# Build application
-WORKDIR /home/poe-stash-indexer/indexer
+WORKDIR /usr/local/src/poe-stash-indexer/indexer
 RUN cargo build
+RUN cp target/debug/indexer /usr/local/bin/indexer
 
-RUN cp target/debug/indexer bin
+FROM builder as devserver
+WORKDIR /usr/local/src/poe-stash-indexer/indexer
+CMD ["scripts/run.sh"]
