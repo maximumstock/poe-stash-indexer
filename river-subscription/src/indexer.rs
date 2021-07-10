@@ -214,6 +214,10 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
 
             let next_change_id = ChangeId::from_str(&next_id).expect("Invalid change_id provided");
 
+            if next_change_id.eq(&change_id) {
+                ratelimit.wait_for(2);
+            }
+
             let next_worker_task = WorkerTask {
                 reader: Box::new(decoder),
                 fetch_partial: next_id_buffer,
@@ -223,7 +227,6 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             let mut lock = shared_state.lock().unwrap();
             lock.body_queue.push_back(next_worker_task);
             lock.change_id_queue.push_back((next_change_id, 0));
-            drop(lock);
         }
 
         shared_state.lock().unwrap().stop();
