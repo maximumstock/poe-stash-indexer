@@ -102,11 +102,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // Skip stash records without any items
                     .filter(|stash_record| !stash_record.items.as_array().unwrap().is_empty())
                     .collect::<Vec<_>>();
-                persistence.save(&stashes).expect("Persisting failed");
+
+                if !stashes.is_empty() {
+                    next_chunk_id += 1;
+                    persistence.save(&stashes).expect("Persisting failed");
+                }
             }
         }
-
-        next_chunk_id += 1;
     }
 
     log::info!("Shutting down indexer...");

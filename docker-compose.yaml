@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+
+  db:
+    image: postgres:12
+    environment:
+      POSTGRES_PASSWORD: "poe"
+      POSTGRES_USER: "poe"
+      POSTGRES_DB: "poe"
+
+  indexer:
+    build:
+      context: .
+      dockerfile: indexer/Dockerfile
+      target: devserver
+    depends_on:
+      - db
+    restart: "no"
+    environment:
+      DATABASE_URL: "postgres://poe:poe@db:5432/poe"
+      RUST_LOG: "info,ureq=warn"
+    volumes:
+      - ".:/usr/local/src/poe-stash-indexer:cached"
