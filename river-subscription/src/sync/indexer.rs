@@ -11,7 +11,7 @@ use std::{
 };
 use ureq::Error;
 
-use crate::common::{change_id::ChangeId, types::StashTabResponse};
+use crate::common::{ChangeId, StashTabResponse};
 use crate::sync::poe_ninja_client::PoeNinjaClient;
 
 pub struct Indexer {

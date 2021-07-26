@@ -24,7 +24,7 @@ use crate::{
 };
 
 use dotenv::dotenv;
-use river_subscription::{ChangeId, Indexer, IndexerMessage};
+use river_subscription::{common::ChangeId, sync::Indexer, sync::IndexerMessage};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
