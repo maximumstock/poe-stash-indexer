@@ -1,4 +1,4 @@
-use crate::common::change_id::ChangeId;
+use crate::common::ChangeId;
 use serde::Deserialize;
 use std::str::FromStr;
 
