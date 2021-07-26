@@ -12,11 +12,14 @@ pub(crate) struct PoeNinjaClient {}
 
 impl PoeNinjaClient {
     pub fn fetch_latest_change_id() -> Result<ChangeId, Box<dyn std::error::Error>> {
-        let response = ureq::get("https://poe.ninja/api/Data/GetStats")
+        ureq::get("https://poe.ninja/api/Data/GetStats")
             .call()
-            .expect("Failed to fetch latest change id from poe.ninja");
-        let stats: PoeNinjaGetStats = serde_json::from_reader(response.into_reader())?;
-        ChangeId::from_str(&stats.next_change_id)
+            .map_err(|e| e.into())
+            .and_then(|res| res.into_string().map_err(|e| e.into()))
+            .and_then(|s| {
+                serde_json::from_str::<PoeNinjaGetStats>(s.as_str()).map_err(|e| e.into())
+            })
+            .and_then(|x| ChangeId::from_str(&x.next_change_id))
     }
 }
 

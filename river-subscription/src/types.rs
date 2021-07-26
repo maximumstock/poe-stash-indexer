@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 pub struct StashTabResponse {
     pub next_change_id: String,
     pub stashes: Vec<Stash>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 pub struct Stash {
     #[serde(rename(deserialize = "accountName"))]
     pub account_name: Option<String>,
@@ -29,7 +29,7 @@ impl Stash {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Item {
     pub name: String,
     pub id: String,
@@ -41,7 +41,7 @@ pub struct Item {
     pub extended: ItemExtendedProp,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct ItemExtendedProp {
     pub category: String,
     #[serde(rename(deserialize = "baseType"))]

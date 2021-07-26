@@ -17,11 +17,12 @@ impl std::str::FromStr for ChangeId {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let is_valid = s.split('-').map(|x| x.parse::<u32>()).all(|x| x.is_ok());
 
-        match is_valid {
-            true => Ok(Self {
+        if is_valid {
+            Ok(Self {
                 inner: s.to_owned(),
-            }),
-            false => Err("derp".into()),
+            })
+        } else {
+            Err(format!("Failed parsing ChangeId {}", s).into())
         }
     }
 }
