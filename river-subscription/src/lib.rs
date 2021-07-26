@@ -1,8 +1,6 @@
-mod change_id;
-mod indexer;
-mod poe_ninja_client;
-mod types;
+mod common;
+mod sync;
 
-pub use change_id::ChangeId;
-pub use indexer::{Indexer, IndexerMessage};
-pub use types::*;
+pub use common::change_id::ChangeId;
+pub use common::types::*;
+pub use sync::indexer::{Indexer, IndexerMessage};

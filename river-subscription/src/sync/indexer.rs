@@ -11,7 +11,8 @@ use std::{
 };
 use ureq::Error;
 
-use crate::{change_id::ChangeId, poe_ninja_client::PoeNinjaClient, types::StashTabResponse};
+use crate::common::{change_id::ChangeId, types::StashTabResponse};
+use crate::sync::poe_ninja_client::PoeNinjaClient;
 
 pub struct Indexer {
     shared_state: SharedState,
