@@ -16,5 +16,6 @@ nixpkgs.mkShell {
     rustStableChannel
     rust-analyzer
     postgresql
+    cargo-edit
   ];
 }
