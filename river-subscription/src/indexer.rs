@@ -70,6 +70,7 @@ struct WorkerTask {
     reader: Box<dyn Read + Send>,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum IndexerMessage {
     Tick {
         payload: StashTabResponse,
@@ -309,12 +310,38 @@ fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error> {
 
 #[cfg(test)]
 mod test {
-    use super::parse_change_id_from_bytes;
+    use std::{sync::mpsc::RecvTimeoutError, time::Duration};
+
+    use super::{parse_change_id_from_bytes, Indexer, IndexerMessage};
 
     #[test]
     fn test_parse_change_id_from_bytes() {
         let input = "{\"next_change_id\": \"abc-def-ghi-jkl-mno\", \"stashes\": []}".as_bytes();
         let result = parse_change_id_from_bytes(&input);
         assert_eq!(result, Ok("abc-def-ghi-jkl-mno".into()));
+    }
+
+    #[test]
+    fn test_indexer() {
+        let mut indexer = Indexer::new();
+        let rx = indexer.start_with_latest();
+        std::thread::sleep(Duration::from_secs(3));
+        indexer.stop();
+
+        let (mut n_tick, mut n_stop) = (0, 0);
+
+        while let Ok(msg) = rx.recv() {
+            match msg {
+                IndexerMessage::Stop => n_stop += 1,
+                IndexerMessage::Tick { .. } => n_tick += 1,
+            }
+        }
+
+        assert!(n_tick > 0);
+        assert_eq!(n_stop, 1);
+        assert_eq!(
+            Err(RecvTimeoutError::Disconnected),
+            rx.recv_timeout(Duration::from_secs(10))
+        );
     }
 }
