@@ -76,9 +76,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     payload.stashes.len()
                 );
                 let stashes = map_to_stash_records(change_id, created_at, payload, next_chunk_id)
-                    .into_iter()
                     .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
-                        filter::FilterResult::Block { reason, .. } => {
+                        filter::FilterResult::Block { reason } => {
                             log::debug!("Filter: Blocked stash, reason: {}", reason);
                             None
                         }
@@ -99,8 +98,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             Some(stash)
                         }
                     })
-                    // Skip stash records without any items
-                    .filter(|stash_record| !stash_record.items.as_array().unwrap().is_empty())
                     .collect::<Vec<_>>();
 
                 if !stashes.is_empty() {
