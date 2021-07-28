@@ -1,7 +1,7 @@
 mod config;
 mod filter;
-mod persistence;
 mod schema;
+mod sinks;
 mod stash_record;
 
 #[macro_use]
@@ -17,7 +17,8 @@ use std::{
 };
 
 use crate::filter::filter_stash_record;
-use crate::persistence::Persist;
+use crate::sinks::postgres::Postgres;
+use crate::sinks::sink::*;
 use crate::{
     config::{Configuration, RestartMode},
     stash_record::map_to_stash_records,
@@ -36,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Chosen configuration: {:#?}", config);
 
     let database_url = std::env::var("DATABASE_URL").expect("No database url set");
-    let persistence = persistence::PgDb::new(&database_url);
+    let persistence = Postgres::new(&database_url);
 
     let mut indexer = Indexer::new();
     let last_change_id: diesel::result::QueryResult<String> = persistence.get_next_change_id();
@@ -102,7 +103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if !stashes.is_empty() {
                     next_chunk_id += 1;
-                    persistence.save(&stashes).expect("Persisting failed");
+                    persistence.handle(&stashes).expect("Persisting failed");
                 }
             }
         }
