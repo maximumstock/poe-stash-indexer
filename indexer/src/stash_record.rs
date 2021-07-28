@@ -27,7 +27,7 @@ pub fn map_to_stash_records(
     created_at: SystemTime,
     payload: StashTabResponse,
     chunk_id: i64,
-) -> Vec<StashRecord> {
+) -> impl Iterator<Item = StashRecord> {
     let next_change_id = payload.next_change_id;
 
     payload
@@ -49,5 +49,4 @@ pub fn map_to_stash_records(
             next_change_id: next_change_id.clone(),
             chunk_id,
         })
-        .collect::<Vec<_>>()
 }

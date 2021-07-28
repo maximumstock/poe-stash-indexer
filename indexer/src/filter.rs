@@ -29,7 +29,7 @@ pub fn filter_stash_record(stash_record: &mut StashRecord, config: &Configuratio
         let items =
             serde_json::from_value::<Vec<serde_json::Value>>(stash_record.items.clone()).unwrap();
 
-        let n_items = items.len();
+        let n_total = items.len();
 
         let filtered = items
             .into_iter()
@@ -42,10 +42,16 @@ pub fn filter_stash_record(stash_record: &mut StashRecord, config: &Configuratio
 
         let n_filtered = filtered.len();
 
+        if n_filtered == 0 {
+            return FilterResult::Block {
+                reason: "Item category filter removed all items".to_string(),
+            };
+        }
+
         stash_record.items = serde_json::to_value(filtered).unwrap();
 
         return FilterResult::Filter {
-            n_total: n_items,
+            n_total,
             n_retained: n_filtered,
         };
     }
