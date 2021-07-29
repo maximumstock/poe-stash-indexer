@@ -21,3 +21,14 @@ services:
       RUST_LOG: "info,ureq=warn"
     volumes:
       - ".:/usr/local/src/poe-stash-indexer:cached"
+
+  rabbitmq:
+    build:
+      context: rabbitmq
+      dockerfile: Dockerfile
+    restart: "always"
+    environment: 
+      RABBITMQ_CONFIG_FILE: "/etc/rabbitmq/rabbitmq.conf"
+    ports: 
+      - 5672:5672 # networking port
+      - 15672:15672 # management plugin port
