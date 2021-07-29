@@ -12,7 +12,7 @@ impl StashDiffer {
             if let Some(after_item) = after.content.get(item_id) {
                 // Check for changed notes
                 if before_item.note.ne(&after_item.note) {
-                    events.push(DiffEvent::ItemNoteChanged(Diff {
+                    events.push(DiffEvent::NoteChanged(Diff {
                         id: after_item.id.clone(),
                         name: after_item.type_line.clone(),
                         before: before_item.note.clone(),
@@ -22,7 +22,7 @@ impl StashDiffer {
 
                 // Check for changed stack_sizes
                 if before_item.stack_size.ne(&after_item.stack_size) {
-                    events.push(DiffEvent::ItemStackSizeChanged(Diff {
+                    events.push(DiffEvent::StackSizeChanged(Diff {
                         id: after_item.id.clone(),
                         name: after_item.type_line.clone(),
                         before: before_item.stack_size,
@@ -30,7 +30,7 @@ impl StashDiffer {
                     }));
                 }
             } else {
-                events.push(DiffEvent::ItemRemoved(Diff {
+                events.push(DiffEvent::Removed(Diff {
                     before: (),
                     after: (),
                     id: before_item.id.clone(),
@@ -41,7 +41,7 @@ impl StashDiffer {
 
         for (item_id, after_item) in after.content.iter() {
             if before.content.get(item_id).is_none() {
-                events.push(DiffEvent::ItemAdded(Diff {
+                events.push(DiffEvent::Added(Diff {
                     before: (),
                     after: (),
                     id: after_item.id.clone(),
@@ -56,10 +56,10 @@ impl StashDiffer {
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum DiffEvent {
-    ItemAdded(Diff<()>),
-    ItemRemoved(Diff<()>),
-    ItemNoteChanged(Diff<Option<String>>),
-    ItemStackSizeChanged(Diff<Option<u32>>),
+    Added(Diff<()>),
+    Removed(Diff<()>),
+    NoteChanged(Diff<Option<String>>),
+    StackSizeChanged(Diff<Option<u32>>),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -95,10 +95,10 @@ impl From<&[DiffEvent]> for DiffStats {
 
         for ev in events {
             match ev {
-                DiffEvent::ItemAdded(_) => stats.added += 1,
-                DiffEvent::ItemRemoved(_) => stats.removed += 1,
-                DiffEvent::ItemNoteChanged(_) => stats.note += 1,
-                DiffEvent::ItemStackSizeChanged(_) => stats.stack_size += 1,
+                DiffEvent::Added(_) => stats.added += 1,
+                DiffEvent::Removed(_) => stats.removed += 1,
+                DiffEvent::NoteChanged(_) => stats.note += 1,
+                DiffEvent::StackSizeChanged(_) => stats.stack_size += 1,
             }
         }
 

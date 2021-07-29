@@ -318,7 +318,7 @@ mod test {
     #[test]
     fn test_parse_change_id_from_bytes() {
         let input = "{\"next_change_id\": \"abc-def-ghi-jkl-mno\", \"stashes\": []}".as_bytes();
-        let result = parse_change_id_from_bytes(&input);
+        let result = parse_change_id_from_bytes(input);
         assert_eq!(result, Ok("abc-def-ghi-jkl-mno".into()));
     }
 

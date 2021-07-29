@@ -24,7 +24,7 @@ impl LeagueStore {
 
     pub fn diff_account(&self, account_name: &str, stash: &Stash) -> Option<Vec<DiffEvent>> {
         if let Some(previous) = self.inner.get(account_name) {
-            let events = StashDiffer::diff(&previous, &stash);
+            let events = StashDiffer::diff(previous, stash);
 
             if events.is_empty() {
                 None
