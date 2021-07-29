@@ -46,7 +46,7 @@ impl<'a> StashRecordIterator<'a> {
 
     fn load_data(&mut self) -> Result<(), sqlx::Error> {
         let next_page = self.runtime.block_on(fetch_stash_records_paginated(
-            &self.pool,
+            self.pool,
             self.page.0,
             self.page.1,
             self.league,
