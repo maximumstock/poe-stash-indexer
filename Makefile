@@ -17,3 +17,6 @@ down:
 
 restart:
 	docker-compose restart $(CONTAINERS)
+
+stop:
+	docker-compose stop $(CONTAINERS)
