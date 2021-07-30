@@ -19,6 +19,7 @@ services:
     environment:
       DATABASE_URL: "postgres://poe:poe@db:5432/poe"
       RUST_LOG: "info,ureq=warn"
+      RABBITMQ_URL: "amqp://poe:poe@rabbitmq"
     volumes:
       - ".:/usr/local/src/poe-stash-indexer:cached"
 
