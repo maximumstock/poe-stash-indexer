@@ -4,7 +4,6 @@ let
   rustStableChannel = nixpkgs.latest.rustChannels.stable.rust.override {
     extensions = [
       "rust-src"
-      "rls-preview"
       "clippy-preview"
       "rustfmt-preview"
     ];
@@ -17,5 +16,7 @@ nixpkgs.mkShell {
     rust-analyzer
     postgresql
     cargo-edit
+    openssl
+    pkgconfig
   ];
 }
