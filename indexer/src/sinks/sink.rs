@@ -13,3 +13,35 @@ pub trait SinkResume {
     /// Returns the next change id to continue from based on previously fetched data.
     fn get_next_change_id(&self) -> QueryResult<String>;
 }
+
+// pub struct UniSink {
+//     inner: Vec<dyn Sink>,
+// }
+
+// impl UniSink {
+//     fn builder() -> UniSinkBuilder {
+//         UniSinkBuilder::default()
+//     }
+// }
+
+// #[derive(Default)]
+// pub struct UniSinkBuilder<'a> {
+//     database_url: Option<&'a str>,
+//     rabbitmq_url: Option<&'a str>,
+// }
+
+// impl UniSinkBuilder {
+//     fn with_database_sink(self, database_url: &'a str) -> Self {
+//         self.database_url = Some(database_url);
+//     }
+
+//     fn with_rabbitmq_sink(self, rabbitmq_url: &'a str) -> Self {
+//         self.database_url = Some(rabbitmq_url);
+//     }
+
+//     fn build(self) -> UniSink {
+//         UniSink {
+//             inner: ve
+//         }
+//     }
+// }

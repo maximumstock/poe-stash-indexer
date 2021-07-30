@@ -16,13 +16,13 @@ use std::{
     },
 };
 
-use crate::filter::filter_stash_record;
 use crate::sinks::postgres::Postgres;
 use crate::sinks::sink::*;
 use crate::{
     config::{Configuration, RestartMode},
     stash_record::map_to_stash_records,
 };
+use crate::{filter::filter_stash_record, sinks::rabbitmq::RabbitMq};
 
 use dotenv::dotenv;
 use river_subscription::{common::ChangeId, sync::Indexer, sync::IndexerMessage};
@@ -36,7 +36,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     log::info!("Chosen configuration: {:#?}", config);
 
-    let database_url = std::env::var("DATABASE_URL").expect("No database url set");
+    let rabbitmq_url = std::env::var("RABBITMQ_URL")?;
+    let mq_sink = RabbitMq::connect(rabbitmq_url.as_str())?;
+
+    let database_url = std::env::var("DATABASE_URL").expect("Missing DATABASE_URL");
     let persistence = Postgres::new(&database_url);
 
     let mut indexer = Indexer::new();
@@ -57,6 +60,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let signal_flag = Arc::new(AtomicBool::new(false));
     signal_hook::flag::register(signal_hook::consts::SIGINT, signal_flag.clone())?;
+
+    let sinks: Vec<Box<dyn Sink>> = vec![Box::new(mq_sink), Box::new(persistence)];
 
     while let Ok(msg) = rx.recv() {
         if signal_flag.load(Ordering::Relaxed) && !indexer.is_stopping() {
@@ -103,7 +108,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if !stashes.is_empty() {
                     next_chunk_id += 1;
-                    persistence.handle(&stashes).expect("Persisting failed");
+                    for sink in &sinks {
+                        sink.handle(&stashes).expect("sink failed");
+                    }
                 }
             }
         }
