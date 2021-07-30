@@ -1,7 +1,7 @@
 # Based on https://hub.docker.com/_/rust
-FROM rust:1.53-slim-buster as builder
+FROM rust:1.54-slim-buster as builder
 RUN apt-get update
-RUN apt-get install libpq-dev -y
+RUN apt-get install libpq-dev libssl-dev pkg-config -y
 RUN cargo install diesel_cli --no-default-features --features postgres
 RUN cargo install cargo-watch
 
