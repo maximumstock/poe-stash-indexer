@@ -19,7 +19,9 @@ services:
     environment:
       DATABASE_URL: "postgres://poe:poe@db:5432/poe"
       RUST_LOG: "info,ureq=warn"
+      RABBITMQ_SINK_ENABLED: "true"
       RABBITMQ_URL: "amqp://poe:poe@rabbitmq"
+      RABBITMQ_PRODUCER_ROUTING_KEY: "stash-record-stream"
     volumes:
       - ".:/usr/local/src/poe-stash-indexer:cached"
 
