@@ -1,6 +1,5 @@
 version: "3.8"
 services:
-
   db:
     image: postgres:12
     environment:
@@ -37,3 +36,20 @@ services:
     ports:
       - 5672:5672 # networking port
       - 15672:15672 # management plugin port
+      - 15692:15692 # prometheus plugin port
+
+  prometheus:
+    build:
+      context: monitoring/prometheus
+      dockerfile: Dockerfile
+    restart: "always"
+    ports:
+      - 9090:9090
+
+  grafana:
+    build:
+      context: monitoring/grafana
+      dockerfile: Dockerfile
+    restart: "always"
+    ports:
+      - 3000:3000

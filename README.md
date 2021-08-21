@@ -22,3 +22,7 @@ You can use the commands `docker-compose up -d` or `make up` to start up this co
 
 This pre-defined setup is only used for spontaneous testing and not meant to be copied and
 ran right away.
+
+- [Prometheus](http://localhost:9090)
+- [RabbitMQ Control Panel](http://localhost:15672) (Credentials: `poe:poe`)
+- [Grafana](http://localhost:3000)
