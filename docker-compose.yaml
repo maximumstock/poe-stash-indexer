@@ -15,6 +15,7 @@ services:
       target: devserver
     depends_on:
       - db
+      - rabbitmq
     restart: "no"
     environment:
       DATABASE_URL: "postgres://poe:poe@db:5432/poe"
@@ -23,15 +24,16 @@ services:
       RABBITMQ_URL: "amqp://poe:poe@rabbitmq"
       RABBITMQ_PRODUCER_ROUTING_KEY: "stash-record-stream"
     volumes:
-      - ".:/usr/local/src/poe-stash-indexer:cached"
+      - ".:/usr/local/src/poe-stash-indexer"
+      - "./target:/usr/local/src/poe-stash-indexer/target"
 
   rabbitmq:
     build:
       context: rabbitmq
       dockerfile: Dockerfile
     restart: "always"
-    environment: 
+    environment:
       RABBITMQ_CONFIG_FILE: "/etc/rabbitmq/rabbitmq.conf"
-    ports: 
+    ports:
       - 5672:5672 # networking port
       - 15672:15672 # management plugin port
