@@ -47,9 +47,15 @@ services:
       - 9090:9090
 
   grafana:
-    build:
-      context: monitoring/grafana
-      dockerfile: Dockerfile
+    image: grafana/grafana:8.1.2
     restart: "always"
+    depends_on:
+      - prometheus
     ports:
       - 3000:3000
+    environment:
+      GF_SECURITY_ADMIN_USER: "poe"
+      GF_SECURITY_ADMIN_PASSWORD: "poe"
+    volumes:
+      - "./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards"
+      - "./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources"

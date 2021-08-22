@@ -24,5 +24,5 @@ This pre-defined setup is only used for spontaneous testing and not meant to be 
 ran right away.
 
 - [Prometheus](http://localhost:9090)
-- [RabbitMQ Control Panel](http://localhost:15672) (Credentials: `poe:poe`)
-- [Grafana](http://localhost:3000)
+- [RabbitMQ Control Panel](http://localhost:15672) (`poe:poe`)
+- [Grafana](http://localhost:3000) (`poe:poe`)
