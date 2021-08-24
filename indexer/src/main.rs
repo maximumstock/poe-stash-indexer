@@ -66,6 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let signal_flag = Arc::new(AtomicBool::new(false));
     signal_hook::flag::register(signal_hook::consts::SIGINT, signal_flag.clone())?;
+    signal_hook::flag::register(signal_hook::consts::SIGTERM, signal_flag.clone())?;
 
     while let Ok(msg) = rx.recv() {
         if signal_flag.load(Ordering::Relaxed) && !indexer.is_stopping() {
