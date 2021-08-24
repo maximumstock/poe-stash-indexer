@@ -19,4 +19,9 @@ nixpkgs.mkShell {
     openssl
     pkgconfig
   ];
+
+  shellHook =
+    ''
+      zsh
+    '';
 }
