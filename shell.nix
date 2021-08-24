@@ -1,27 +1,28 @@
 let
-  moz_overlay = import (builtins.fetchTarball https://github.com/mozilla/nixpkgs-mozilla/archive/master.tar.gz);
-  nixpkgs = import <nixpkgs> { overlays = [ moz_overlay ]; };
-  rustStableChannel = nixpkgs.latest.rustChannels.stable.rust.override {
-    extensions = [
-      "rust-src"
-      "clippy-preview"
-      "rustfmt-preview"
-    ];
+  rustOverlay = builtins.fetchTarball "https://github.com/oxalica/rust-overlay/archive/master.tar.gz";
+  # pinnedPkgs = (import <nixpkgs>).fetchFromGitHub {
+  #   owner  = "NixOS";
+  #   repo   = "nixpkgs";
+  #   rev    = "1fe6ed37fd9beb92afe90671c0c2a662a03463dd";
+  #   sha256 = "1daa0y3p17shn9gibr321vx8vija6bfsb5zd7h4pxdbbwjkfq8n2";
+  # };
+  pkgs = import <nixpkgs> {
+    overlays = [ (import rustOverlay) ];
   };
 in
-nixpkgs.mkShell {
-  name = "rust-dev-env";
-  buildInputs = with nixpkgs; [
-    rustStableChannel
-    rust-analyzer
-    postgresql
-    cargo-edit
-    openssl
-    pkgconfig
-  ];
+  pkgs.mkShell {
+    buildInputs = with pkgs; [
+      pkg-config
+      postgresql
+      openssl
+      openssl.dev
+      (rust-bin.stable."1.54.0".default.override {
+        extensions = ["rust-src"];
+      })
+      rust-analyzer
+      cargo-edit
+    ];
 
-  shellHook =
-    ''
-      zsh
-    '';
-}
+    # RUST_BACKTRACE = 1;
+
+  }
