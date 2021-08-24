@@ -40,8 +40,8 @@ impl Default for Indexer {
 type SharedState = Arc<Mutex<State>>;
 
 struct State {
-    body_queue: BodyQueue,
-    change_id_queue: ChangeIdQueue,
+    worker_queue: WorkerQueue,
+    fetcher_queue: FetcherQueue,
     should_stop: bool,
 }
 
@@ -54,16 +54,16 @@ impl State {
 impl Default for State {
     fn default() -> Self {
         Self {
-            body_queue: VecDeque::new(),
-            change_id_queue: VecDeque::new(),
+            worker_queue: VecDeque::new(),
+            fetcher_queue: VecDeque::new(),
             should_stop: false,
         }
     }
 }
 
 type ChangeIdRequest = (ChangeId, usize);
-type ChangeIdQueue = VecDeque<ChangeIdRequest>;
-type BodyQueue = VecDeque<WorkerTask>;
+type FetcherQueue = VecDeque<ChangeIdRequest>;
+type WorkerQueue = VecDeque<WorkerTask>;
 
 struct WorkerTask {
     fetch_partial: [u8; 80],
@@ -95,7 +95,7 @@ impl Indexer {
         self.shared_state
             .lock()
             .unwrap()
-            .change_id_queue
+            .fetcher_queue
             .push_back((change_id, 0));
 
         self.start()
@@ -110,7 +110,7 @@ impl Indexer {
         self.shared_state
             .lock()
             .unwrap()
-            .change_id_queue
+            .fetcher_queue
             .push_back((latest_change_id, 0));
 
         self.start()
@@ -157,7 +157,7 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             let change_id_request = shared_state
                 .lock()
                 .unwrap()
-                .change_id_queue
+                .fetcher_queue
                 .pop_front()
                 .unwrap();
 
@@ -228,8 +228,8 @@ fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
             };
 
             let mut lock = shared_state.lock().unwrap();
-            lock.body_queue.push_back(next_worker_task);
-            lock.change_id_queue.push_back((next_change_id, 0));
+            lock.worker_queue.push_back(next_worker_task);
+            lock.fetcher_queue.push_back((next_change_id, 0));
         }
 
         shared_state.lock().unwrap().stop();
@@ -251,7 +251,7 @@ fn reschedule(shared_state: SharedState, request: ChangeIdRequest) -> Result<(),
     shared_state
         .lock()
         .unwrap()
-        .change_id_queue
+        .fetcher_queue
         .push_back(new_request);
 
     Ok(())
@@ -266,23 +266,20 @@ fn start_worker(
 
         if lock.should_stop {
             tx.send(IndexerMessage::Stop).unwrap();
-            break;
+            return;
         }
 
-        if let Some(next) = lock.body_queue.pop_front() {
-            let mut task = next;
-
+        if let Some(mut task) = lock.worker_queue.pop_front() {
             let start = std::time::Instant::now();
             let mut buffer = Vec::new();
             buffer.write_all(&task.fetch_partial).unwrap();
             task.reader.read_to_end(&mut buffer).unwrap();
+            log::debug!("Took {}ms to read body", start.elapsed().as_millis());
 
+            let start = std::time::Instant::now();
             let deserialized = serde_json::from_slice::<StashTabResponse>(&buffer)
                 .expect("Deserialization of body failed");
-            log::debug!(
-                "Took {}ms to read & deserialize body",
-                start.elapsed().as_millis()
-            );
+            log::debug!("Took {}ms to deserialize body", start.elapsed().as_millis());
 
             let msg = IndexerMessage::Tick {
                 payload: deserialized,
@@ -290,7 +287,7 @@ fn start_worker(
                 created_at: std::time::SystemTime::now(),
             };
 
-            tx.send(msg).expect("Sending IndexerMessage failed");
+            tx.send(msg).expect("Sending IndexerMessage::Tick failed");
         } else {
             drop(lock);
             log::debug!("Worker is waiting due to no work");
