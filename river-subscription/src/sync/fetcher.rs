@@ -2,16 +2,39 @@ use std::{
     io::{BufReader, Read},
     str::FromStr,
     string::FromUtf8Error,
+    sync::mpsc::{Receiver, SendError, Sender},
 };
 
 use flate2::bufread::GzDecoder;
 use ureq::Error;
 
-use crate::{common::ChangeId, sync::indexer::WorkerTask};
+use crate::{common::ChangeId, sync::worker::WorkerTask};
 
-use super::state::{ChangeIdRequest, SharedState};
+use super::{scheduler::SchedulerMessage, worker::WorkerMessage};
 
-pub(crate) fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandle<()> {
+pub(crate) enum FetcherMessage {
+    Task(FetchTask),
+}
+
+pub(crate) struct FetchTask {
+    change_id: ChangeId,
+    reschedule_count: u32,
+}
+
+impl FetchTask {
+    pub(crate) fn new(change_id: ChangeId) -> Self {
+        Self {
+            change_id,
+            reschedule_count: 0,
+        }
+    }
+}
+
+pub(crate) fn start_fetcher(
+    fetcher_rx: Receiver<FetcherMessage>,
+    scheduler_tx: Sender<SchedulerMessage>,
+    worker_tx: Sender<WorkerMessage>,
+) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
         // Break down rate-limit into quantum of 1, so we never do any bursts,
         // like we would with for example 2 requests per second.
@@ -21,42 +44,29 @@ pub(crate) fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandl
             .interval(std::time::Duration::from_millis(500))
             .build();
 
-        loop {
-            if shared_state.lock().unwrap().should_stop {
-                break;
-            }
-
+        while let Ok(FetcherMessage::Task(task)) = fetcher_rx.recv() {
             ratelimit.wait();
-
-            let change_id_request = shared_state
-                .lock()
-                .unwrap()
-                .fetcher_queue
-                .pop_front()
-                .unwrap();
-
-            let (change_id, _) = change_id_request.clone();
 
             let start = std::time::Instant::now();
             let url = format!(
                 "http://www.pathofexile.com/api/public-stash-tabs?id={}",
-                change_id
+                task.change_id
             );
 
-            log::debug!("Requesting {}", change_id);
+            log::debug!("Requesting {}", task.change_id);
             let request = ureq::request("GET", &url)
                 .set("Accept-Encoding", "gzip")
                 .set("Accept", "application/json");
             let response = request.call();
 
-            if let Err(Error::Status(status, response)) = response {
+            if let Err(Error::Status(status, ref response)) = response {
                 log::error!("fetcher: HTTP error {}", status);
                 log::error!("fetcher: HTTP response: {:?}", response);
 
-                match reschedule(shared_state.clone(), change_id_request) {
-                    Ok(_) => continue,
-                    Err(_) => break,
-                }
+                // match reschedule(shared_state.clone(), change_id_request) {
+                //     Ok(_) => continue,
+                //     Err(_) => break,
+                // }
             }
 
             let reader = response.unwrap().into_reader();
@@ -67,16 +77,15 @@ pub(crate) fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandl
                 Ok(_) => {}
                 Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => {
                     log::error!("UnexpectedEof: {:?}", next_id_buffer);
-                    shared_state.lock().unwrap().stop();
                     continue;
                 }
                 Err(err) => {
                     log::error!("fetcher: gzip decoding failed: {}", err);
 
-                    match reschedule(shared_state.clone(), change_id_request.clone()) {
-                        Ok(_) => continue,
-                        Err(_) => break,
-                    }
+                    // match reschedule(shared_state.clone(), change_id_request.clone()) {
+                    //     Ok(_) => continue,
+                    //     Err(_) => break,
+                    // }
                 }
             }
 
@@ -91,45 +100,49 @@ pub(crate) fn start_fetcher(shared_state: SharedState) -> std::thread::JoinHandl
 
             let next_change_id = ChangeId::from_str(&next_id).expect("Invalid change_id provided");
 
-            if next_change_id.eq(&change_id) {
+            if next_change_id.eq(&task.change_id) {
                 ratelimit.wait_for(2);
             }
 
-            let next_worker_task = WorkerTask {
+            if let Err(SendError(_)) = scheduler_tx.send(SchedulerMessage::Task(FetchTask {
+                change_id: next_change_id,
+                reschedule_count: 0,
+            })) {
+                break;
+            };
+            if let Err(SendError(_)) = worker_tx.send(WorkerMessage::Task(WorkerTask {
                 reader: Box::new(decoder),
                 fetch_partial: next_id_buffer,
-                change_id,
+                change_id: task.change_id,
+            })) {
+                break;
             };
-
-            let mut lock = shared_state.lock().unwrap();
-            lock.worker_queue.push_back(next_worker_task);
-            lock.fetcher_queue.push_back((next_change_id, 0));
         }
 
-        shared_state.lock().unwrap().stop();
+        log::debug!("Shut down fetcher");
     })
 }
 
-fn reschedule(shared_state: SharedState, request: ChangeIdRequest) -> Result<(), ()> {
-    if request.1 > 2 {
-        log::error!("Retried too many times...shutting down");
-        return Err(());
-    }
+// fn reschedule(shared_state: SharedState, request: ChangeIdRequest) -> Result<(), ()> {
+//     if request.1 > 2 {
+//         log::error!("Retried too many times...shutting down");
+//         return Err(());
+//     }
 
-    let new_request = (request.0, request.1 + 1);
-    log::info!(
-        "Rescheduling {} (Retried {} times)",
-        new_request.0,
-        request.1
-    );
-    shared_state
-        .lock()
-        .unwrap()
-        .fetcher_queue
-        .push_back(new_request);
+//     let new_request = (request.0, request.1 + 1);
+//     log::info!(
+//         "Rescheduling {} (Retried {} times)",
+//         new_request.0,
+//         request.1
+//     );
+//     shared_state
+//         .lock()
+//         .unwrap()
+//         .fetcher_queue
+//         .push_back(new_request);
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error> {
     String::from_utf8(
