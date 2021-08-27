@@ -1,91 +1,57 @@
 use std::{
-    io::Read,
+    sync::mpsc::Sender,
     sync::mpsc::{channel, Receiver},
-    sync::Arc,
-    sync::Mutex,
 };
 
-use crate::common::{ChangeId, StashTabResponse};
-use crate::sync::poe_ninja_client::PoeNinjaClient;
+use crate::sync::{poe_ninja_client::PoeNinjaClient, scheduler::SchedulerMessage};
+use crate::{
+    common::{ChangeId, StashTabResponse},
+    sync::fetcher::FetchTask,
+};
 
 use super::{
-    fetcher::start_fetcher,
-    state::{SharedState, State},
-    worker::start_worker,
+    fetcher::{start_fetcher, FetcherMessage},
+    scheduler::start_scheduler,
+    worker::{start_worker, WorkerMessage},
 };
 
+#[derive(Default)]
 pub struct Indexer {
-    pub(crate) shared_state: SharedState,
+    pub(crate) scheduler_tx: Option<Sender<SchedulerMessage>>,
+    pub(crate) is_stopping: bool,
 }
-
-impl Indexer {
-    pub fn stop(&mut self) {
-        println!("Stopping indexer");
-        self.shared_state.lock().unwrap().should_stop = true;
-    }
-
-    pub fn is_stopping(&self) -> bool {
-        self.shared_state.lock().unwrap().should_stop
-    }
-}
-
-impl Default for Indexer {
-    fn default() -> Self {
-        Self {
-            shared_state: Arc::new(Mutex::new(State::default())),
-        }
-    }
-}
-
-pub(crate) struct WorkerTask {
-    pub(crate) fetch_partial: [u8; 80],
-    pub(crate) change_id: ChangeId,
-    pub(crate) reader: Box<dyn Read + Send>,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum IndexerMessage {
-    Tick {
-        payload: StashTabResponse,
-        change_id: ChangeId,
-        created_at: std::time::SystemTime,
-    },
-    Stop,
-}
-
-type IndexerResult = Receiver<IndexerMessage>;
 
 impl Indexer {
     pub fn new() -> Self {
         Self::default()
     }
 
+    pub fn stop(&mut self) {
+        self.is_stopping = true;
+        log::info!("Stopping indexer");
+        self.scheduler_tx
+            .as_ref()
+            .expect("indexer: Missing ref to scheduler_rx")
+            .send(SchedulerMessage::Stop)
+            .expect("indexer: Failed to send SchedulerMessage::Stop");
+    }
+
+    pub fn is_stopping(&self) -> bool {
+        self.is_stopping
+    }
+
     /// Start the indexer with a given change_id
-    pub fn start_with_id(&self, change_id: ChangeId) -> IndexerResult {
+    pub fn start_with_id(&mut self, change_id: ChangeId) -> IndexerResult {
         log::info!("Resuming at change id: {}", change_id);
-
-        self.shared_state
-            .lock()
-            .unwrap()
-            .fetcher_queue
-            .push_back((change_id, 0));
-
-        self.start()
+        self.start(change_id)
     }
 
     /// Start the indexer with the latest change_id from poe.ninja
-    pub fn start_with_latest(&self) -> IndexerResult {
+    pub fn start_with_latest(&mut self) -> IndexerResult {
         let latest_change_id = PoeNinjaClient::fetch_latest_change_id()
             .expect("Fetching lastest change_id from poe.ninja failed");
         log::info!("Fetched latest change id: {}", latest_change_id);
-
-        self.shared_state
-            .lock()
-            .unwrap()
-            .fetcher_queue
-            .push_back((latest_change_id, 0));
-
-        self.start()
+        self.start(latest_change_id)
     }
 
     /// Starts the indexer instance.
@@ -99,15 +65,37 @@ impl Indexer {
     /// b) another thread with a work queue to deserialize the full response data
     ///    as StashTabResponse structs and sending it to the user of the indexer
     ///    instance.
-    fn start(&self) -> IndexerResult {
-        let (tx, rx) = channel::<IndexerMessage>();
+    fn start(&mut self, change_id: ChangeId) -> IndexerResult {
+        let (scheduler_tx, scheduler_rx) = channel::<SchedulerMessage>();
+        let (fetcher_tx, fetcher_rx) = channel::<FetcherMessage>();
+        let (worker_tx, worker_rx) = channel::<WorkerMessage>();
+        let (indexer_tx, indexer_rx) = channel::<IndexerMessage>();
 
-        let _fetcher_handle = start_fetcher(self.shared_state.clone());
-        let _worker_handle = start_worker(self.shared_state.clone(), tx);
+        let _fetcher_handle = start_fetcher(fetcher_rx, scheduler_tx.clone(), worker_tx);
+        let _worker_handle = start_worker(worker_rx, scheduler_tx.clone(), indexer_tx);
+        let _scheduler_handle = start_scheduler(scheduler_rx, fetcher_tx);
 
-        rx
+        scheduler_tx
+            .send(SchedulerMessage::Task(FetchTask::new(change_id)))
+            .expect("indexer: Failed to schedule initial FetchTask");
+
+        self.scheduler_tx = Some(scheduler_tx);
+
+        indexer_rx
     }
 }
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum IndexerMessage {
+    Tick {
+        payload: StashTabResponse,
+        change_id: ChangeId,
+        created_at: std::time::SystemTime,
+    },
+    Stop,
+}
+
+type IndexerResult = Receiver<IndexerMessage>;
 
 #[cfg(test)]
 mod test {
