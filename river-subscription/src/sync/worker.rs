@@ -50,6 +50,10 @@ pub(crate) fn start_worker(
             }
         }
 
+        indexer_tx
+            .send(IndexerMessage::Stop)
+            .expect("worker: Failed sending IndexerMessage::Stop");
+
         log::debug!("Shut down worker");
     })
 }
