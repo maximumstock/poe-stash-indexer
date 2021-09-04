@@ -2,8 +2,8 @@ use std::time::SystemTime;
 
 use crate::schema::stash_records;
 use chrono::{DateTime, NaiveDateTime, Utc};
-use river_subscription::{common::ChangeId, common::StashTabResponse};
 use serde::Serialize;
+use stash_api::{common::ChangeId, common::StashTabResponse};
 
 #[derive(Serialize, Insertable, Queryable)]
 #[table_name = "stash_records"]

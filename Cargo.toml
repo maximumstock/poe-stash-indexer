@@ -1,7 +1,3 @@
 [workspace]
 
-members = [
-    "indexer",
-    "river-subscription",
-    "stash-differ"
-]
+members = ["indexer", "stash-api", "stash-differ"]

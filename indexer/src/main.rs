@@ -25,7 +25,7 @@ use crate::{
 use crate::{filter::filter_stash_record, sinks::rabbitmq::RabbitMq};
 
 use dotenv::dotenv;
-use river_subscription::{common::ChangeId, sync::Indexer, sync::IndexerMessage};
+use stash_api::{common::ChangeId, sync::Indexer, sync::IndexerMessage};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();

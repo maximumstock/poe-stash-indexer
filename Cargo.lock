@@ -784,6 +784,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "indexer"
+version = "0.1.0"
+dependencies = [
+ "amiquip",
+ "chrono",
+ "config",
+ "diesel",
+ "dotenv",
+ "log",
+ "pretty_env_logger",
+ "regex",
+ "serde 1.0.129",
+ "serde_json",
+ "signal-hook",
+ "stash-api",
+]
+
+[[package]]
 name = "indexmap"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1325,24 +1343,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
 
 [[package]]
-name = "poe-stash-indexer"
-version = "0.1.0"
-dependencies = [
- "amiquip",
- "chrono",
- "config",
- "diesel",
- "dotenv",
- "log",
- "pretty_env_logger",
- "regex",
- "river-subscription",
- "serde 1.0.129",
- "serde_json",
- "signal-hook",
-]
-
-[[package]]
 name = "ppv-lite86"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1513,18 +1513,6 @@ dependencies = [
  "untrusted",
  "web-sys",
  "winapi 0.3.9",
-]
-
-[[package]]
-name = "river-subscription"
-version = "0.1.0"
-dependencies = [
- "flate2",
- "log",
- "ratelimit",
- "serde 1.0.129",
- "serde_json",
- "ureq",
 ]
 
 [[package]]
@@ -1878,6 +1866,18 @@ dependencies = [
  "once_cell",
  "tokio",
  "tokio-rustls",
+]
+
+[[package]]
+name = "stash-api"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "log",
+ "ratelimit",
+ "serde 1.0.129",
+ "serde_json",
+ "ureq",
 ]
 
 [[package]]
