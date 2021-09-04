@@ -1,4 +1,5 @@
 use std::{
+    error::Error,
     io::{BufReader, Read},
     str::FromStr,
     string::FromUtf8Error,
@@ -6,7 +7,7 @@ use std::{
 };
 
 use flate2::bufread::GzDecoder;
-use ureq::Error;
+use ureq::Response;
 
 use crate::{common::ChangeId, sync::worker::WorkerTask};
 
@@ -32,118 +33,168 @@ impl FetchTask {
     }
 }
 
+#[derive(Debug)]
+enum FetcherError {
+    HttpError { status: u16 },
+    Transport,
+    RateLimited,
+    ParseError,
+}
+
+impl std::fmt::Display for FetcherError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&self, f)
+    }
+}
+
+impl Error for FetcherError {}
+
 pub(crate) fn start_fetcher(
     fetcher_rx: Receiver<FetcherMessage>,
     scheduler_tx: Sender<SchedulerMessage>,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
-        // Break down rate-limit into quantum of 1, so we never do any bursts,
-        // like we would with for example 2 requests per second.
-        let mut ratelimit = ratelimit::Builder::new()
-            .capacity(1)
-            .quantum(1)
-            .interval(std::time::Duration::from_millis(500))
-            .build();
+        let mut ratelimit = ratelimiter();
 
         while let Ok(FetcherMessage::Task(task)) = fetcher_rx.recv() {
             ratelimit.wait();
 
             let start = std::time::Instant::now();
-            let url = format!(
-                "http://www.pathofexile.com/api/public-stash-tabs?id={}",
-                task.change_id
-            );
-
             log::debug!("Requesting {}", task.change_id);
-            let request = ureq::request("GET", &url)
-                .set("Accept-Encoding", "gzip")
-                .set("Accept", "application/json");
-            let response = request.call();
 
-            if let Err(Error::Status(status, ref response)) = response {
-                log::error!("fetcher: HTTP error {}", status);
-                log::error!("fetcher: HTTP response: {:?}", response);
+            match process(&task) {
+                Ok((decoder, change_id_buffer, next_change_id)) => {
+                    log::debug!(
+                        "Took {}ms to read next id: {}",
+                        start.elapsed().as_millis(),
+                        next_change_id
+                    );
 
-                // match reschedule(shared_state.clone(), change_id_request) {
-                //     Ok(_) => continue,
-                //     Err(_) => break,
-                // }
-            }
+                    if next_change_id.eq(&task.change_id) {
+                        ratelimit.wait_for(2);
+                    }
 
-            let reader = response.unwrap().into_reader();
-            let mut decoder = GzDecoder::new(BufReader::new(reader));
-            let mut next_id_buffer = [0; 80];
+                    if task.reschedule_count == 0 {
+                        scheduler_tx
+                            .send(SchedulerMessage::Fetch(FetchTask {
+                                change_id: next_change_id,
+                                reschedule_count: 0,
+                            }))
+                            .unwrap();
+                    }
 
-            match decoder.read_exact(&mut next_id_buffer) {
-                Ok(_) => {}
-                Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => {
-                    log::error!("UnexpectedEof: {:?}", next_id_buffer);
-                    continue;
+                    scheduler_tx
+                        .send(SchedulerMessage::Work(WorkerTask {
+                            reader: Box::new(decoder),
+                            fetch_partial: change_id_buffer,
+                            change_id: task.change_id,
+                        }))
+                        .unwrap();
                 }
-                Err(err) => {
-                    log::error!("fetcher: gzip decoding failed: {}", err);
-
-                    // match reschedule(shared_state.clone(), change_id_request.clone()) {
-                    //     Ok(_) => continue,
-                    //     Err(_) => break,
-                    // }
+                Err(
+                    FetcherError::Transport
+                    | FetcherError::HttpError { .. }
+                    | FetcherError::ParseError,
+                ) => {
+                    reschedule_task(&scheduler_tx, task);
+                }
+                Err(FetcherError::RateLimited) => {
+                    log::info!("fetcher: Rate limit reached");
+                    scheduler_tx.send(SchedulerMessage::Stop).unwrap();
+                    break;
                 }
             }
-
-            let next_id = parse_change_id_from_bytes(&next_id_buffer)
-                .expect("Preemptive deserialization of next change_id failed");
-
-            log::debug!(
-                "Took {}ms to read next id: {}",
-                start.elapsed().as_millis(),
-                next_id
-            );
-
-            let next_change_id = ChangeId::from_str(&next_id).expect("Invalid change_id provided");
-
-            if next_change_id.eq(&task.change_id) {
-                ratelimit.wait_for(2);
-            }
-
-            scheduler_tx
-                .send(SchedulerMessage::Fetch(FetchTask {
-                    change_id: next_change_id,
-                    reschedule_count: 0,
-                }))
-                .unwrap();
-            scheduler_tx
-                .send(SchedulerMessage::Work(WorkerTask {
-                    reader: Box::new(decoder),
-                    fetch_partial: next_id_buffer,
-                    change_id: task.change_id,
-                }))
-                .unwrap();
         }
 
         log::debug!("Shut down fetcher");
     })
 }
 
-// fn reschedule(shared_state: SharedState, request: ChangeIdRequest) -> Result<(), ()> {
-//     if request.1 > 2 {
-//         log::error!("Retried too many times...shutting down");
-//         return Err(());
-//     }
+fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
+    if task.reschedule_count > 2 {
+        scheduler_tx.send(SchedulerMessage::Stop).unwrap();
+        return;
+    }
 
-//     let new_request = (request.0, request.1 + 1);
-//     log::info!(
-//         "Rescheduling {} (Retried {} times)",
-//         new_request.0,
-//         request.1
-//     );
-//     shared_state
-//         .lock()
-//         .unwrap()
-//         .fetcher_queue
-//         .push_back(new_request);
+    log::info!(
+        "Rescheduling {} (Retried {} times)",
+        task.change_id,
+        task.reschedule_count
+    );
 
-//     Ok(())
-// }
+    scheduler_tx
+        .send(SchedulerMessage::Fetch(FetchTask {
+            reschedule_count: task.reschedule_count + 1,
+            ..task
+        }))
+        .unwrap();
+}
+
+fn ratelimiter() -> ratelimit::Limiter {
+    // Break down rate-limit into quantum of 1, so we never do any bursts,
+    // like we would with for example 2 requests per second.
+    ratelimit::Builder::new()
+        .capacity(1)
+        .quantum(1)
+        .interval(std::time::Duration::from_millis(500))
+        .build()
+}
+
+fn process(
+    task: &FetchTask,
+) -> Result<(GzDecoder<BufReader<impl Read + Send>>, [u8; 80], ChangeId), FetcherError> {
+    fetch_chunk(task).and_then(parse_chunk)
+}
+
+fn parse_chunk(
+    response: Response,
+) -> Result<(GzDecoder<BufReader<impl Read + Send>>, [u8; 80], ChangeId), FetcherError> {
+    let reader = response.into_reader();
+    let mut decoder = GzDecoder::new(BufReader::new(reader));
+    let mut next_id_buffer = [0; 80];
+
+    match decoder.read_exact(&mut next_id_buffer) {
+        Ok(_) => {
+            let next_id = parse_change_id_from_bytes(&next_id_buffer)
+                .map_err(|_| FetcherError::ParseError)
+                .and_then(|s| ChangeId::from_str(&s).map_err(|_| FetcherError::ParseError))?;
+            Ok((decoder, next_id_buffer, next_id))
+        }
+        Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => {
+            log::error!("fetcher: UnexpectedEof: {:?}", next_id_buffer);
+            Err(FetcherError::ParseError)
+        }
+        Err(err) => {
+            log::error!("fetcher: gzip decoding failed: {}", err);
+            Err(FetcherError::ParseError)
+        }
+    }
+}
+
+fn fetch_chunk(task: &FetchTask) -> Result<Response, FetcherError> {
+    let url = format!(
+        "http://www.pathofexile.com/api/public-stash-tabs?id={}",
+        task.change_id
+    );
+
+    let response = ureq::request("GET", &url)
+        .set("Accept-Encoding", "gzip")
+        .set("Accept", "application/json")
+        .call();
+
+    response.map_err(|e| match e {
+        ureq::Error::Status(status, ref response) => {
+            log::error!("fetcher: HTTP error {}", status);
+            log::error!("fetcher: HTTP response: {:?}", response);
+
+            match status {
+                429 => FetcherError::RateLimited,
+                _ => FetcherError::HttpError { status },
+            }
+        }
+        ureq::Error::Transport(_) => FetcherError::Transport,
+    })
+}
 
 pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error> {
     String::from_utf8(
