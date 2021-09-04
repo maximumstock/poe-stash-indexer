@@ -9,6 +9,7 @@ use super::{scheduler::SchedulerMessage, IndexerMessage};
 
 pub(crate) enum WorkerMessage {
     Task(WorkerTask),
+    Stop,
 }
 
 pub(crate) struct WorkerTask {
@@ -19,8 +20,7 @@ pub(crate) struct WorkerTask {
 
 pub(crate) fn start_worker(
     worker_rx: Receiver<WorkerMessage>,
-    _scheduler_tx: Sender<SchedulerMessage>,
-    indexer_tx: Sender<IndexerMessage>,
+    scheduler_tx: Sender<SchedulerMessage>,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
         let mut buffer = Vec::new();
@@ -39,20 +39,17 @@ pub(crate) fn start_worker(
                         .expect("Deserialization of body failed");
                     log::debug!("Took {}ms to deserialize body", start.elapsed().as_millis());
 
-                    indexer_tx
-                        .send(IndexerMessage::Tick {
+                    scheduler_tx
+                        .send(SchedulerMessage::Done(IndexerMessage::Tick {
                             payload: deserialized,
                             change_id: task.change_id,
                             created_at: std::time::SystemTime::now(),
-                        })
+                        }))
                         .expect("worker: Sending IndexerMessage::Tick failed");
                 }
+                WorkerMessage::Stop => break,
             }
         }
-
-        indexer_tx
-            .send(IndexerMessage::Stop)
-            .expect("worker: Failed sending IndexerMessage::Stop");
 
         log::debug!("Shut down worker");
     })
