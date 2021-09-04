@@ -23,11 +23,13 @@ pub(crate) fn start_worker(
     indexer_tx: Sender<IndexerMessage>,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
+        let mut buffer = Vec::new();
         while let Ok(message) = worker_rx.recv() {
+            buffer.clear();
+
             match message {
                 WorkerMessage::Task(mut task) => {
                     let start = std::time::Instant::now();
-                    let mut buffer = Vec::new();
                     buffer.write_all(&task.fetch_partial).unwrap();
                     task.reader.read_to_end(&mut buffer).unwrap();
                     log::debug!("Took {}ms to read body", start.elapsed().as_millis());
