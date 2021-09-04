@@ -2,7 +2,7 @@ use std::{
     io::{BufReader, Read},
     str::FromStr,
     string::FromUtf8Error,
-    sync::mpsc::{Receiver, SendError, Sender},
+    sync::mpsc::{Receiver, Sender},
 };
 
 use flate2::bufread::GzDecoder;
@@ -10,12 +10,14 @@ use ureq::Error;
 
 use crate::{common::ChangeId, sync::worker::WorkerTask};
 
-use super::{scheduler::SchedulerMessage, worker::WorkerMessage};
+use super::scheduler::SchedulerMessage;
 
 pub(crate) enum FetcherMessage {
     Task(FetchTask),
+    Stop,
 }
 
+#[derive(Debug, Clone)]
 pub(crate) struct FetchTask {
     change_id: ChangeId,
     reschedule_count: u32,
@@ -33,7 +35,6 @@ impl FetchTask {
 pub(crate) fn start_fetcher(
     fetcher_rx: Receiver<FetcherMessage>,
     scheduler_tx: Sender<SchedulerMessage>,
-    worker_tx: Sender<WorkerMessage>,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
         // Break down rate-limit into quantum of 1, so we never do any bursts,
@@ -104,19 +105,19 @@ pub(crate) fn start_fetcher(
                 ratelimit.wait_for(2);
             }
 
-            if let Err(SendError(_)) = scheduler_tx.send(SchedulerMessage::Task(FetchTask {
-                change_id: next_change_id,
-                reschedule_count: 0,
-            })) {
-                break;
-            };
-            if let Err(SendError(_)) = worker_tx.send(WorkerMessage::Task(WorkerTask {
-                reader: Box::new(decoder),
-                fetch_partial: next_id_buffer,
-                change_id: task.change_id,
-            })) {
-                break;
-            };
+            scheduler_tx
+                .send(SchedulerMessage::Fetch(FetchTask {
+                    change_id: next_change_id,
+                    reschedule_count: 0,
+                }))
+                .unwrap();
+            scheduler_tx
+                .send(SchedulerMessage::Work(WorkerTask {
+                    reader: Box::new(decoder),
+                    fetch_partial: next_id_buffer,
+                    change_id: task.change_id,
+                }))
+                .unwrap();
         }
 
         log::debug!("Shut down fetcher");

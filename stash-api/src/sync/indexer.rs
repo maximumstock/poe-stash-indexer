@@ -1,7 +1,4 @@
-use std::{
-    sync::mpsc::Sender,
-    sync::mpsc::{channel, Receiver},
-};
+use std::{sync::mpsc::Receiver, sync::mpsc::Sender};
 
 use crate::sync::{poe_ninja_client::PoeNinjaClient, scheduler::SchedulerMessage};
 use crate::{
@@ -9,11 +6,7 @@ use crate::{
     sync::fetcher::FetchTask,
 };
 
-use super::{
-    fetcher::{start_fetcher, FetcherMessage},
-    scheduler::start_scheduler,
-    worker::{start_worker, WorkerMessage},
-};
+use super::scheduler::start_scheduler;
 
 #[derive(Default)]
 pub struct Indexer {
@@ -66,17 +59,10 @@ impl Indexer {
     ///    as StashTabResponse structs and sending it to the user of the indexer
     ///    instance.
     fn start(&mut self, change_id: ChangeId) -> IndexerResult {
-        let (scheduler_tx, scheduler_rx) = channel::<SchedulerMessage>();
-        let (fetcher_tx, fetcher_rx) = channel::<FetcherMessage>();
-        let (worker_tx, worker_rx) = channel::<WorkerMessage>();
-        let (indexer_tx, indexer_rx) = channel::<IndexerMessage>();
-
-        let _fetcher_handle = start_fetcher(fetcher_rx, scheduler_tx.clone(), worker_tx);
-        let _worker_handle = start_worker(worker_rx, scheduler_tx.clone(), indexer_tx);
-        let _scheduler_handle = start_scheduler(scheduler_rx, fetcher_tx);
+        let (indexer_rx, scheduler_tx) = start_scheduler();
 
         scheduler_tx
-            .send(SchedulerMessage::Task(FetchTask::new(change_id)))
+            .send(SchedulerMessage::Fetch(FetchTask::new(change_id)))
             .expect("indexer: Failed to schedule initial FetchTask");
 
         self.scheduler_tx = Some(scheduler_tx);
@@ -85,7 +71,7 @@ impl Indexer {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IndexerMessage {
     Tick {
         payload: StashTabResponse,
@@ -116,7 +102,7 @@ mod test {
     fn test_indexer() {
         let mut indexer = Indexer::new();
         let rx = indexer.start_with_latest();
-        std::thread::sleep(Duration::from_secs(3));
+        std::thread::sleep(Duration::from_secs(10));
         indexer.stop();
 
         let (mut n_tick, mut n_stop) = (0, 0);
