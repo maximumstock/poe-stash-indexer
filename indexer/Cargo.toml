@@ -1,5 +1,5 @@
 [package]
-name = "poe-stash-indexer"
+name = "indexer"
 version = "0.1.0"
 authors = ["Maximilian Stock <mxmlnstock@gmail.com>"]
 edition = "2018"
@@ -13,7 +13,7 @@ regex = "1.5.4"
 diesel = { version = "1.4.7", features = ["postgres", "chrono", "serde_json"] }
 dotenv = "0.15.0"
 chrono = { version = "0.4.19", features = ["serde"] }
-river-subscription = { path = "../river-subscription" }
+stash-api = { path = "../stash-api" }
 log = "0.4.14"
 pretty_env_logger = "0.4.0"
 config = "0.11.0"

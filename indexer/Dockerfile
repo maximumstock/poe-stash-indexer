@@ -7,17 +7,17 @@ RUN cargo install cargo-watch
 
 FROM base as builder
 WORKDIR /usr/local/src/poe-stash-indexer
-# Pre-build river-subscription dependencies
-COPY river-subscription ./river-subscription
-RUN echo "#[allow(dead_code)]\nfn main() {}" > river-subscription/src/lib.rs
-RUN cd river-subscription && cargo build
-COPY river-subscription/src ./river-subscriptions/src
+# Pre-build stash-api dependencies
+COPY stash-api ./stash-api
+RUN echo "#[allow(dead_code)]\nfn main() {}" > stash-api/src/lib.rs
+RUN cd stash-api && cargo build
+COPY stash-api/src ./stash-apis/src
 
 # Pre-build indexer dependencies
 COPY indexer ./indexer
 RUN echo "#[allow(dead_code)]\nfn main() {}" > indexer/src/main.rs
 RUN cd indexer && cargo build
-COPY river-subscription/src ./river-subscriptions/src
+COPY stash-api/src ./stash-apis/src
 
 WORKDIR /usr/local/src/poe-stash-indexer/indexer
 RUN cargo build
