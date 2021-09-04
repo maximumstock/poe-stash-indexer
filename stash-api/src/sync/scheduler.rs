@@ -31,12 +31,8 @@ pub(crate) fn start_scheduler() -> (Receiver<IndexerMessage>, Sender<SchedulerMe
         while let Ok(msg) = scheduler_rx.recv() {
             match msg {
                 SchedulerMessage::Stop => {
-                    scheduler_fetcher_tx
-                        .send(FetcherMessage::Stop)
-                        .expect("scheduler: Failed to send FetcherMessage::Stop");
-                    scheduler_worker_tx
-                        .send(WorkerMessage::Stop)
-                        .expect("scheduler: Failed to send WorkerMessage::Stop");
+                    let _ = scheduler_fetcher_tx.send(FetcherMessage::Stop);
+                    let _ = scheduler_worker_tx.send(WorkerMessage::Stop);
                     break;
                 }
                 SchedulerMessage::Fetch(task) => {
