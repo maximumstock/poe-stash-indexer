@@ -4,25 +4,20 @@ RUN apt-get update
 RUN apt-get install libpq-dev libssl-dev pkg-config -y
 RUN cargo install diesel_cli --no-default-features --features postgres
 RUN cargo install cargo-watch
+RUN cargo install cargo-chef
+
+
+FROM base as planner
+WORKDIR /app
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
 FROM base as builder
-WORKDIR /usr/local/src/poe-stash-indexer
-# Pre-build stash-api dependencies
-COPY stash-api ./stash-api
-RUN echo "#[allow(dead_code)]\nfn main() {}" > stash-api/src/lib.rs
-RUN cd stash-api && cargo build
-COPY stash-api/src ./stash-apis/src
-
-# Pre-build indexer dependencies
-COPY indexer ./indexer
-RUN echo "#[allow(dead_code)]\nfn main() {}" > indexer/src/main.rs
-RUN cd indexer && cargo build
-COPY stash-api/src ./stash-apis/src
-
-WORKDIR /usr/local/src/poe-stash-indexer/indexer
-RUN cargo build
-RUN cp target/debug/indexer /usr/local/bin/indexer
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --recipe-path recipe.json
+COPY . .
+RUN cargo build --bin indexer
 
 FROM builder as devserver
-WORKDIR /usr/local/src/poe-stash-indexer/indexer
-CMD ["scripts/run.sh"]
+WORKDIR /app
+CMD ["indexer/scripts/run.sh"]
