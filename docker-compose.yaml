@@ -24,7 +24,7 @@ services:
       RABBITMQ_PRODUCER_ROUTING_KEY: "stash-record-stream"
     volumes:
       - ".:/usr/local/src/poe-stash-indexer"
-      - "./target:/usr/local/src/poe-stash-indexer/target"
+      - "./target:/usr/local/src/poe-stash-indexer/target:cached"
 
   rabbitmq:
     build:

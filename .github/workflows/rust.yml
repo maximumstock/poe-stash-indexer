@@ -1,9 +1,12 @@
 name: Continuous Integration
-
 on:
-  push:
   pull_request:
+  push:
     branches: [ master ]
+
+env:
+  # Because matklad said so https://matklad.github.io/2021/09/04/fast-rust-builds.html
+  CARGO_INCREMENTAL: 0
 
 jobs:
   ci:
@@ -21,24 +24,17 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Run cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@ce325b60658c1b38465c06cc965b79baf32c1e72
 
-      - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+      - name: Compile
+        run: cargo test --no-run --locked
 
-      - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - name: Test
+        run: cargo test -- --nocapture --quiet
 
-      - name: Run cargo clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Lint
+        run: cargo clippy -- -D warnings
