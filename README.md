@@ -16,12 +16,16 @@ Our [`docker-compose.yaml`](./docker-compose.yaml) describes an examplatory setu
 - saves collected data to a dockerized PostgreSQL database
 - pushes collected data to a dockerized RabbitMQ exchange
 
-This is meant to be run via your terminal or an equivalent [Docker](https://www.docker.com/) setup.
-You can use the commands `docker-compose up -d` or `make up` to start up this configuration and
+This is meant to be run via your terminal or an equivalent [Docker](https://www.docker.com/) setup with `make` installed.
+You can use the command `make up` to start up this configuration and
 `make logs` to watch all logs.
 
+Check out `Makefile` for more command aliases.
+
 This pre-defined setup is only used for spontaneous testing and not meant to be copied and
-ran right away.
+ran in production.
+
+Here is a list of services in this local development setup and and their credentials:
 
 - [Prometheus](http://localhost:9090)
 - [RabbitMQ Control Panel](http://localhost:15672) (`poe:poe`)
