@@ -32,12 +32,18 @@ pub(crate) fn start_worker(
                     let start = std::time::Instant::now();
                     buffer.write_all(&task.fetch_partial).unwrap();
                     task.reader.read_to_end(&mut buffer).unwrap();
-                    log::debug!("Took {}ms to read body", start.elapsed().as_millis());
+                    log::debug!(
+                        "worker: Took {}ms to read body",
+                        start.elapsed().as_millis()
+                    );
 
                     let start = std::time::Instant::now();
                     let deserialized = serde_json::from_slice::<StashTabResponse>(&buffer)
                         .expect("Deserialization of body failed");
-                    log::debug!("Took {}ms to deserialize body", start.elapsed().as_millis());
+                    log::debug!(
+                        "worker: Took {}ms to deserialize body",
+                        start.elapsed().as_millis()
+                    );
 
                     scheduler_tx
                         .send(SchedulerMessage::Done(IndexerMessage::Tick {
@@ -51,6 +57,6 @@ pub(crate) fn start_worker(
             }
         }
 
-        log::debug!("Shut down worker");
+        log::debug!("worker: Shutting down");
     })
 }

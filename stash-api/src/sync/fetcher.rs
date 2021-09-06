@@ -65,7 +65,7 @@ pub(crate) fn start_fetcher(
             match process(&task) {
                 Ok((decoder, change_id_buffer, next_change_id)) => {
                     log::debug!(
-                        "Took {}ms to read next id: {}",
+                        "fetcher: Took {}ms to read next id: {}",
                         start.elapsed().as_millis(),
                         next_change_id
                     );
@@ -106,7 +106,7 @@ pub(crate) fn start_fetcher(
             }
         }
 
-        log::debug!("Shut down fetcher");
+        log::debug!("fetcher: Shutting down");
     })
 }
 
@@ -117,7 +117,7 @@ fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
     }
 
     log::info!(
-        "Rescheduling {} (Retried {} times)",
+        "fetcher: Rescheduling {} (Retried {} times)",
         task.change_id,
         task.reschedule_count
     );
