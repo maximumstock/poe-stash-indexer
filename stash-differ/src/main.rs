@@ -3,7 +3,7 @@ extern crate pretty_env_logger;
 
 mod db;
 mod differ;
-mod stash;
+pub mod stash;
 mod store;
 
 use chrono::{prelude::*, Duration};
