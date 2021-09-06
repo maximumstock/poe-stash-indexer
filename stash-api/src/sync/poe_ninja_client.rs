@@ -8,7 +8,7 @@ struct PoeNinjaGetStats {
 }
 
 #[derive(Debug)]
-pub(crate) struct PoeNinjaClient {}
+pub(crate) struct PoeNinjaClient;
 
 impl PoeNinjaClient {
     pub fn fetch_latest_change_id() -> Result<ChangeId, Box<dyn std::error::Error>> {

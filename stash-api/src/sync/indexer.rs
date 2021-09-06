@@ -102,15 +102,22 @@ mod test {
     fn test_indexer() {
         let mut indexer = Indexer::new();
         let rx = indexer.start_with_latest();
-        std::thread::sleep(Duration::from_secs(10));
-        indexer.stop();
 
         let (mut n_tick, mut n_stop) = (0, 0);
 
         while let Ok(msg) = rx.recv() {
             match msg {
-                IndexerMessage::Stop => n_stop += 1,
-                IndexerMessage::Tick { .. } => n_tick += 1,
+                IndexerMessage::Stop => {
+                    n_stop += 1;
+                    break;
+                }
+                IndexerMessage::Tick { .. } => {
+                    n_tick += 1;
+
+                    if n_tick > 5 {
+                        indexer.stop();
+                    }
+                }
             }
         }
 
