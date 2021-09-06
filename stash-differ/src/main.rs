@@ -19,7 +19,7 @@ use std::{
     sync::{Arc, Condvar, Mutex},
 };
 
-use crate::{db::group_stash_records_by_account_name, differ::DiffStats, store::LeagueStore};
+use crate::{differ::DiffStats, stash::group_stash_records_by_account_name, store::LeagueStore};
 
 #[derive(Default)]
 struct State {
