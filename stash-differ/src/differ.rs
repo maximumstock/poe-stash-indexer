@@ -1,18 +1,28 @@
 use std::ops::AddAssign;
 
-use crate::stash::Stash;
+use crate::stash::{AccountStash, Stash};
 
 pub struct StashDiffer;
 
 impl StashDiffer {
-    pub fn diff(before: &Stash, after: &Stash) -> Vec<DiffEvent> {
+    pub fn diff_accounts(before: &AccountStash, after: &AccountStash) -> Vec<DiffEvent> {
         let mut events = vec![];
 
+        for (stash_id, before_stash) in &before.stashes {
+            if let Some(after_stash) = after.stashes.get(stash_id) {
+                Self::diff_stash(before_stash, after_stash, &mut events);
+            }
+        }
+
+        events
+    }
+
+    pub fn diff_stash(before: &Stash, after: &Stash, buffer: &mut Vec<DiffEvent>) {
         for (item_id, before_item) in before.content.iter() {
             if let Some(after_item) = after.content.get(item_id) {
                 // Check for changed notes
                 if before_item.note.ne(&after_item.note) {
-                    events.push(DiffEvent::NoteChanged(Diff {
+                    buffer.push(DiffEvent::NoteChanged(Diff {
                         id: after_item.id.clone(),
                         name: after_item.type_line.clone(),
                         before: before_item.note.clone(),
@@ -22,7 +32,7 @@ impl StashDiffer {
 
                 // Check for changed stack_sizes
                 if before_item.stack_size.ne(&after_item.stack_size) {
-                    events.push(DiffEvent::StackSizeChanged(Diff {
+                    buffer.push(DiffEvent::StackSizeChanged(Diff {
                         id: after_item.id.clone(),
                         name: after_item.type_line.clone(),
                         before: before_item.stack_size,
@@ -30,7 +40,7 @@ impl StashDiffer {
                     }));
                 }
             } else {
-                events.push(DiffEvent::Removed(Diff {
+                buffer.push(DiffEvent::Removed(Diff {
                     before: (),
                     after: (),
                     id: before_item.id.clone(),
@@ -41,7 +51,7 @@ impl StashDiffer {
 
         for (item_id, after_item) in after.content.iter() {
             if before.content.get(item_id).is_none() {
-                events.push(DiffEvent::Added(Diff {
+                buffer.push(DiffEvent::Added(Diff {
                     before: (),
                     after: (),
                     id: after_item.id.clone(),
@@ -49,8 +59,6 @@ impl StashDiffer {
                 }));
             }
         }
-
-        events
     }
 }
 
@@ -70,7 +78,7 @@ pub struct Diff<T> {
     after: T,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct DiffStats {
     pub added: u32,
     pub removed: u32,
@@ -103,16 +111,5 @@ impl From<&[DiffEvent]> for DiffStats {
         }
 
         stats
-    }
-}
-
-impl Default for DiffStats {
-    fn default() -> Self {
-        DiffStats {
-            added: 0,
-            removed: 0,
-            note: 0,
-            stack_size: 0,
-        }
     }
 }
