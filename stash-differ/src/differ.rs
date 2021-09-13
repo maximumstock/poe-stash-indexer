@@ -1,3 +1,4 @@
+use serde::Serialize;
 use std::ops::AddAssign;
 
 use crate::stash::{AccountStash, Stash};
@@ -19,6 +20,8 @@ impl StashDiffer {
 
     pub fn diff_stash(before: &Stash, after: &Stash, buffer: &mut Vec<DiffEvent>) {
         for (item_id, before_item) in before.content.iter() {
+            let item_age = Some(before_item.birthday.map_or(0, |b| before.update_count - b));
+
             if let Some(after_item) = after.content.get(item_id) {
                 // Check for changed notes
                 if before_item.note.ne(&after_item.note) {
@@ -27,6 +30,7 @@ impl StashDiffer {
                         name: after_item.type_line.clone(),
                         before: before_item.note.clone(),
                         after: after_item.note.clone(),
+                        age: item_age,
                     }));
                 }
 
@@ -37,6 +41,7 @@ impl StashDiffer {
                         name: after_item.type_line.clone(),
                         before: before_item.stack_size,
                         after: after_item.stack_size,
+                        age: item_age,
                     }));
                 }
             } else {
@@ -45,6 +50,7 @@ impl StashDiffer {
                     after: (),
                     id: before_item.id.clone(),
                     name: before_item.type_line.clone(),
+                    age: item_age,
                 }));
             }
         }
@@ -56,13 +62,14 @@ impl StashDiffer {
                     after: (),
                     id: after_item.id.clone(),
                     name: after_item.type_line.clone(),
+                    age: None,
                 }));
             }
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Serialize)]
 pub enum DiffEvent {
     Added(Diff<()>),
     Removed(Diff<()>),
@@ -70,12 +77,13 @@ pub enum DiffEvent {
     StackSizeChanged(Diff<Option<u32>>),
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Diff<T> {
+#[derive(Debug, PartialEq, Eq, Hash, Serialize)]
+pub struct Diff<T: Serialize> {
     id: String,
     name: String,
     before: T,
     after: T,
+    age: Option<u64>,
 }
 
 #[derive(Debug, Copy, Clone, Default)]
