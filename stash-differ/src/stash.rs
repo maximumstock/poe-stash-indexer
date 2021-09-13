@@ -12,6 +12,7 @@ pub struct AccountStash {
     pub account_name: Option<AccountName>,
     pub league: Option<String>,
     pub stashes: HashMap<StashId, Stash>,
+    pub update_count: u64,
 }
 
 impl AccountStash {
@@ -29,6 +30,7 @@ impl AccountStash {
 pub struct Stash {
     pub stash_id: StashId,
     pub content: HashMap<ItemId, Item>,
+    pub update_count: u64,
 }
 
 impl Stash {
@@ -54,6 +56,7 @@ impl From<Vec<StashRecord>> for AccountStash {
                 .into_iter()
                 .map(|sr| (sr.stash_id.clone(), sr.into()))
                 .collect(),
+            update_count: 0,
         }
     }
 }
@@ -67,6 +70,7 @@ impl From<StashRecord> for Stash {
                 .into_iter()
                 .map(|i| (i.id.clone(), i))
                 .collect(),
+            update_count: 0,
         }
     }
 }
@@ -89,6 +93,7 @@ pub struct Item {
     pub type_line: String,
     pub note: Option<String>,
     pub stack_size: Option<u32>,
+    pub birthday: Option<u64>,
 }
 
 impl Item {
