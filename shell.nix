@@ -16,7 +16,7 @@ in
       postgresql
       openssl
       openssl.dev
-      (rust-bin.stable."1.54.0".default.override {
+      (rust-bin.stable."1.55.0".default.override {
         extensions = ["rust-src"];
       })
       rust-analyzer
