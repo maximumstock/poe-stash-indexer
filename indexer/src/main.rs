@@ -46,6 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let database_url = std::env::var("DATABASE_URL").expect("Missing DATABASE_URL");
     let persistence = Postgres::new(&database_url);
+    sinks.push(Box::new(Postgres::new(&database_url)));
     log::info!("Configured PostgreSQL sink");
 
     let mut indexer = Indexer::new();
