@@ -1,4 +1,4 @@
-_init: 
+_init:
 	docker-compose up -d
 
 indexer-migrate: _init
@@ -12,7 +12,7 @@ logs:
 
 up: _init
 
-down: 
+down:
 	docker-compose down
 
 restart:
@@ -20,3 +20,6 @@ restart:
 
 stop:
 	docker-compose stop $(CONTAINERS)
+
+build:
+	docker build -t indexer:latest -f indexer/Dockerfile .
