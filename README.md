@@ -11,7 +11,7 @@ Exile's [Public Stash Tab API](https://www.pathofexile.com/developer/docs/refere
 
 # How To Run
 
-Our [`docker-compose.yaml`](./docker-compose.yaml) describes an examplatory setup of the [indexer](./indexer/README.md) that:
+Our [`docker-compose.yaml`](./docker-compose.yaml) describes an examplatory setup of the [indexer](./indexer) that:
 
 - saves collected data to a dockerized PostgreSQL database
 - pushes collected data to a dockerized RabbitMQ exchange
