@@ -7,8 +7,7 @@ use crate::{
 };
 
 /// A consumer thread implementation that pulls data from `SharedState`, builds a
-/// continuous stash store, build diffs and aggregates them based on a time window
-/// before serializing these aggregated events to a .csv file.
+/// continuous stash store, build diffs events and serializes them to a .csv file.
 pub fn flat_consumer(shared_state: SharedState) {
     let mut csv_writer = csv::WriterBuilder::new()
         .has_headers(true)
