@@ -5,4 +5,7 @@ members = ["indexer", "stash-api", "stash-differ"]
 [profile.dev]
 # Disabling debug info speeds up builds a bunch,
 # and we don't rely on it for debugging that much.
-debug = 0
+debug = false
+
+[profile.release]
+debug = true

@@ -21,6 +21,7 @@ in
       })
       rust-analyzer
       cargo-edit
+      linuxPackages.perf
     ];
 
     # RUST_BACKTRACE = 1;
