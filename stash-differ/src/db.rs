@@ -106,7 +106,7 @@ async fn fetch_stash_records_paginated(
     league: &str,
 ) -> Result<Vec<StashRecord>, sqlx::Error> {
     sqlx::query_as::<_, StashRecord>(
-        "SELECT change_id, next_change_id, stash_id, account_name, league, items, created_at
+        "SELECT change_id, next_change_id, stash_id, account_name, league, public, items, created_at
              FROM stash_records
              WHERE league = $1 and int8range($2, $3, '[]') @> int8range(id, id, '[]')",
     )
