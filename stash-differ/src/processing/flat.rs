@@ -56,7 +56,8 @@ pub fn flat_consumer(shared_state: SharedState) {
                                 last_timestamp: chunk_first_timestamp.timestamp(),
                                 event,
                             };
-                            csv_writer.serialize(&record).unwrap_or_else(|_| {
+                            csv_writer.serialize(&record).unwrap_or_else(|e| {
+                                log::error!("{}", e);
                                 panic!("Error when serializing record {:?}", record)
                             });
                         });
@@ -72,5 +73,6 @@ pub fn flat_consumer(shared_state: SharedState) {
 struct CsvRecord<'a> {
     account_name: &'a String,
     last_timestamp: i64,
+    #[serde(flatten)]
     event: &'a DiffEvent,
 }
