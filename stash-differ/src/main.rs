@@ -44,7 +44,11 @@ fn main() -> Result<(), sqlx::Error> {
 }
 
 fn producer(shared_state: SharedState, database_url: &str, league: &str) {
-    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("Error when creating Tokio runtime");
+
     let pool = runtime
         .block_on(async {
             PgPoolOptions::new()
