@@ -8,7 +8,7 @@ and lets you save its data to different [sinks](#sinks).
 
 - [x] Minimum indexing delay due to look-ahead for next `change_id` on partial HTTP response
 - [x] Respects Stash Tab API [rate limit](https://pathofexile.gamepedia.com/Public_stash_tab_API#Rate_Limit)
-- [x] Persists stash updates in a PostgreSQL database in the form of [Stash Records](indexer/src/stash_record.rs)
+- [x] Persists stash updates in a [TimescaleDB](https://www.timescale.com/) database in the form of [Stash Records](indexer/src/stash_record.rs)
 
 **Note: Around 800 MB - 1 GB is generated per hour of indexing during active play-time**
 
