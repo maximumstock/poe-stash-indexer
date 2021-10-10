@@ -70,6 +70,7 @@ impl StashDiffer {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Serialize)]
+#[serde(tag = "type")]
 pub enum DiffEvent {
     Added(Diff<()>),
     Removed(Diff<()>),
