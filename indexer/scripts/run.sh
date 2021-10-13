@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
 
+set -ex
+
 while !</dev/tcp/db/5432; do sleep 1; done;
 
-diesel setup
-diesel migration run
+diesel setup \
+  --migration-dir indexer/migrations \
+  --config-file indexer/diesel.toml
 
-cargo watch -x run
+case $ENV in
+  "production")
+    indexer
+    ;;
+  *)
+    cargo watch -x "run --bin indexer"
+    ;;
+esac
+

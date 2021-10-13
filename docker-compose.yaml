@@ -1,4 +1,4 @@
-version: "3.8"
+version: "3"
 services:
   db:
     image: timescale/timescaledb:2.4.1-pg13
@@ -6,25 +6,28 @@ services:
       POSTGRES_PASSWORD: "poe"
       POSTGRES_USER: "poe"
       POSTGRES_DB: "poe"
+      PG_DATA: "/pg-data"
+    volumes:
+      - ./timescaledb:/pg-data
 
   indexer:
     build:
       context: .
       dockerfile: indexer/Dockerfile
-      target: devserver
+      target: development
     depends_on:
       - db
       - rabbitmq
-    restart: "no"
+    restart: "unless-stopped"
     environment:
+      ENV: "development"
       DATABASE_URL: "postgres://poe:poe@db:5432/poe"
       RUST_LOG: "info,ureq=warn"
       RABBITMQ_SINK_ENABLED: "true"
       RABBITMQ_URL: "amqp://poe:poe@rabbitmq"
       RABBITMQ_PRODUCER_ROUTING_KEY: "stash-record-stream"
     volumes:
-      - ".:/usr/local/src/poe-stash-indexer"
-      - "./target:/usr/local/src/poe-stash-indexer/target:cached"
+      - ".:/app:cached"
 
   rabbitmq:
     build:

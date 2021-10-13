@@ -1,0 +1,9 @@
+version: "3"
+services:
+  indexer:
+    build:
+      context: .
+      dockerfile: indexer/Dockerfile
+      target: production
+    environment:
+      ENV: "production"

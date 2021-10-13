@@ -22,8 +22,8 @@ in
       rust-analyzer
       cargo-edit
       linuxPackages.perf
+      docker-compose
     ];
 
-    # RUST_BACKTRACE = 1;
-
+    RUST_BACKTRACE = 1;
   }
