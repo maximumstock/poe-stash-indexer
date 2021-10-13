@@ -1,32 +1,41 @@
-_init:
-	docker-compose up -d
+dc := docker-compose -f docker-compose.yaml
+dc-prod := docker-compose -f docker-compose.yaml -f docker-compose.production.yaml
 
-indexer-migrate: _init
-	docker-compose exec indexer bash -c "diesel migration run"
+init:
+	$(dc) up -d
+init-prod:
+	$(dc-prod) up -d
 
-indexer-start : _init
-	docker-compose exec indexer indexer
+up: build init
+up-prod: build-prod init-prod
 
-logs:
-	docker-compose logs -f --tail=20
-
-up: _init
+build: 
+	$(dc) build --force-rm indexer
+build-prod: 
+	$(dc-prod) build --force-rm indexer
 
 down:
-	docker-compose down
+	$(dc) down --remove-orphans
 
 restart:
-	docker-compose restart $(CONTAINERS)
+	$(dc) restart $(CONTAINERS)
 
 stop:
-	docker-compose stop $(CONTAINERS)
+	$(dc) stop $(CONTAINERS)
 
-build:
-	docker build -t indexer:latest -f indexer/Dockerfile .
+logs:
+	$(dc) logs -f --tail=20
+
+
+# Indexer targets
+indexer-migrate: _init
+	$(dc) exec indexer bash -c "diesel setup"
+
+indexer-start : _init
+	$(dc) exec indexer indexer
 
 shell-indexer:
-	docker-compose exec indexer bash
+	$(dc) exec indexer bash
 
 shell-db:
-	docker-compose exec db bash
-
+	$(dc) exec db bash
