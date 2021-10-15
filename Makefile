@@ -2,7 +2,7 @@ dc := docker-compose -f docker-compose.yaml
 dc-prod := docker-compose -f docker-compose.yaml -f docker-compose.production.yaml
 
 init:
-	$(dc) up -d
+	$(dc) up --build -d
 init-prod:
 	$(dc-prod) up -d
 
