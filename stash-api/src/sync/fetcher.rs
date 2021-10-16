@@ -76,7 +76,7 @@ pub(crate) fn start_fetcher(
             let start = std::time::Instant::now();
             log::debug!("Requesting {}", task.change_id);
 
-            match process(&task) {
+            match fetch_chunk(&task).and_then(parse_chunk) {
                 Ok((decoder, change_id_buffer, next_change_id)) => {
                     log::debug!(
                         "fetcher: Took {}ms to read next id: {}",
@@ -88,6 +88,7 @@ pub(crate) fn start_fetcher(
                         ratelimit.wait_for(2);
                     }
 
+                    // Only fresh tasks trigger a successive task.
                     if task.reschedule_count == 0 {
                         scheduler_tx
                             .send(SchedulerMessage::Fetch(FetchTask {
@@ -151,12 +152,6 @@ fn ratelimiter() -> ratelimit::Limiter {
         .quantum(1)
         .interval(std::time::Duration::from_millis(500))
         .build()
-}
-
-fn process(
-    task: &FetchTask,
-) -> Result<(GzDecoder<BufReader<impl Read + Send>>, [u8; 80], ChangeId), FetcherError> {
-    fetch_chunk(task).and_then(parse_chunk)
 }
 
 fn parse_chunk(
