@@ -34,6 +34,17 @@ impl FetchTask {
             reschedule_count: 0,
         }
     }
+
+    pub(crate) fn retry(self) -> Option<Self> {
+        if self.reschedule_count > 2 {
+            return None;
+        }
+
+        Some(FetchTask {
+            reschedule_count: self.reschedule_count + 1,
+            ..self
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -116,23 +127,20 @@ pub(crate) fn start_fetcher(
 }
 
 fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
-    if task.reschedule_count > 2 {
-        scheduler_tx.send(SchedulerMessage::Stop).unwrap();
-        return;
+    match task.retry() {
+        Some(t) => {
+            log::info!(
+                "fetcher: Rescheduling {} (Retried {} times)",
+                t.change_id,
+                t.reschedule_count - 1
+            );
+
+            scheduler_tx.send(SchedulerMessage::Fetch(t)).unwrap();
+        }
+        None => {
+            scheduler_tx.send(SchedulerMessage::Stop).unwrap();
+        }
     }
-
-    log::info!(
-        "fetcher: Rescheduling {} (Retried {} times)",
-        task.change_id,
-        task.reschedule_count
-    );
-
-    scheduler_tx
-        .send(SchedulerMessage::Fetch(FetchTask {
-            reschedule_count: task.reschedule_count + 1,
-            ..task
-        }))
-        .unwrap();
 }
 
 fn ratelimiter() -> ratelimit::Limiter {
@@ -230,9 +238,11 @@ pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error>
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::{str::FromStr, time::Duration};
 
-    use super::parse_rate_limit_timer;
+    use crate::common::ChangeId;
+
+    use super::{parse_rate_limit_timer, FetchTask};
 
     #[test]
     fn test_parse_rate_limit_timer() {
@@ -249,5 +259,32 @@ mod tests {
             parse_rate_limit_timer(Some("_:_:120")),
             Duration::from_secs(120)
         );
+    }
+
+    #[test]
+    fn test_fetch_task_retry() {
+        let task = FetchTask {
+            change_id: ChangeId::from_str("850662131-863318628-825558626-931433265-890834941")
+                .unwrap(),
+            reschedule_count: 0,
+        };
+
+        let retry1 = task.retry();
+        assert!(retry1.is_some());
+        let retry1 = retry1.unwrap();
+        assert_eq!(retry1.reschedule_count, 1);
+
+        let retry2 = retry1.retry();
+        assert!(retry2.is_some());
+        let retry2 = retry2.unwrap();
+        assert_eq!(retry2.reschedule_count, 2);
+
+        let retry3 = retry2.retry();
+        assert!(retry3.is_some());
+        let retry3 = retry3.unwrap();
+        assert_eq!(retry3.reschedule_count, 3);
+
+        let retry4 = retry3.retry();
+        assert!(retry4.is_none());
     }
 }
