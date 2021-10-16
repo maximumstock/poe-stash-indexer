@@ -4,6 +4,7 @@ use std::{
     str::FromStr,
     string::FromUtf8Error,
     sync::mpsc::{Receiver, Sender},
+    time::Duration,
 };
 
 use flate2::bufread::GzDecoder;
@@ -12,6 +13,8 @@ use ureq::Response;
 use crate::{common::ChangeId, sync::worker::WorkerTask};
 
 use super::scheduler::SchedulerMessage;
+
+const DEFAULT_RATE_LIMIT_TIMER: u64 = 60;
 
 pub(crate) enum FetcherMessage {
     Task(FetchTask),
@@ -37,7 +40,7 @@ impl FetchTask {
 enum FetcherError {
     HttpError { status: u16 },
     Transport,
-    RateLimited,
+    RateLimited(Duration),
     ParseError,
 }
 
@@ -98,10 +101,12 @@ pub(crate) fn start_fetcher(
                 ) => {
                     reschedule_task(&scheduler_tx, task);
                 }
-                Err(FetcherError::RateLimited) => {
+                Err(FetcherError::RateLimited(timer)) => {
                     log::info!("fetcher: Rate limit reached");
-                    scheduler_tx.send(SchedulerMessage::Stop).unwrap();
-                    break;
+                    scheduler_tx
+                        .send(SchedulerMessage::RateLimited(timer))
+                        .unwrap();
+                    reschedule_task(&scheduler_tx, task);
                 }
             }
         }
@@ -188,12 +193,29 @@ fn fetch_chunk(task: &FetchTask) -> Result<Response, FetcherError> {
             log::error!("fetcher: HTTP response: {:?}", response);
 
             match status {
-                429 => FetcherError::RateLimited,
+                429 => {
+                    let wait_time = parse_rate_limit_timer(response.header("x-rate-limit-ip"));
+                    FetcherError::RateLimited(wait_time)
+                }
                 _ => FetcherError::HttpError { status },
             }
         }
         ureq::Error::Transport(_) => FetcherError::Transport,
     })
+}
+
+pub fn parse_rate_limit_timer(input: Option<&str>) -> Duration {
+    let seconds = input
+        .and_then(|v| v.split(':').last())
+        .map(|s| {
+            if s.ne("60") {
+                log::warn!("Expected x-rate-limit-ip to be 60 seconds");
+            }
+            s.parse().unwrap_or(DEFAULT_RATE_LIMIT_TIMER)
+        })
+        .unwrap_or(DEFAULT_RATE_LIMIT_TIMER);
+
+    Duration::from_secs(seconds)
 }
 
 pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error> {
@@ -204,4 +226,28 @@ pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error>
             .unwrap()
             .to_vec(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::parse_rate_limit_timer;
+
+    #[test]
+    fn test_parse_rate_limit_timer() {
+        assert_eq!(parse_rate_limit_timer(None), Duration::from_secs(60));
+        assert_eq!(
+            parse_rate_limit_timer(Some("something")),
+            Duration::from_secs(60)
+        );
+        assert_eq!(
+            parse_rate_limit_timer(Some("_:_:abc")),
+            Duration::from_secs(60)
+        );
+        assert_eq!(
+            parse_rate_limit_timer(Some("_:_:120")),
+            Duration::from_secs(120)
+        );
+    }
 }
