@@ -1,4 +1,7 @@
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::{
+    sync::mpsc::{channel, Receiver, Sender},
+    time::Duration,
+};
 
 use super::{
     fetcher::{start_fetcher, FetchTask, FetcherMessage},
@@ -10,6 +13,7 @@ pub(crate) enum SchedulerMessage {
     Fetch(FetchTask),
     Work(WorkerTask),
     Done(IndexerMessage),
+    RateLimited(Duration),
     Stop,
 }
 
@@ -44,6 +48,12 @@ pub(crate) fn start_scheduler() -> (Receiver<IndexerMessage>, Sender<SchedulerMe
                     scheduler_worker_tx
                         .send(WorkerMessage::Task(task))
                         .expect("scheduler: Failed to send WorkerMessage::Task");
+                }
+                SchedulerMessage::RateLimited(timer) => {
+                    indexer_tx
+                        .send(IndexerMessage::RateLimited(timer))
+                        .expect("scheduler: Failed to send IndexerMessage::RateLimited");
+                    std::thread::sleep(timer);
                 }
                 SchedulerMessage::Done(msg) => {
                     indexer_tx
