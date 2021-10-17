@@ -77,6 +77,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         match msg {
             IndexerMessage::Stop => break,
+            IndexerMessage::RateLimited(timer) => {
+                log::info!("Rate limited for {} seconds...waiting", timer.as_secs());
+            }
             IndexerMessage::Tick {
                 change_id,
                 payload,

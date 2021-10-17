@@ -4,6 +4,7 @@ use std::{
     str::FromStr,
     string::FromUtf8Error,
     sync::mpsc::{Receiver, Sender},
+    time::Duration,
 };
 
 use flate2::bufread::GzDecoder;
@@ -13,6 +14,8 @@ use crate::{common::ChangeId, sync::worker::WorkerTask};
 
 use super::scheduler::SchedulerMessage;
 
+const DEFAULT_RATE_LIMIT_TIMER: u64 = 60;
+
 pub(crate) enum FetcherMessage {
     Task(FetchTask),
     Stop,
@@ -21,15 +24,15 @@ pub(crate) enum FetcherMessage {
 #[derive(Debug, Clone)]
 pub(crate) struct FetchTask {
     change_id: ChangeId,
-    reschedule_count: u32,
 }
 
 impl FetchTask {
     pub(crate) fn new(change_id: ChangeId) -> Self {
-        Self {
-            change_id,
-            reschedule_count: 0,
-        }
+        Self { change_id }
+    }
+
+    pub(crate) fn retry(self) -> Option<Self> {
+        Some(FetchTask { ..self })
     }
 }
 
@@ -37,7 +40,7 @@ impl FetchTask {
 enum FetcherError {
     HttpError { status: u16 },
     Transport,
-    RateLimited,
+    RateLimited(Duration),
     ParseError,
 }
 
@@ -62,7 +65,7 @@ pub(crate) fn start_fetcher(
             let start = std::time::Instant::now();
             log::debug!("Requesting {}", task.change_id);
 
-            match process(&task) {
+            match fetch_chunk(&task).and_then(parse_chunk) {
                 Ok((decoder, change_id_buffer, next_change_id)) => {
                     log::debug!(
                         "fetcher: Took {}ms to read next id: {}",
@@ -74,14 +77,11 @@ pub(crate) fn start_fetcher(
                         ratelimit.wait_for(2);
                     }
 
-                    if task.reschedule_count == 0 {
-                        scheduler_tx
-                            .send(SchedulerMessage::Fetch(FetchTask {
-                                change_id: next_change_id,
-                                reschedule_count: 0,
-                            }))
-                            .unwrap();
-                    }
+                    scheduler_tx
+                        .send(SchedulerMessage::Fetch(FetchTask {
+                            change_id: next_change_id,
+                        }))
+                        .unwrap();
 
                     scheduler_tx
                         .send(SchedulerMessage::Work(WorkerTask {
@@ -98,10 +98,12 @@ pub(crate) fn start_fetcher(
                 ) => {
                     reschedule_task(&scheduler_tx, task);
                 }
-                Err(FetcherError::RateLimited) => {
+                Err(FetcherError::RateLimited(timer)) => {
                     log::info!("fetcher: Rate limit reached");
-                    scheduler_tx.send(SchedulerMessage::Stop).unwrap();
-                    break;
+                    scheduler_tx
+                        .send(SchedulerMessage::RateLimited(timer))
+                        .unwrap();
+                    reschedule_task(&scheduler_tx, task);
                 }
             }
         }
@@ -111,23 +113,16 @@ pub(crate) fn start_fetcher(
 }
 
 fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
-    if task.reschedule_count > 2 {
-        scheduler_tx.send(SchedulerMessage::Stop).unwrap();
-        return;
+    match task.retry() {
+        Some(t) => {
+            log::info!("fetcher: Rescheduling {}", t.change_id,);
+
+            scheduler_tx.send(SchedulerMessage::Fetch(t)).unwrap();
+        }
+        None => {
+            scheduler_tx.send(SchedulerMessage::Stop).unwrap();
+        }
     }
-
-    log::info!(
-        "fetcher: Rescheduling {} (Retried {} times)",
-        task.change_id,
-        task.reschedule_count
-    );
-
-    scheduler_tx
-        .send(SchedulerMessage::Fetch(FetchTask {
-            reschedule_count: task.reschedule_count + 1,
-            ..task
-        }))
-        .unwrap();
 }
 
 fn ratelimiter() -> ratelimit::Limiter {
@@ -138,12 +133,6 @@ fn ratelimiter() -> ratelimit::Limiter {
         .quantum(1)
         .interval(std::time::Duration::from_millis(500))
         .build()
-}
-
-fn process(
-    task: &FetchTask,
-) -> Result<(GzDecoder<BufReader<impl Read + Send>>, [u8; 80], ChangeId), FetcherError> {
-    fetch_chunk(task).and_then(parse_chunk)
 }
 
 fn parse_chunk(
@@ -188,12 +177,29 @@ fn fetch_chunk(task: &FetchTask) -> Result<Response, FetcherError> {
             log::error!("fetcher: HTTP response: {:?}", response);
 
             match status {
-                429 => FetcherError::RateLimited,
+                429 => {
+                    let wait_time = parse_rate_limit_timer(response.header("x-rate-limit-ip"));
+                    FetcherError::RateLimited(wait_time)
+                }
                 _ => FetcherError::HttpError { status },
             }
         }
         ureq::Error::Transport(_) => FetcherError::Transport,
     })
+}
+
+pub fn parse_rate_limit_timer(input: Option<&str>) -> Duration {
+    let seconds = input
+        .and_then(|v| v.split(':').last())
+        .map(|s| {
+            if s.ne("60") {
+                log::warn!("Expected x-rate-limit-ip to be 60 seconds");
+            }
+            s.parse().unwrap_or(DEFAULT_RATE_LIMIT_TIMER)
+        })
+        .unwrap_or(DEFAULT_RATE_LIMIT_TIMER);
+
+    Duration::from_secs(seconds)
 }
 
 pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error> {
@@ -204,4 +210,28 @@ pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error>
             .unwrap()
             .to_vec(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::parse_rate_limit_timer;
+
+    #[test]
+    fn test_parse_rate_limit_timer() {
+        assert_eq!(parse_rate_limit_timer(None), Duration::from_secs(60));
+        assert_eq!(
+            parse_rate_limit_timer(Some("something")),
+            Duration::from_secs(60)
+        );
+        assert_eq!(
+            parse_rate_limit_timer(Some("_:_:abc")),
+            Duration::from_secs(60)
+        );
+        assert_eq!(
+            parse_rate_limit_timer(Some("_:_:120")),
+            Duration::from_secs(120)
+        );
+    }
 }

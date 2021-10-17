@@ -1,3 +1,4 @@
+use std::time::Duration;
 use std::{sync::mpsc::Receiver, sync::mpsc::Sender};
 
 use crate::sync::{poe_ninja_client::PoeNinjaClient, scheduler::SchedulerMessage};
@@ -78,6 +79,7 @@ pub enum IndexerMessage {
         change_id: ChangeId,
         created_at: std::time::SystemTime,
     },
+    RateLimited(Duration),
     Stop,
 }
 
@@ -118,6 +120,7 @@ mod test {
                         indexer.stop();
                     }
                 }
+                IndexerMessage::RateLimited(_) => {}
             }
         }
 
