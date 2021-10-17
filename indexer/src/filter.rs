@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::{config::config::Configuration, stash_record::StashRecord};
+use crate::{config::Configuration, stash_record::StashRecord};
 
 pub enum FilterResult {
     Filter { n_total: usize, n_retained: usize },

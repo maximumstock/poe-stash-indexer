@@ -1,6 +1,6 @@
 use amiquip::{Channel, Connection, Publish};
 
-use crate::config::config::RabbitMqConfig;
+use crate::config::RabbitMqConfig;
 
 use super::sink::Sink;
 
