@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::{config::Configuration, stash_record::StashRecord};
+use crate::{config::config::Configuration, stash_record::StashRecord};
 
 pub enum FilterResult {
     Filter { n_total: usize, n_retained: usize },
@@ -11,7 +11,12 @@ pub enum FilterResult {
 pub fn filter_stash_record(stash_record: &mut StashRecord, config: &Configuration) -> FilterResult {
     // League filtering
     let league = stash_record.league.clone();
-    let allowed_leagues = config.filter.leagues.clone().unwrap_or_default();
+    let allowed_leagues = config
+        .user_config
+        .filter
+        .leagues
+        .clone()
+        .unwrap_or_default();
 
     if league.is_some()
         && !allowed_leagues.is_empty()
@@ -23,7 +28,12 @@ pub fn filter_stash_record(stash_record: &mut StashRecord, config: &Configuratio
     }
 
     // Item filtering
-    let allowed_item_categories = config.filter.item_categories.clone().unwrap_or_default();
+    let allowed_item_categories = config
+        .user_config
+        .filter
+        .item_categories
+        .clone()
+        .unwrap_or_default();
 
     if !allowed_item_categories.is_empty() {
         let items =
