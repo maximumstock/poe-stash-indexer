@@ -24,26 +24,15 @@ pub(crate) enum FetcherMessage {
 #[derive(Debug, Clone)]
 pub(crate) struct FetchTask {
     change_id: ChangeId,
-    reschedule_count: u32,
 }
 
 impl FetchTask {
     pub(crate) fn new(change_id: ChangeId) -> Self {
-        Self {
-            change_id,
-            reschedule_count: 0,
-        }
+        Self { change_id }
     }
 
     pub(crate) fn retry(self) -> Option<Self> {
-        if self.reschedule_count > 2 {
-            return None;
-        }
-
-        Some(FetchTask {
-            reschedule_count: self.reschedule_count + 1,
-            ..self
-        })
+        Some(FetchTask { ..self })
     }
 }
 
@@ -88,15 +77,11 @@ pub(crate) fn start_fetcher(
                         ratelimit.wait_for(2);
                     }
 
-                    // Only fresh tasks trigger a successive task.
-                    if task.reschedule_count == 0 {
-                        scheduler_tx
-                            .send(SchedulerMessage::Fetch(FetchTask {
-                                change_id: next_change_id,
-                                reschedule_count: 0,
-                            }))
-                            .unwrap();
-                    }
+                    scheduler_tx
+                        .send(SchedulerMessage::Fetch(FetchTask {
+                            change_id: next_change_id,
+                        }))
+                        .unwrap();
 
                     scheduler_tx
                         .send(SchedulerMessage::Work(WorkerTask {
@@ -130,11 +115,7 @@ pub(crate) fn start_fetcher(
 fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
     match task.retry() {
         Some(t) => {
-            log::info!(
-                "fetcher: Rescheduling {} (Retried {} times)",
-                t.change_id,
-                t.reschedule_count - 1
-            );
+            log::info!("fetcher: Rescheduling {}", t.change_id,);
 
             scheduler_tx.send(SchedulerMessage::Fetch(t)).unwrap();
         }
@@ -233,11 +214,9 @@ pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error>
 
 #[cfg(test)]
 mod tests {
-    use std::{str::FromStr, time::Duration};
+    use std::time::Duration;
 
-    use crate::common::ChangeId;
-
-    use super::{parse_rate_limit_timer, FetchTask};
+    use super::parse_rate_limit_timer;
 
     #[test]
     fn test_parse_rate_limit_timer() {
@@ -254,32 +233,5 @@ mod tests {
             parse_rate_limit_timer(Some("_:_:120")),
             Duration::from_secs(120)
         );
-    }
-
-    #[test]
-    fn test_fetch_task_retry() {
-        let task = FetchTask {
-            change_id: ChangeId::from_str("850662131-863318628-825558626-931433265-890834941")
-                .unwrap(),
-            reschedule_count: 0,
-        };
-
-        let retry1 = task.retry();
-        assert!(retry1.is_some());
-        let retry1 = retry1.unwrap();
-        assert_eq!(retry1.reschedule_count, 1);
-
-        let retry2 = retry1.retry();
-        assert!(retry2.is_some());
-        let retry2 = retry2.unwrap();
-        assert_eq!(retry2.reschedule_count, 2);
-
-        let retry3 = retry2.retry();
-        assert!(retry3.is_some());
-        let retry3 = retry3.unwrap();
-        assert_eq!(retry3.reschedule_count, 3);
-
-        let retry4 = retry3.retry();
-        assert!(retry4.is_none());
     }
 }
