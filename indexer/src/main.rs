@@ -17,11 +17,11 @@ use std::{
     },
 };
 
+use crate::stash_record::map_to_stash_records;
 use crate::{
-    config::config::{Configuration, RabbitMqConfig},
+    config::{user_config::RestartMode, Configuration, RabbitMqConfig},
     sinks::postgres::Postgres,
 };
-use crate::{config::user_config::RestartMode, stash_record::map_to_stash_records};
 use crate::{filter::filter_stash_record, sinks::rabbitmq::RabbitMq};
 use crate::{metrics::init_prometheus_exporter, sinks::sink::*};
 
