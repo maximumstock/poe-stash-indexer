@@ -9,9 +9,9 @@ init-prod:
 up: build init
 up-prod: build-prod init-prod
 
-build: 
+build:
 	$(dc) build --force-rm indexer
-build-prod: 
+build-prod:
 	$(dc-prod) build --force-rm indexer
 
 down:
@@ -26,6 +26,8 @@ stop:
 logs:
 	$(dc) logs -f --tail=20
 
+tidy:
+	cargo fmt --all -- --check && cargo clippy -- -D warnings
 
 # Indexer targets
 indexer-migrate: _init
