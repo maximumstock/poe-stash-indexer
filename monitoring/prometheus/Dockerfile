@@ -1,3 +1,3 @@
-FROM prom/prometheus:2.29.1
+FROM prom/prometheus:latest
 
 ADD prometheus.yml /etc/prometheus

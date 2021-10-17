@@ -1,5 +1,7 @@
 use amiquip::{Channel, Connection, Publish};
 
+use crate::config::RabbitMqConfig;
+
 use super::sink::Sink;
 
 const EXCHANGE: &str = "amq.fanout";
@@ -41,35 +43,5 @@ impl Sink for RabbitMq {
             )
             .map(|_| payload.len())
             .map_err(|e| e.into())
-    }
-}
-
-pub struct RabbitMqConfig {
-    connection_url: String,
-    producer_routing_key: String,
-}
-
-impl RabbitMqConfig {
-    pub fn from_env() -> Result<Option<RabbitMqConfig>, std::env::VarError> {
-        let enabled =
-            std::env::var("RABBITMQ_SINK_ENABLED").expect("Missing RABBITMQ_SINK_ENABLED");
-
-        Ok(enabled)
-            .map(|s| s.to_lowercase().eq(&"true") || s.eq(&"1"))
-            .map(|enabled| {
-                if enabled {
-                    let connection_url =
-                        std::env::var("RABBITMQ_URL").expect("Missing RABBITMQ_URL");
-                    let producer_routing_key = std::env::var("RABBITMQ_PRODUCER_ROUTING_KEY")
-                        .expect("Missing RABBITMQ_PRODUCER_ROUTING_KEY");
-
-                    Some(RabbitMqConfig {
-                        connection_url,
-                        producer_routing_key,
-                    })
-                } else {
-                    None
-                }
-            })
     }
 }
