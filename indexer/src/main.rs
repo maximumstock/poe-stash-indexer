@@ -9,6 +9,7 @@ extern crate diesel;
 extern crate dotenv;
 
 use std::{
+    convert::TryInto,
     str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -16,13 +17,13 @@ use std::{
     },
 };
 
-use crate::sinks::sink::*;
-use crate::sinks::{postgres::Postgres, rabbitmq::RabbitMqConfig};
 use crate::{
-    config::{Configuration, RestartMode},
-    stash_record::map_to_stash_records,
+    config::config::{Configuration, RabbitMqConfig},
+    sinks::postgres::Postgres,
 };
+use crate::{config::user_config::RestartMode, stash_record::map_to_stash_records};
 use crate::{filter::filter_stash_record, sinks::rabbitmq::RabbitMq};
+use crate::{metrics::init_prometheus_exporter, sinks::sink::*};
 
 use dotenv::dotenv;
 use stash_api::{common::ChangeId, sync::Indexer, sync::IndexerMessage};
@@ -31,8 +32,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
     pretty_env_logger::init_timed();
 
-    let config =
-        Configuration::read().expect("Your configuration file is malformed. Please check.");
+    let metrics_port = std::env::var("METRICS_PORT")
+        .expect("Missing METRICS_PORT")
+        .parse()
+        .unwrap();
+    let metrics = init_prometheus_exporter(metrics_port)?;
+
+    let config = Configuration::from_env()?;
 
     log::info!("Chosen configuration: {:#?}", config);
 
@@ -50,13 +56,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Configured PostgreSQL sink");
 
     let mut indexer = Indexer::new();
-    let last_change_id: diesel::result::QueryResult<String> = persistence.get_next_change_id();
+    let last_change_id = persistence.get_next_change_id();
     let mut next_chunk_id = persistence
         .get_next_chunk_id()
         .expect("Failed to read last chunk id")
         .map(|id| id + 1)
         .unwrap_or(0);
-    let rx = match (&config.restart_mode, last_change_id) {
+    let rx = match (&config.user_config.restart_mode, last_change_id) {
         (RestartMode::Fresh, _) => indexer.start_with_latest(),
         (RestartMode::Resume, Ok(id)) => indexer.start_with_id(ChangeId::from_str(&id).unwrap()),
         (RestartMode::Resume, Err(_)) => {
@@ -90,6 +96,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     change_id,
                     payload.stashes.len()
                 );
+
+                metrics
+                    .stashes_processed
+                    .inc_by(payload.stashes.len().try_into().unwrap());
+                metrics.chunks_processed.inc();
+
                 let stashes = map_to_stash_records(change_id, created_at, payload, next_chunk_id)
                     .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
                         filter::FilterResult::Block { reason } => {
@@ -128,4 +140,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Shutting down indexer...");
 
     Ok(())
+}
+
+mod metrics {
+    use prometheus_exporter::prometheus::core::{AtomicU64, GenericCounter};
+
+    pub struct Metrics {
+        pub chunks_processed: GenericCounter<AtomicU64>,
+        pub stashes_processed: GenericCounter<AtomicU64>,
+    }
+
+    pub fn init_prometheus_exporter(port: u32) -> Result<Metrics, Box<dyn std::error::Error>> {
+        let binding = format!("0.0.0.0:{}", port).parse()?;
+        prometheus_exporter::start(binding)?;
+        let chunks_processed =
+            prometheus_exporter::prometheus::register_int_counter!("chunks_processed", "help")?;
+
+        let stashes_processed =
+            prometheus_exporter::prometheus::register_int_counter!("stashes_processed", "help")?;
+
+        Ok(Metrics {
+            chunks_processed,
+            stashes_processed,
+        })
+    }
 }

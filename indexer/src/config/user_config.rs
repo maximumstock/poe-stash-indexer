@@ -4,7 +4,7 @@ use serde::Deserialize;
 const CONFIG_FILE_PATH: &str = "./config/config.toml";
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct Configuration {
+pub struct UserConfiguration {
     pub filter: Filter,
     pub restart_mode: RestartMode,
 }
@@ -20,7 +20,7 @@ pub enum RestartMode {
     Fresh,
 }
 
-impl Configuration {
+impl UserConfiguration {
     pub fn read() -> Result<Self, ConfigError> {
         let mut s = Config::new();
         // Its fine if the file does not exist
@@ -29,12 +29,12 @@ impl Configuration {
     }
 
     #[allow(dead_code)]
-    pub fn builder() -> ConfigurationBuilder {
-        ConfigurationBuilder::new()
+    pub fn builder() -> UserConfigurationBuilder {
+        UserConfigurationBuilder::new()
     }
 }
 
-impl Default for Configuration {
+impl Default for UserConfiguration {
     fn default() -> Self {
         Self {
             filter: Filter {
@@ -46,15 +46,15 @@ impl Default for Configuration {
     }
 }
 
-pub struct ConfigurationBuilder {
+pub struct UserConfigurationBuilder {
     #[allow(dead_code)]
-    configuration: Configuration,
+    configuration: UserConfiguration,
 }
 
-impl ConfigurationBuilder {
+impl UserConfigurationBuilder {
     #[allow(dead_code)]
     pub fn new() -> Self {
-        ConfigurationBuilder::default()
+        UserConfigurationBuilder::default()
     }
 
     #[allow(dead_code)]
@@ -70,25 +70,25 @@ impl ConfigurationBuilder {
     }
 
     #[allow(dead_code)]
-    pub fn build(self) -> Configuration {
+    pub fn build(self) -> UserConfiguration {
         self.configuration
     }
 }
 
-impl Default for ConfigurationBuilder {
+impl Default for UserConfigurationBuilder {
     fn default() -> Self {
-        ConfigurationBuilder {
-            configuration: Configuration::default(),
+        UserConfigurationBuilder {
+            configuration: UserConfiguration::default(),
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::{ConfigurationBuilder, RestartMode};
+    use super::{RestartMode, UserConfigurationBuilder};
     #[test]
     fn test_configuration_builder_with_categories() {
-        let configuration = ConfigurationBuilder::new()
+        let configuration = UserConfigurationBuilder::new()
             .with_categories(vec!["currency".into(), "maps".into()])
             .build();
         assert_eq!(
@@ -99,7 +99,7 @@ mod test {
 
     #[test]
     fn test_configuration_builder_with_restart_mode() {
-        let configuration = ConfigurationBuilder::new()
+        let configuration = UserConfigurationBuilder::new()
             .with_restart_mode(RestartMode::Fresh)
             .build();
         assert_eq!(configuration.restart_mode, RestartMode::Fresh);
@@ -107,7 +107,7 @@ mod test {
 
     #[test]
     fn test_default_restart_mode_is_resume() {
-        let configuration = ConfigurationBuilder::new().build();
+        let configuration = UserConfigurationBuilder::new().build();
         assert_eq!(configuration.restart_mode, RestartMode::Resume);
     }
 }

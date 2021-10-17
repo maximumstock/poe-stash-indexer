@@ -26,8 +26,16 @@ services:
       RABBITMQ_SINK_ENABLED: "true"
       RABBITMQ_URL: "amqp://poe:poe@rabbitmq"
       RABBITMQ_PRODUCER_ROUTING_KEY: "stash-record-stream"
+      METRICS_PORT: 4000
+    ports:
+      - 4000:4000
     volumes:
       - ".:/app:cached"
+    healthcheck:
+      test: ["CMD-SHELL", "curl", "http://indexer:4000/metrics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   rabbitmq:
     build:
