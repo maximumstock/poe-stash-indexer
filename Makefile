@@ -24,7 +24,7 @@ stop:
 	$(dc) stop $(CONTAINERS)
 
 logs:
-	$(dc) logs -f --tail=20
+	docker-compose logs -f --tail=20
 
 tidy:
 	cargo fmt --all -- --check && cargo clippy -- -D warnings
