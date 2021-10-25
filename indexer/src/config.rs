@@ -3,15 +3,15 @@ use self::user_config::UserConfiguration;
 #[derive(Debug)]
 pub struct Configuration {
     pub user_config: UserConfiguration,
-    pub database_url: String,
+    pub database_url: Option<String>,
     pub rabbitmq: Option<RabbitMqConfig>,
-    pub metrics_port: usize,
+    pub metrics_port: u32,
 }
 
 impl Configuration {
     pub fn from_env() -> Result<Configuration, std::env::VarError> {
         Ok(Configuration {
-            database_url: ensure_string_from_env("DATABASE_URL"),
+            database_url: read_string_from_env("DATABASE_URL"),
             metrics_port: ensure_int_from_env("METRICS_PORT"),
             rabbitmq: RabbitMqConfig::from_env()?,
             user_config: UserConfiguration::read()
@@ -24,7 +24,11 @@ fn ensure_string_from_env(name: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| panic!("Missing environment variable {}", name))
 }
 
-fn ensure_int_from_env(name: &str) -> usize {
+fn read_string_from_env(name: &str) -> Option<String> {
+    std::env::var(name).ok()
+}
+
+fn ensure_int_from_env(name: &str) -> u32 {
     ensure_string_from_env(name).parse().unwrap()
 }
 
