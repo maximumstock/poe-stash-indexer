@@ -2,3 +2,4 @@
 .idea
 poe-stash-indexer.iml
 target
+indexer_state.json
