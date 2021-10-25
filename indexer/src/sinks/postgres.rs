@@ -12,7 +12,7 @@ pub struct Postgres {
 }
 
 impl Postgres {
-    pub fn new(database_url: &str) -> Self {
+    pub fn connect(database_url: &str) -> Self {
         Postgres {
             conn: PgConnection::establish(database_url).expect("Could not connect to database"),
         }
