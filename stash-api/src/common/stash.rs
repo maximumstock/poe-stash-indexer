@@ -37,5 +37,5 @@ pub struct Item {
 pub struct ItemExtendedProp {
     pub category: String,
     #[serde(rename(deserialize = "baseType"))]
-    pub base_type: String,
+    pub base_type: Option<String>,
 }

@@ -6,15 +6,15 @@ use super::sink::Sink;
 
 const EXCHANGE: &str = "amq.fanout";
 
-pub struct RabbitMq {
+pub struct RabbitMq<'a> {
     #[allow(dead_code)]
     connection: Connection,
     channel: Channel,
-    config: RabbitMqConfig,
+    config: &'a RabbitMqConfig,
 }
 
-impl RabbitMq {
-    pub fn connect(config: RabbitMqConfig) -> Result<Self, amiquip::Error> {
+impl<'a> RabbitMq<'a> {
+    pub fn connect(config: &'a RabbitMqConfig) -> Result<Self, amiquip::Error> {
         let mut connection = Connection::insecure_open(config.connection_url.as_str())?;
         let channel = connection.open_channel(None)?;
 
@@ -26,7 +26,7 @@ impl RabbitMq {
     }
 }
 
-impl Sink for RabbitMq {
+impl<'a> Sink for RabbitMq<'a> {
     fn handle(
         &self,
         payload: &[crate::stash_record::StashRecord],
