@@ -15,6 +15,7 @@ services:
       context: .
       dockerfile: indexer/Dockerfile
       target: development
+    user: ${UID}:${GID}
     depends_on:
       - db
       - rabbitmq

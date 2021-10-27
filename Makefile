@@ -1,5 +1,10 @@
-dc := docker-compose -f docker-compose.yaml
-dc-prod := docker-compose -f docker-compose.yaml -f docker-compose.production.yaml
+UID := $(shell id -u)
+GID := $(shell id -g)
+
+docker-compose := env UID=${UID} GID=${GID} docker-compose
+
+dc := ${docker-compose} -f docker-compose.yaml
+dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production.yaml
 
 init:
 	$(dc) up --build -d
@@ -24,7 +29,7 @@ stop:
 	$(dc) stop $(CONTAINERS)
 
 logs:
-	docker-compose logs -f --tail=20
+	${docker-compose} logs -f --tail=20
 
 tidy:
 	cargo fmt --all -- --check && cargo clippy -- -D warnings
