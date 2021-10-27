@@ -9,10 +9,10 @@ dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production
 init:
 	$(dc) up --build -d
 init-prod:
-	$(dc-prod) up -d
+	$(dc-prod) up --build -d
 
-up: build init
-up-prod: build-prod init-prod
+up: init
+up-prod: init-prod
 
 build:
 	$(dc) build --force-rm indexer
