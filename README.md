@@ -27,6 +27,7 @@ ran in production.
 
 Here is a list of services in this local development setup and and their credentials:
 
-- [Prometheus](http://localhost:9090)
-- [RabbitMQ Control Panel](http://localhost:15672) (`poe:poe`)
-- [Grafana](http://localhost:3000) (`poe:poe`)
+- [Indexer Metrics Endpoint/Healthcheck](http://indexer.localhost:8888)
+- [Prometheus](http://prometheus.localhost:8888)
+- [RabbitMQ Control Panel](http://rabbitmq.localhost:8888) (`poe:poe`)
+- [Grafana](http://grafana.localhost:8888) (`poe:poe`)
