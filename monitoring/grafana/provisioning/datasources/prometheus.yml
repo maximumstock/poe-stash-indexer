@@ -4,5 +4,5 @@ datasources:
   - name: Prometheus
     type: prometheus
     access: direct
-    url: http://prometheus:9090
+    url: http://prometheus.localhost:8888
     editable: false

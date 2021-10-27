@@ -15,9 +15,9 @@ up: init
 up-prod: init-prod
 
 build:
-	$(dc) build --force-rm indexer
+	$(dc) build --force-rm
 build-prod:
-	$(dc-prod) build --force-rm indexer
+	$(dc-prod) build --force-rm
 
 down:
 	$(dc) down --remove-orphans

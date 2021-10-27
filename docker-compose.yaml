@@ -4,6 +4,11 @@ services:
     build:
       context: .
       dockerfile: nginx/Dockerfile
+    depends_on:
+      - grafana
+      - indexer
+      - prometheus
+      - rabbitmq
     ports:
       - 127.0.0.1:8888:80
 
@@ -35,8 +40,6 @@ services:
       RABBITMQ_URL: "amqp://poe:poe@rabbitmq"
       RABBITMQ_PRODUCER_ROUTING_KEY: "stash-record-stream"
       METRICS_PORT: 4000
-    ports:
-      - 4000:4000
     volumes:
       - ".:/app:cached"
     healthcheck:
@@ -52,26 +55,20 @@ services:
     restart: "always"
     environment:
       RABBITMQ_CONFIG_FILE: "/etc/rabbitmq/rabbitmq.conf"
-    ports:
-      - 5672:5672 # networking port
-      - 15672:15672 # management plugin port
-      - 15692:15692 # prometheus plugin port
 
   prometheus:
     build:
       context: monitoring/prometheus
       dockerfile: Dockerfile
     restart: "always"
-    ports:
-      - 9090:9090
 
   grafana:
-    image: grafana/grafana:8.1.2
+    build:
+      context: monitoring/grafana
+      dockerfile: Dockerfile
     restart: "always"
     depends_on:
       - prometheus
-    ports:
-      - 3000:3000
     environment:
       GF_SECURITY_ADMIN_USER: "poe"
       GF_SECURITY_ADMIN_PASSWORD: "poe"
