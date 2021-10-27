@@ -12,10 +12,10 @@ fi
 
 case $ENV in
   "production")
-    indexer
+    exec indexer
     ;;
   *)
-    cargo watch -w indexer -x "run --bin indexer"
+    exec cargo watch -w indexer -x "run --bin indexer"
     ;;
 esac
 

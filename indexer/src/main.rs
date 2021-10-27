@@ -58,7 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     while let Ok(msg) = rx.recv() {
         if signal_flag.load(Ordering::Relaxed) && !indexer.is_stopping() {
-            log::info!("CTRL+C detected -> shutting down...");
+            log::info!("Shutdown signal detected. Shutting down gracefully.");
             indexer.stop();
         }
 
@@ -127,9 +127,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    log::info!("Shutting down indexer...");
-
-    resumption.save()?;
+    if resumption.save().is_ok() {
+        log::info!("Saved resumption state");
+    }
 
     Ok(())
 }
