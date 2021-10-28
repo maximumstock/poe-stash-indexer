@@ -7,7 +7,7 @@ Exile's [Public Stash Tab API](https://www.pathofexile.com/developer/docs/refere
 
 - `stash-api` - a library for listening to the Stash Tab API river
 - [indexer](indexer/README.md) - saves API river snapshots to different sinks
-- `stash-differ` - a work-in-progress tool to generate diff events between stash snapshots to create a player trading behaviour dataset
+- [stash-differ](stash-differ/README.md) - a work-in-progress tool to generate diff events between stash snapshots to create a player trading behaviour dataset
 
 # How To Run
 
