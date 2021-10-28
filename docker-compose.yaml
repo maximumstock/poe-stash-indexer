@@ -49,23 +49,21 @@ services:
       retries: 5
 
   rabbitmq:
-    build:
-      context: rabbitmq
-      dockerfile: Dockerfile
+    image: rabbitmq:3.9-management-alpine
     restart: "always"
     environment:
       RABBITMQ_CONFIG_FILE: "/etc/rabbitmq/rabbitmq.conf"
+    volumes:
+      - "./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf"
 
   prometheus:
-    build:
-      context: monitoring/prometheus
-      dockerfile: Dockerfile
+    image: prom/prometheus:latest
     restart: "always"
+    volumes:
+      - "./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
 
   grafana:
-    build:
-      context: monitoring/grafana
-      dockerfile: Dockerfile
+    image: grafana/grafana:8.1.2
     restart: "always"
     depends_on:
       - prometheus
@@ -75,3 +73,4 @@ services:
     volumes:
       - "./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards"
       - "./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources"
+      - "./monitoring/grafana/custom.ini:/etc/grafana/grafana.ini"
