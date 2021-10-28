@@ -4,7 +4,7 @@ providers:
   - name: Prometheus
     orgId: 1
     type: file
-    disableDeletion: false
+    disableDeletion: true
     editable: true
     allowUiUpdates: true
     updateIntervalSeconds: 10

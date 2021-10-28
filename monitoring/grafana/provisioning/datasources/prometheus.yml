@@ -2,7 +2,10 @@ apiVersion: 1
 
 datasources:
   - name: Prometheus
+    version: 1
     type: prometheus
     access: direct
     url: http://prometheus.localhost:8888
-    editable: false
+    editable: true
+    jsonData:
+      timeInterval: 2s
