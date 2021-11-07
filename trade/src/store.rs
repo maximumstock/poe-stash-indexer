@@ -5,7 +5,7 @@ use std::{
 };
 use typed_builder::TypedBuilder;
 
-use crate::source::StashRecord;
+use crate::{assets::AssetIndex, source::StashRecord};
 
 type StashId = String;
 type ItemId = String;
@@ -135,6 +135,10 @@ impl Store {
         Self::builder().league(league.to_string()).build()
     }
 
+    pub fn size(&self) -> usize {
+        self.offers.len()
+    }
+
     fn invalidate_stash(&mut self, stash_id: &str) {
         // Remove old index data for the given stash
         if let Some(stash_offer_indices) = self.stash_to_offers_idx.get_mut(stash_id) {
@@ -181,13 +185,15 @@ impl Store {
         self.offers.insert(offer_index, offer);
     }
 
-    pub fn ingest_stash(&mut self, stash: StashRecord) {
+    pub fn ingest_stash(&mut self, stash: StashRecord, asset_index: &AssetIndex) {
         self.invalidate_stash(&stash.stash_id);
 
         let offers: Vec<Offer> = stash.into();
         for o in offers {
-            if o.buy.contains("Orb") {
+            if asset_index.has_item(&o.buy) {
                 self.ingest_offer(o);
+            } else {
+                println!("Filter out {:?}", o.buy);
             }
         }
     }
@@ -198,6 +204,7 @@ mod tests {
     use std::collections::{HashMap, HashSet};
 
     use crate::{
+        assets::AssetIndex,
         collection,
         source::{Item, StashRecord},
         store::Store,
@@ -205,6 +212,7 @@ mod tests {
 
     #[test]
     fn test_stash_invalidation() {
+        let asset_index = AssetIndex::new();
         let input = StashRecord {
             account_name: "some guy".into(),
             league: "Standard".into(),
@@ -219,9 +227,9 @@ mod tests {
 
         let mut store = Store::new("Standard");
 
-        store.ingest_stash(input.clone());
+        store.ingest_stash(input.clone(), &asset_index);
         store.invalidate_stash(&input.stash_id);
-        store.ingest_stash(input.clone());
+        store.ingest_stash(input.clone(), &asset_index);
         store.invalidate_stash(&input.stash_id);
 
         let stash_to_offers_idx2: HashMap<_, _> =
