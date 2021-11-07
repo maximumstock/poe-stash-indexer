@@ -2065,6 +2065,9 @@ dependencies = [
 name = "trade"
 version = "0.1.0"
 dependencies = [
+ "futures",
+ "serde 1.0.130",
+ "serde_json",
  "typed-builder",
 ]
 

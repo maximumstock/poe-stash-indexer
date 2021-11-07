@@ -18,9 +18,8 @@ services:
       POSTGRES_PASSWORD: "poe"
       POSTGRES_USER: "poe"
       POSTGRES_DB: "poe"
-      PG_DATA: "/pg-data"
     volumes:
-      - ./timescaledb:/pg-data
+      - ./timescaledb:/var/lib/postgresql/data
 
   indexer:
     build:
