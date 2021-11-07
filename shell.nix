@@ -21,6 +21,7 @@ in
       })
       rust-analyzer
       cargo-edit
+      cargo-feature
       linuxPackages.perf
       docker-compose
     ];
