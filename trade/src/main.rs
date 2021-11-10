@@ -4,38 +4,77 @@ use store::Store;
 use crate::assets::AssetIndex;
 
 /// TODO
-/// - RabbitMQ client that produces a stream of `StashRecord`s
-/// - a module to maintain `StashRecord`s as offers /w indices to answer:
+/// [ ] - RabbitMQ client that produces a stream of `StashRecord`s
+/// [x] - a module to maintain `StashRecord`s as offers /w indices to answer:
 ///   - What offers are there for selling X for Y?
 ///   - What offers can we delete if a new stash is updated
 ///   - turning `StashRecord` into a set of Offers
-/// - a web API that mimics pathofexile.com/trade API
-/// - will need state snapshots + restoration down the road
-/// - filter currency items from `StashRecord`
+/// [ ] - a web API that mimics pathofexile.com/trade API
+/// [ ] - will need state snapshots + restoration down the road
+/// [x] - filter currency items from `StashRecord`
 ///   - need asset mapping from pathofexile.com/trade
+/// [ ] - note parsing to extract price
 mod store;
 
-fn main() {
-    let mut asset_index = AssetIndex::new();
-    asset_index.init();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // let mut asset_index = AssetIndex::new();
+    // asset_index.init().await?;
 
-    let example = ExampleStream::new("./data.json");
-    let mut store = Store::new("Scourge");
+    // let example = ExampleStream::new("./data.json");
+    // let mut store = Store::new("Scourge");
 
-    for stash_record in example {
-        store.ingest_stash(stash_record, &asset_index);
+    // for stash_record in example {
+    //     store.ingest_stash(stash_record, &asset_index);
+    // }
+
+    // println!("Store has {:#?} offers", store.size());
+
+    let api = api::init(([127, 0, 0, 1], 3999));
+    tokio::spawn(api).await?;
+
+    Ok(())
+}
+
+mod api {
+    use std::net::SocketAddr;
+
+    use futures::Future;
+    use serde::{Deserialize, Serialize};
+    use warp::Filter;
+
+    #[derive(Debug, Serialize, Deserialize)]
+    struct RequestBody {
+        sell: String,
+        buy: String,
     }
 
-    println!("Store has {:#?} offers", store.size());
+    pub fn init<T: Into<SocketAddr>>(options: T) -> impl Future<Output = ()> {
+        let routes = healtcheck_endpoint().or(search_endpoint());
+        warp::serve(routes).run(options)
+    }
+
+    fn search_endpoint() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
+    {
+        warp::post()
+            .and(warp::path("trade"))
+            // .and(warp::body::content_length_limit(1024 * 16))
+            .and(warp::body::json())
+            .map(|payload: RequestBody| warp::reply::json(&payload))
+    }
+
+    fn healtcheck_endpoint(
+    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+        warp::get()
+            .and(warp::path("healthcheck"))
+            .map(|| "{\"health\": \"ok\"}")
+    }
 }
 
 mod assets {
-    use std::{
-        collections::HashMap,
-        fs::File,
-        io::{BufReader, BufWriter},
-    };
+    use std::{collections::HashMap, fs::File, io::BufWriter};
 
+    use futures::future::TryFutureExt;
     use reqwest::header::HeaderValue;
     use serde::{Deserialize, Serialize};
 
@@ -53,8 +92,8 @@ mod assets {
             }
         }
 
-        pub fn init(&mut self) {
-            let asset_response = self.reload().or_else(|_| self.fetch()).unwrap();
+        pub async fn init(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+            let asset_response = self.reload().or_else(|_| self.fetch()).await?;
 
             for category in asset_response.result {
                 for item in category.entries {
@@ -65,6 +104,7 @@ mod assets {
             }
 
             self.persist().unwrap();
+            Ok(())
         }
 
         fn persist(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -74,21 +114,25 @@ mod assets {
             Ok(())
         }
 
-        fn reload(&self) -> Result<AssetResponse, Box<dyn std::error::Error>> {
-            let file = File::open("asset_index.json")?;
-            let reader = BufReader::new(file);
-            let asset_response = serde_json::from_reader(reader)?;
+        async fn reload(&self) -> Result<AssetResponse, Box<dyn std::error::Error>> {
+            let reader = tokio::fs::read_to_string("asset_index.json").await?;
+            let asset_response = serde_json::from_str(&reader)?;
             Ok(asset_response)
         }
 
-        fn fetch(&self) -> Result<AssetResponse, Box<dyn std::error::Error>> {
-            let mut request = reqwest::blocking::Request::new(
+        async fn fetch(&self) -> Result<AssetResponse, Box<dyn std::error::Error>> {
+            let mut request = reqwest::Request::new(
                 reqwest::Method::GET,
                 "https://www.pathofexile.com/api/trade/data/static".parse()?,
             );
             request.headers_mut().insert("user-agent", HeaderValue::from_str("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36").unwrap());
-            let client = reqwest::blocking::Client::new();
-            let asset_response = client.execute(request).unwrap().json::<AssetResponse>()?;
+            let client = reqwest::Client::new();
+            let asset_response = client
+                .execute(request)
+                .await
+                .unwrap()
+                .json::<AssetResponse>()
+                .await?;
             Ok(asset_response)
         }
 
