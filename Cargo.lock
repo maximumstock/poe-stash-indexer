@@ -2393,6 +2393,7 @@ name = "trade"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "regex",
  "reqwest",
  "serde 1.0.130",
  "serde_json",

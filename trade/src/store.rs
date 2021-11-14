@@ -6,7 +6,7 @@ use std::{
 };
 use typed_builder::TypedBuilder;
 
-use crate::{assets::AssetIndex, source::StashRecord};
+use crate::{assets::AssetIndex, note_parser::PriceParser, source::StashRecord};
 
 type StashId = String;
 type ItemId = String;
@@ -56,19 +56,26 @@ impl From<StashRecord> for Vec<Offer> {
     fn from(stash: StashRecord) -> Self {
         let account_name = stash.account_name;
         let stash_id = stash.stash_id;
+        let price_parser = PriceParser::new();
 
         stash
             .items
             .into_iter()
-            .map(|item| Offer {
-                stock: item.stack_size.unwrap_or(1),
-                buy: item.type_line,
-                // TODO parse item (from abbreviation to full name) & price
-                conversion_rate: 0f32,
-                sell: item.note.unwrap_or_default(),
-                item_id: item.id,
-                seller_account: account_name.clone(),
-                stash_id: stash_id.clone(),
+            .filter(|item| item.note.is_some())
+            .filter_map(|item| {
+                if let Ok(price) = price_parser.parse_price(&item.note.unwrap()) {
+                    Some(Offer {
+                        stock: item.stack_size.unwrap_or(1),
+                        buy: item.type_line,
+                        conversion_rate: price.ratio,
+                        sell: price.item.to_owned(),
+                        item_id: item.id,
+                        seller_account: account_name.clone(),
+                        stash_id: stash_id.clone(),
+                    })
+                } else {
+                    None
+                }
             })
             .collect()
     }

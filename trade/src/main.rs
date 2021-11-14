@@ -1,26 +1,29 @@
-use std::sync::Arc;
-
-use source::ExampleStream;
-use store::Store;
-use tokio::sync::Mutex;
-
-use crate::assets::AssetIndex;
-
 mod api;
 mod assets;
+mod note_parser;
 mod source;
 mod store;
+
+use std::sync::Arc;
+use tokio::sync::Mutex;
+
+use assets::AssetIndex;
+use source::ExampleStream;
+use store::Store;
+
 /// TODO
-/// [ ] - RabbitMQ client that produces a stream of `StashRecord`s
 /// [x] - a module to maintain `StashRecord`s as offers /w indices to answer:
 ///   - What offers are there for selling X for Y?
 ///   - What offers can we delete if a new stash is updated
 ///   - turning `StashRecord` into a set of Offers
-/// [ ] - a web API that mimics pathofexile.com/trade API
-/// [ ] - will need state snapshots + restoration down the road
 /// [x] - filter currency items from `StashRecord`
 ///   - need asset mapping from pathofexile.com/trade
-/// [ ] - note parsing to extract price
+/// [ ] - will need state snapshots + restoration down the road
+/// [ ] - RabbitMQ client that produces a stream of `StashRecord`s
+/// [ ] - a web API that mimics pathofexile.com/trade API
+/// [x] - note parsing to extract price
+///       - look at https://github.com/maximumstock/poe-stash-indexer/blob/f7424546ffd40e1a74ecf6ca44584a74c2028957/src/parser.rs
+///       - look at example stream to build note corpus -> sort -> unit test cases
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -44,6 +47,6 @@ async fn setup_inbounds(store: Arc<Mutex<Store>>) {
         store.ingest_stash(stash_record, &asset_index);
         println!("Store has {:#?} offers", store.size());
         drop(store);
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
 }
