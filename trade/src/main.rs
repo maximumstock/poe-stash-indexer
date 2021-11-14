@@ -18,12 +18,12 @@ use store::Store;
 ///   - turning `StashRecord` into a set of Offers
 /// [x] - filter currency items from `StashRecord`
 ///   - need asset mapping from pathofexile.com/trade
-/// [ ] - will need state snapshots + restoration down the road
-/// [ ] - RabbitMQ client that produces a stream of `StashRecord`s
-/// [ ] - a web API that mimics pathofexile.com/trade API
 /// [x] - note parsing to extract price
 ///       - look at https://github.com/maximumstock/poe-stash-indexer/blob/f7424546ffd40e1a74ecf6ca44584a74c2028957/src/parser.rs
 ///       - look at example stream to build note corpus -> sort -> unit test cases
+/// [ ] - will need state snapshots + restoration down the road
+/// [ ] - RabbitMQ client that produces a stream of `StashRecord`s
+/// [ ] - a web API that mimics pathofexile.com/trade API
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
