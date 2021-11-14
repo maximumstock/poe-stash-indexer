@@ -1,0 +1,12 @@
+
+GET http://localhost:3999/healthcheck
+
+###
+
+POST http://localhost:3999/trade
+content-type: application/json
+
+{
+    "buy": "Chaos Orb",
+    "sell": "~price 1/5 maze-of-the-minotaur-map"
+}
