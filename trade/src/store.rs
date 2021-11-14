@@ -1,3 +1,4 @@
+use serde::Serialize;
 use std::{
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
     fmt::Debug,
@@ -11,7 +12,7 @@ type StashId = String;
 type ItemId = String;
 type OfferIndex = u64;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 /// Describes an offer from the view of the seller.
 pub struct Offer {
     item_id: ItemId,
@@ -95,6 +96,10 @@ struct Conversion<'a> {
 }
 
 impl<'a> Conversion<'a> {
+    pub fn new(sell: &'a str, buy: &'a str) -> Self {
+        Self { sell, buy }
+    }
+
     pub fn get_index(&self) -> ConversionIndex {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
@@ -196,6 +201,22 @@ impl Store {
                 println!("Filter out {:?}", o.buy);
             }
         }
+    }
+
+    pub fn query(&self, sell: &str, buy: &str) -> Option<Vec<&Offer>> {
+        let conversion_idx = Conversion::new(sell, buy).get_index();
+
+        if let Some(offers) = self.conversion_to_offers_idx.get(&conversion_idx) {
+            return Some(
+                offers
+                    .iter()
+                    .map(|offer_idx| self.offers.get(offer_idx))
+                    .flatten()
+                    .collect::<Vec<_>>(),
+            );
+        }
+
+        None
     }
 }
 
