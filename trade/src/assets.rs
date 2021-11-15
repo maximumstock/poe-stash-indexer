@@ -3,6 +3,7 @@ use std::{collections::HashMap, fs::File, io::BufWriter};
 use futures::future::TryFutureExt;
 use reqwest::header::HeaderValue;
 use serde::{Deserialize, Serialize};
+use typed_builder::TypedBuilder;
 
 fn sort_alphabetically<T: Serialize, S: serde::Serializer>(
     value: &T,
@@ -12,7 +13,7 @@ fn sort_alphabetically<T: Serialize, S: serde::Serializer>(
     value.serialize(serializer)
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, TypedBuilder, Serialize, Default, PartialEq, Eq)]
 pub struct AssetIndex {
     #[serde(serialize_with = "sort_alphabetically")]
     long_short_idx: HashMap<String, String>,
