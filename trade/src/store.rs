@@ -140,11 +140,16 @@ pub struct Store {
     // Holds a reverse index mapping Offer hash to (sell, buy) for offer invalidation.
     #[builder(default)]
     offer_to_conversion_idx: HashMap<OfferIndex, ConversionIndex>,
+    #[builder(default)]
+    asset_index: AssetIndex,
 }
 
 impl Store {
-    pub fn new<T: ToString>(league: T) -> Self {
-        Self::builder().league(league.to_string()).build()
+    pub fn new<T: ToString>(league: T, asset_index: AssetIndex) -> Self {
+        Self::builder()
+            .league(league.to_string())
+            .asset_index(asset_index)
+            .build()
     }
 
     pub fn size(&self) -> usize {
@@ -197,12 +202,12 @@ impl Store {
         self.offers.insert(offer_index, offer);
     }
 
-    pub fn ingest_stash(&mut self, stash: StashRecord, asset_index: &AssetIndex) {
+    pub fn ingest_stash(&mut self, stash: StashRecord) {
         self.invalidate_stash(&stash.stash_id);
 
         let offers: Vec<Offer> = stash.into();
         for o in offers {
-            if asset_index.has_item(&o.buy) {
+            if self.asset_index.has_item(&o.buy) {
                 self.ingest_offer(o);
             } else {
                 println!("Filter out {:?}", o.buy);
@@ -240,36 +245,41 @@ mod tests {
 
     #[test]
     fn test_stash_invalidation() {
-        let asset_index = AssetIndex::new();
+        let asset_index = AssetIndex::builder()
+            .long_short_idx(collection! { "Exalted Orb".into() => "exalted".into() })
+            .short_long_idx(collection! { "exalted".into() => "Exalted Orb".into() })
+            .build();
+
         let input = StashRecord {
             account_name: "some guy".into(),
             league: "Standard".into(),
             stash_id: "stash-id".into(),
             items: vec![Item {
                 id: "item-id-1".into(),
-                note: Some("~5 chaos".into()),
+                note: Some("~b/o 5 chaos".into()),
                 stack_size: Some(10),
                 type_line: "Exalted Orb".into(),
             }],
         };
 
-        let mut store = Store::new("Standard");
+        let mut store = Store::new("Standard", asset_index.clone());
 
-        store.ingest_stash(input.clone(), &asset_index);
+        store.ingest_stash(input.clone());
         store.invalidate_stash(&input.stash_id);
-        store.ingest_stash(input.clone(), &asset_index);
+        store.ingest_stash(input.clone());
         store.invalidate_stash(&input.stash_id);
 
-        let stash_to_offers_idx2: HashMap<_, _> =
+        let stash_to_offers_idx: HashMap<_, _> =
             collection! { "stash-id".into() => HashSet::default(), };
 
         let conversion_to_offers_idx: HashMap<_, _> =
-            collection! { 11579197031891085763 => HashSet::default() };
+            collection! { 12665932254730138288 => HashSet::default() };
 
         let expected = Store::builder()
             .league("Standard".into())
-            .stash_to_offers_idx(stash_to_offers_idx2)
+            .stash_to_offers_idx(stash_to_offers_idx)
             .conversion_to_offers_idx(conversion_to_offers_idx)
+            .asset_index(asset_index)
             .build();
 
         assert_eq!(store, expected);
