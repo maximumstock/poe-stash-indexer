@@ -28,7 +28,10 @@ use store::Store;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let store = Arc::new(Mutex::new(Store::new("Scourge")));
+    let mut asset_index = AssetIndex::new();
+    asset_index.init().await.unwrap();
+
+    let store = Arc::new(Mutex::new(Store::new("Scourge", asset_index)));
 
     let stream = setup_inbounds(store.clone());
     let api = api::init(([127, 0, 0, 1], 3999), store);
@@ -38,14 +41,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn setup_inbounds(store: Arc<Mutex<Store>>) {
-    let mut asset_index = AssetIndex::new();
-    asset_index.init().await.unwrap();
-
     let example_stream = ExampleStream::new("./data.json");
 
     for stash_record in example_stream {
         let mut store = store.lock().await;
-        store.ingest_stash(stash_record, &asset_index);
+        store.ingest_stash(stash_record);
         println!("Store has {:#?} offers", store.size());
         drop(store);
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
