@@ -24,6 +24,7 @@ pub struct Offer {
     seller_account: String,
     stock: u32,
     conversion_rate: f32,
+    created_at: u64,
 }
 
 impl Default for Offer {
@@ -36,6 +37,10 @@ impl Default for Offer {
             conversion_rate: (1f32 / 100f32),
             seller_account: "some guy".into(),
             stock: 1000,
+            created_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("Failed to create timestamp")
+                .as_secs(),
         }
     }
 }
@@ -72,6 +77,10 @@ impl From<StashRecord> for Vec<Offer> {
                         item_id: item.id,
                         seller_account: account_name.clone(),
                         stash_id: stash_id.clone(),
+                        created_at: std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .expect("Failed to create timestamp")
+                            .as_secs(),
                     })
                 } else {
                     None

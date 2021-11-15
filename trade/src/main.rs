@@ -21,6 +21,7 @@ use store::Store;
 /// [x] - note parsing to extract price
 ///       - look at https://github.com/maximumstock/poe-stash-indexer/blob/f7424546ffd40e1a74ecf6ca44584a74c2028957/src/parser.rs
 ///       - look at example stream to build note corpus -> sort -> unit test cases
+/// [x] - created_at timestamp on offers
 /// [ ] - RabbitMQ client that produces a stream of `StashRecord`s
 /// [ ] - will need state snapshots + restoration down the road
 /// [ ] - extend for multiple leagues
