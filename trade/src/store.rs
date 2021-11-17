@@ -219,7 +219,7 @@ impl Store {
             if self.asset_index.has_item(&o.buy) {
                 self.ingest_offer(o);
             } else {
-                println!("Filter out {:?}", o.buy);
+                // println!("Filter out {:?}", o.buy);
             }
         }
     }
