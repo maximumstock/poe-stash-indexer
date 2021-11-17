@@ -34,10 +34,10 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26cd67e9eac07fe42b3aff004337aa3fe75506e90517b6447747711f6605e50e"
 dependencies = [
- "amq-protocol",
+ "amq-protocol 1.4.0",
  "built",
  "bytes 0.5.6",
- "cookie-factory",
+ "cookie-factory 0.2.4",
  "crossbeam-channel",
  "indexmap",
  "input_buffer",
@@ -57,10 +57,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d687fc53c2d85f31d22d91d8b62a7a6f8fc2b0e8dfd2c23d52a0433db4d01f2b"
 dependencies = [
  "amq-protocol-codegen",
- "amq-protocol-types",
- "cookie-factory",
+ "amq-protocol-types 1.2.0",
+ "cookie-factory 0.2.4",
  "nom 4.2.3",
  "url 1.7.2",
+]
+
+[[package]]
+name = "amq-protocol"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3b51c409a2b30e48826a593d56a26a43f37bf3df682821e55cd108e24de9ce7"
+dependencies = [
+ "amq-protocol-tcp",
+ "amq-protocol-types 6.1.0",
+ "amq-protocol-uri",
+ "cookie-factory 0.3.2",
+ "nom 7.0.0",
 ]
 
 [[package]]
@@ -69,10 +82,21 @@ version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b367f31f4feba2ca7959f476f81076db213734a053d2b0ab78bcffab0acbfae6"
 dependencies = [
- "amq-protocol-types",
+ "amq-protocol-types 1.2.0",
  "handlebars",
  "serde 1.0.130",
  "serde_json",
+]
+
+[[package]]
+name = "amq-protocol-tcp"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9797cd3a8f1491e4828818341aea5e1378029ec89dc2422cd85d62715f913080"
+dependencies = [
+ "amq-protocol-uri",
+ "tcp-stream",
+ "tracing",
 ]
 
 [[package]]
@@ -81,10 +105,32 @@ version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6857d51c6c9e9b45eacd355917c0e792cd3ceeaeab76a75d6475ea8980009fea"
 dependencies = [
- "cookie-factory",
+ "cookie-factory 0.2.4",
  "nom 4.2.3",
  "serde 1.0.130",
  "serde_json",
+]
+
+[[package]]
+name = "amq-protocol-types"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "028cb766932137535fe8a320245e385bac379506d7e9e3d0375be069bb6fb0de"
+dependencies = [
+ "cookie-factory 0.3.2",
+ "nom 7.0.0",
+ "serde 1.0.130",
+ "serde_json",
+]
+
+[[package]]
+name = "amq-protocol-uri"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b08059afa9495f674408891c5eaee50c5eca3532598c90532c1856990b91da96"
+dependencies = [
+ "percent-encoding 2.1.0",
+ "url 2.2.2",
 ]
 
 [[package]]
@@ -98,6 +144,12 @@ name = "ascii"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbf56136a5198c7b01a49e3afcbef6cf84597273d298f54432926024107b0109"
+
+[[package]]
+name = "async-task"
+version = "4.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e91831deabf0d6d7ec49552e489aed63b7456a7a3c46cff62adad428110b0af0"
 
 [[package]]
 name = "atoi"
@@ -299,6 +351,12 @@ name = "cookie-factory"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98a479f8099cc5ac64915a3dd76c87be27f929ba406ad705aacb13f19b791207"
+
+[[package]]
+name = "cookie-factory"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "396de984970346b0d9e93d1415082923c679e5ae5c3ee3dcbd104f5610af126b"
 
 [[package]]
 name = "core-foundation"
@@ -1024,6 +1082,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "lapin"
+version = "1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "859ca27aa1d2a8141ebed7a7af8129ed5bc1ee8a5e763ab53508d9af51f08279"
+dependencies = [
+ "amq-protocol 6.1.0",
+ "async-task",
+ "crossbeam-channel",
+ "futures-core",
+ "log",
+ "mio 0.7.13",
+ "parking_lot",
+ "pinky-swear",
+ "serde 1.0.130",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1407,6 +1482,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pem"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd56cbd21fea48d0c440b41cd69c589faacade08c992d9a54e471b79d0fd13eb"
+dependencies = [
+ "base64",
+ "once_cell",
+ "regex",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1492,6 +1578,17 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
+
+[[package]]
+name = "pinky-swear"
+version = "4.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bf8cda6f8e1500338634e4e3ce90ac59eb7929a1e088b6946c742be1cc44dc1"
+dependencies = [
+ "doc-comment",
+ "parking_lot",
+ "tracing",
+]
 
 [[package]]
 name = "pkg-config"
@@ -2181,6 +2278,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tcp-stream"
+version = "0.20.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12669e6606f91cd87e01c3d3411236ea10cf570e9f262d1aaefbe8b7502ca3fb"
+dependencies = [
+ "cfg-if 1.0.0",
+ "mio 0.7.13",
+ "native-tls",
+ "pem",
+]
+
+[[package]]
 name = "tempfile"
 version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2280,6 +2389,17 @@ dependencies = [
  "signal-hook-registry",
  "tokio-macros",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "tokio-amqp"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a236324e1e84931e62c22e2ee47688e077aa33a2a95f14d29ab8ec4dbaf9845"
+dependencies = [
+ "lapin",
+ "parking_lot",
+ "tokio",
 ]
 
 [[package]]
@@ -2393,11 +2513,13 @@ name = "trade"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "lapin",
  "regex",
  "reqwest",
  "serde 1.0.130",
  "serde_json",
  "tokio",
+ "tokio-amqp",
  "typed-builder",
  "warp",
 ]

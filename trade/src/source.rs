@@ -1,6 +1,12 @@
 use std::{fs::File, io::BufReader, path::Path};
 
+use lapin::{
+    options::{BasicConsumeOptions, QueueBindOptions, QueueDeclareOptions},
+    types::FieldTable,
+    Connection, ConnectionProperties, Consumer,
+};
 use serde::Deserialize;
+use tokio_amqp::*;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct StashRecord {
@@ -38,4 +44,43 @@ impl ExampleStream {
 
         Self { stash_records }
     }
+}
+
+pub async fn setup_consumer() -> Result<Consumer, Box<dyn std::error::Error>> {
+    let addr = std::env::var("AMQP_ADDR").unwrap_or_else(|_| "amqp://poe:poe@rabbitmq".into());
+    let conn = Connection::connect(&addr, ConnectionProperties::default().with_tokio()).await?; // Note the `with_tokio()` here
+    let channel = conn.create_channel().await?;
+    let queue_name = "trade_queue";
+
+    channel
+        .queue_declare(
+            queue_name,
+            QueueDeclareOptions::default(),
+            FieldTable::default(),
+        )
+        .await?;
+    println!("Declared {:?}", queue_name);
+
+    channel
+        .queue_bind(
+            queue_name,
+            "amq.fanout",
+            "stash-record-stream",
+            QueueBindOptions::default(),
+            FieldTable::default(),
+        )
+        .await?;
+
+    println!("Connected to {:?}", queue_name);
+
+    let consumer = channel
+        .basic_consume(
+            queue_name,
+            "trade_consumer",
+            BasicConsumeOptions::default(),
+            FieldTable::default(),
+        )
+        .await?;
+
+    Ok(consumer)
 }

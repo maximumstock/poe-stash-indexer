@@ -1,7 +1,8 @@
-UID := $(shell id -u)
-GID := $(shell id -g)
+# UID := $(shell id -u)
+# GID := $(shell id -g)
 
-docker-compose := env UID=${UID} GID=${GID} docker-compose
+#docker-compose := env UID=${UID} GID=${GID} docker-compose
+docker-compose := docker-compose
 
 dc := ${docker-compose} -f docker-compose.yaml
 dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production.yaml

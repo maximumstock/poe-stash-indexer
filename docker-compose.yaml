@@ -9,6 +9,7 @@ services:
       - indexer
       - prometheus
       - rabbitmq
+      - trade
     ports:
       - 127.0.0.1:8888:80
 
@@ -46,6 +47,26 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  trade:
+    build:
+      context: .
+      dockerfile: trade/Dockerfile
+      target: development
+    user: ${UID}:${GID}
+    depends_on:
+      - rabbitmq
+    restart: "unless-stopped"
+    environment:
+      ENV: "development"
+      DATABASE_URL: "postgres://poe:poe@db:5432/poe"
+      RUST_LOG: "info,ureq=warn"
+      RABBITMQ_SINK_ENABLED: "true"
+      RABBITMQ_URL: "amqp://poe:poe@rabbitmq"
+      RABBITMQ_PRODUCER_ROUTING_KEY: "stash-record-stream"
+      METRICS_PORT: 4000
+    volumes:
+      - ".:/app:cached"
 
   rabbitmq:
     image: rabbitmq:3.9-management-alpine
