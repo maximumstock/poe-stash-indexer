@@ -35,7 +35,10 @@ async fn handle_search(payload: RequestBody, store: Arc<Mutex<Store>>) -> Result
     let offers = store.query(&payload.sell, &payload.buy);
 
     if let Some(offers) = offers {
-        return Ok(warp::reply::json(&QueryResponse { offers }));
+        return Ok(warp::reply::json(&QueryResponse {
+            count: offers.len(),
+            offers,
+        }));
     }
 
     Err(QueryEmptyResultError {}.into())
@@ -55,6 +58,7 @@ impl warp::reject::Reject for QueryEmptyResultError {}
 
 #[derive(Debug, Serialize)]
 struct QueryResponse<'a> {
+    count: usize,
     offers: Vec<&'a Offer>,
 }
 

@@ -1,9 +1,9 @@
 
-GET http://localhost:4001/healthcheck
+GET http://trade.localhost:8888/healthcheck
 
 ###
 
-POST http://localhost:4001/trade
+POST http://trade.localhost:8888/trade
 content-type: application/json
 
 {
