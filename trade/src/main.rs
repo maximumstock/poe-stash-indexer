@@ -26,14 +26,15 @@ use crate::source::setup_consumer;
 ///       - look at https://github.com/maximumstock/poe-stash-indexer/blob/f7424546ffd40e1a74ecf6ca44584a74c2028957/src/parser.rs
 ///       - look at example stream to build note corpus -> sort -> unit test cases
 /// [x] - created_at timestamp on offers
-/// [ ] - validate offer results
-/// [ ] - RabbitMQ client that produces a stream of `StashRecord`s
+/// [x] - validate offer results
+/// [x] - RabbitMQ client that produces a stream of `StashRecord`s
 /// [ ] - will need state snapshots + restoration down the road
 /// [ ] - extend for multiple leagues
 /// [ ] - a web API that mimics pathofexile.com/trade API
 /// [ ] - extend API response to contain number of offers as metadata
 /// [ ] - pagination
 /// [ ] - compression (its fine to do this server-side in this case)
+/// [ ] - metrics (this is going to be awesome)
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
