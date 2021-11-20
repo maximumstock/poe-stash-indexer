@@ -21,6 +21,8 @@ pub struct AssetIndex {
     short_long_idx: HashMap<String, String>,
 }
 
+const ASSET_INDEX_FILE_PATH: &str = "trade/asset_index.json";
+
 impl AssetIndex {
     pub fn new() -> Self {
         Self {
@@ -45,14 +47,14 @@ impl AssetIndex {
     }
 
     fn persist(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let file = File::create("asset_index.json")?;
+        let file = File::create(ASSET_INDEX_FILE_PATH)?;
         let writer = BufWriter::new(file);
         serde_json::to_writer_pretty(writer, &self)?;
         Ok(())
     }
 
     async fn reload(&self) -> Result<AssetResponse, Box<dyn std::error::Error>> {
-        let reader = tokio::fs::read_to_string("asset_index.json").await?;
+        let reader = tokio::fs::read_to_string(ASSET_INDEX_FILE_PATH).await?;
         let asset_response = serde_json::from_str(&reader)?;
         Ok(asset_response)
     }
