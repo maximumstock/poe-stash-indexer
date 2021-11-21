@@ -34,7 +34,10 @@ use crate::source::setup_consumer;
 /// [x] - extend API response to contain number of offers as metadata
 /// [ ] - pagination
 /// [ ] - compression (its fine to do this server-side in this case)
-/// [ ] - metrics (this is going to be awesome)
+/// [ ] - move from logs to metrics
+///       - only log errors and debug info
+///       - log and count unmappable item names
+///       - metrics for all sorts of index sizes, number of offers, processed offers/service activity
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
