@@ -19,6 +19,7 @@ pub struct StashRecord {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Item {
     pub id: String,
+    pub name: String,
     pub type_line: String,
     pub note: Option<String>,
     pub stack_size: Option<u32>,

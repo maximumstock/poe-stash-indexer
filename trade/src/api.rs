@@ -32,9 +32,8 @@ fn search_endpoint(
 
 async fn handle_search(payload: RequestBody, store: Arc<Mutex<Store>>) -> Result<Json, Rejection> {
     let store = store.lock().await;
-    let offers = store.query(&payload.sell, &payload.buy);
 
-    if let Some(offers) = offers {
+    if let Some(offers) = store.query(&payload.sell, &payload.buy) {
         return Ok(warp::reply::json(&QueryResponse {
             count: offers.len(),
             offers,

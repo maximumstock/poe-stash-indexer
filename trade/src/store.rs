@@ -27,29 +27,7 @@ pub struct Offer {
     created_at: u64,
 }
 
-impl Default for Offer {
-    fn default() -> Self {
-        Self {
-            item_id: "herp_derp".into(),
-            stash_id: "my_stash".into(),
-            sell: "chaos".into(),
-            buy: "exa".into(),
-            conversion_rate: (1f32 / 100f32),
-            seller_account: "some guy".into(),
-            stock: 1000,
-            created_at: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .expect("Failed to create timestamp")
-                .as_secs(),
-        }
-    }
-}
-
 impl Offer {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     pub fn get_index(&self) -> u64 {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
@@ -69,11 +47,16 @@ impl From<StashRecord> for Vec<Offer> {
             .filter(|item| item.note.is_some())
             .filter_map(|item| {
                 if let Ok(price) = price_parser.parse_price(&item.note.unwrap()) {
+                    let sold_item_name = match item.name.as_str() {
+                        "" => item.type_line,
+                        _ => item.name,
+                    };
+
                     Some(Offer {
                         stock: item.stack_size.unwrap_or(1),
-                        buy: item.type_line,
+                        sell: sold_item_name,
                         conversion_rate: price.ratio,
-                        sell: price.item.to_owned(),
+                        buy: price.item.to_owned(),
                         item_id: item.id,
                         seller_account: account_name.clone(),
                         stash_id: stash_id.clone(),
@@ -188,6 +171,12 @@ impl Store {
     }
 
     fn ingest_offer(&mut self, offer: Offer) {
+        let mut offer = offer;
+
+        if let Some(mapped_item_name) = self.asset_index.get_name(&offer.buy) {
+            offer.buy = mapped_item_name.to_owned();
+        }
+
         let offer_index = offer.get_index();
         let conversion_index = Conversion::from(&offer).get_index();
 
@@ -216,10 +205,8 @@ impl Store {
 
         let offers: Vec<Offer> = stash.into();
         for o in offers {
-            if self.asset_index.has_item(&o.buy) {
+            if self.asset_index.has_item(&o.sell) {
                 self.ingest_offer(o);
-            } else {
-                // println!("Filter out {:?}", o.buy);
             }
         }
     }
@@ -227,12 +214,11 @@ impl Store {
     pub fn query(&self, sell: &str, buy: &str) -> Option<Vec<&Offer>> {
         let conversion_idx = Conversion::new(sell, buy).get_index();
 
-        if let Some(offers) = self.conversion_to_offers_idx.get(&conversion_idx) {
+        if let Some(offer_idxs) = self.conversion_to_offers_idx.get(&conversion_idx) {
             return Some(
-                offers
+                offer_idxs
                     .iter()
-                    .map(|offer_idx| self.offers.get(offer_idx))
-                    .flatten()
+                    .filter_map(|offer_idx| self.offers.get(offer_idx))
                     .collect::<Vec<_>>(),
             );
         }
@@ -255,20 +241,43 @@ mod tests {
     #[test]
     fn test_stash_invalidation() {
         let asset_index = AssetIndex::builder()
-            .long_short_idx(collection! { "Exalted Orb".into() => "exalted".into() })
-            .short_long_idx(collection! { "exalted".into() => "Exalted Orb".into() })
+            .long_short_idx(collection! {
+                "Exalted Orb".into() => "exalted".into(),
+                "Mirror of Kalandra".into() => "mirror".into()
+            })
+            .short_long_idx(collection! {
+                "exalted".into() => "Exalted Orb".into(),
+                "mirror".into() => "Mirror of Kalandra".into()
+            })
             .build();
 
         let input = StashRecord {
             account_name: "some guy".into(),
             league: "Standard".into(),
             stash_id: "stash-id".into(),
-            items: vec![Item {
-                id: "item-id-1".into(),
-                note: Some("~b/o 5 chaos".into()),
-                stack_size: Some(10),
-                type_line: "Exalted Orb".into(),
-            }],
+            items: vec![
+                Item {
+                    id: "item-id-1".into(),
+                    name: "".into(),
+                    note: Some("~b/o 5 chaos".into()),
+                    stack_size: Some(10),
+                    type_line: "Exalted Orb".into(),
+                },
+                Item {
+                    id: "item-id-2".into(),
+                    name: "Headhunter".into(),
+                    note: Some("~b/o 500 exalted".into()),
+                    stack_size: Some(10),
+                    type_line: "Leather Belt".into(),
+                },
+                Item {
+                    id: "item-id-3".into(),
+                    name: "".into(),
+                    note: Some("~b/o 500 exalted".into()),
+                    stack_size: Some(10),
+                    type_line: "Mirror of Kalandra".into(),
+                },
+            ],
         };
 
         let mut store = Store::new("Standard", asset_index.clone());
@@ -281,8 +290,10 @@ mod tests {
         let stash_to_offers_idx: HashMap<_, _> =
             collection! { "stash-id".into() => HashSet::default(), };
 
-        let conversion_to_offers_idx: HashMap<_, _> =
-            collection! { 12665932254730138288 => HashSet::default() };
+        let conversion_to_offers_idx: HashMap<_, _> = collection! {
+            4093394393773149507 => HashSet::default(),
+            11233860493351374465 => HashSet::default()
+        };
 
         let expected = Store::builder()
             .league("Standard".into())

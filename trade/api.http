@@ -8,7 +8,7 @@ content-type: application/json
 
 {
     "buy": "Chaos Orb",
-    "sell": "maze-of-the-minotaur-map"
+    "sell": "Maze of the Minotaur Map"
 }
 
 ###
@@ -17,6 +17,6 @@ POST http://trade.localhost:8888/trade
 content-type: application/json
 
 {
-    "buy": "Chaos Orb",
-    "sell": "exalted"
+    "sell": "Chaos Orb",
+    "buy": "Exalted Orb"
 }

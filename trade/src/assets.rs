@@ -38,7 +38,7 @@ impl AssetIndex {
             for item in category.entries {
                 self.long_short_idx
                     .insert(item.text.clone(), item.id.clone());
-                self.short_long_idx.insert(item.text, item.id);
+                self.short_long_idx.insert(item.id, item.text);
             }
         }
 
@@ -79,9 +79,9 @@ impl AssetIndex {
         self.short_long_idx.contains_key(input) || self.long_short_idx.contains_key(input)
     }
 
-    // pub fn get_name(&self, id: &str) -> Option<&String> {
-    //     self.short_long_idx.get(id)
-    // }
+    pub fn get_name(&self, id: &str) -> Option<&String> {
+        self.short_long_idx.get(id)
+    }
 
     // pub fn get_id(&self, name: &str) -> Option<&String> {
     //     self.long_short_idx.get(name)
