@@ -31,7 +31,7 @@ use crate::source::setup_consumer;
 /// [ ] - will need state snapshots + restoration down the road
 /// [ ] - extend for multiple leagues
 /// [ ] - a web API that mimics pathofexile.com/trade API
-/// [ ] - extend API response to contain number of offers as metadata
+/// [x] - extend API response to contain number of offers as metadata
 /// [ ] - pagination
 /// [ ] - compression (its fine to do this server-side in this case)
 /// [ ] - metrics (this is going to be awesome)
