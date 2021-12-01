@@ -34,17 +34,18 @@ use crate::source::setup_consumer;
 /// [x] - created_at timestamp on offers
 /// [x] - validate offer results
 /// [x] - RabbitMQ client that produces a stream of `StashRecord`s
-/// [ ] - will need state snapshots + restoration down the road
+/// [x] - will need state snapshots + restoration down the road
+/// [x] - fix file paths
 /// [ ] - extend for multiple leagues
 /// [ ] - a web API that mimics pathofexile.com/trade API
 /// [x] - extend API response to contain number of offers as metadata
+/// [ ] - add proper logging
 /// [ ] - pagination
 /// [ ] - compression (its fine to do this server-side in this case)
 /// [ ] - move from logs to metrics
 ///       - only log errors and debug info
 ///       - log and count unmappable item names
 ///       - metrics for all sorts of index sizes, number of offers, processed offers/service activity
-/// [ ] - fix file paths
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let runtime = tokio::runtime::Runtime::new()?;
