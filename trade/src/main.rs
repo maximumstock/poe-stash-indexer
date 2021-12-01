@@ -6,8 +6,14 @@ mod store;
 
 use futures::StreamExt;
 use lapin::options::BasicAckOptions;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+use tokio::sync::{
+    oneshot::{Receiver, Sender},
+    Mutex,
+};
 
 use assets::AssetIndex;
 use source::{ExampleStream, StashRecord};
@@ -38,21 +44,72 @@ use crate::source::setup_consumer;
 ///       - only log errors and debug info
 ///       - log and count unmappable item names
 ///       - metrics for all sorts of index sizes, number of offers, processed offers/service activity
+/// [ ] - fix file paths
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut asset_index = AssetIndex::new();
-    asset_index.init().await.unwrap();
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let runtime = tokio::runtime::Runtime::new()?;
+    let signal_flag = setup_signal_handlers()?;
+    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+    setup_shutdown_handler(signal_flag, shutdown_tx);
 
-    let store = Arc::new(Mutex::new(Store::new("Scourge", asset_index)));
+    let store = runtime.block_on(setup_work(shutdown_rx, "Scourge".into()));
 
-    // let stream = setup_local_consumer(store.clone());
-    let stream = setup_rabbitmq_consumer(store.clone());
-    let api = api::init(([0, 0, 0, 0], 4001), store);
-    let x = tokio::join!(stream, api);
-    x.0.unwrap();
+    println!("Saving store...");
+    runtime.block_on(store.lock()).persist()?;
+
+    println!("Shutting down");
 
     Ok(())
+}
+
+fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>) {
+    std::thread::spawn(move || loop {
+        if !signal_flag.load(Ordering::Relaxed) {
+            continue;
+        }
+
+        shutdown_tx
+            .send(())
+            .expect("Signaling graceful shutdown failed");
+
+        println!("Shutting down gracefully");
+        return;
+    });
+}
+
+async fn setup_work(shutdown_rx: Receiver<()>, league: String) -> Arc<Mutex<Store>> {
+    let store = match Store::restore() {
+        Ok(store) => {
+            println!("Successfully restored store from file");
+            store
+        }
+        Err(e) => {
+            println!("Error restoring store: {:?}", e);
+            let mut asset_index = AssetIndex::new();
+            asset_index.init().await.unwrap();
+            Store::new(league, asset_index)
+        }
+    };
+    let store = Arc::new(Mutex::new(store));
+
+    tokio::select! {
+        _ = async {
+            match setup_rabbitmq_consumer(shutdown_rx, store.clone()).await {
+                Err(e) => eprintln!("Error setting up RabbitMQ consumer: {:?}", e),
+                Ok(_) => println!("Initialized RabbitMQ consumer")
+            }
+        } => {},
+        _ = api::init(([0, 0, 0, 0], 4001), store.clone()) => {},
+    };
+
+    store
+}
+
+fn setup_signal_handlers() -> Result<Arc<AtomicBool>, Box<dyn std::error::Error>> {
+    let signal_flag = Arc::new(AtomicBool::new(false));
+    signal_hook::flag::register(signal_hook::consts::SIGINT, signal_flag.clone())?;
+    signal_hook::flag::register(signal_hook::consts::SIGTERM, signal_flag.clone())?;
+    Ok(signal_flag)
 }
 
 #[allow(dead_code)]
@@ -69,6 +126,7 @@ async fn setup_local_consumer(store: Arc<Mutex<Store>>) {
 }
 
 async fn setup_rabbitmq_consumer(
+    mut shutdown_rx: Receiver<()>,
     store: Arc<Mutex<Store>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut consumer = setup_consumer().await?;
@@ -84,7 +142,15 @@ async fn setup_rabbitmq_consumer(
             store.ingest_stash(stash_record);
         }
         println!("Store has {:#?} offers", store.size());
+
+        if let Ok(_) | Err(tokio::sync::oneshot::error::TryRecvError::Closed) =
+            shutdown_rx.try_recv()
+        {
+            break;
+        }
     }
+
+    println!("Stopping RabbitMQ consumer");
 
     Ok(())
 }

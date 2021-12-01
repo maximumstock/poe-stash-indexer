@@ -2518,6 +2518,7 @@ dependencies = [
  "reqwest",
  "serde 1.0.130",
  "serde_json",
+ "signal-hook",
  "tokio",
  "tokio-amqp",
  "typed-builder",

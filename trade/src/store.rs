@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
     fmt::Debug,
@@ -12,7 +12,7 @@ type StashId = String;
 type ItemId = String;
 type OfferIndex = u64;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 /// Describes an offer from the view of the seller.
 pub struct Offer {
     item_id: ItemId,
@@ -117,7 +117,8 @@ impl<'a> From<&'a Offer> for Conversion<'a> {
 
 type ConversionIndex = u64;
 
-#[derive(Debug, TypedBuilder, Eq, PartialEq)]
+const STORE_FILE_PATH: &str = "./trade/store.json";
+#[derive(Debug, TypedBuilder, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Store {
     league: String,
     /// Holds _all_ offers for the given league indexed by a manually created hash.
@@ -224,6 +225,23 @@ impl Store {
         }
 
         None
+    }
+
+    pub fn persist(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(STORE_FILE_PATH)?;
+        serde_json::to_writer(file, &self).unwrap();
+        Ok(())
+    }
+
+    pub fn restore() -> Result<Self, Box<dyn std::error::Error>> {
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .open(STORE_FILE_PATH)?;
+        let deserialized: Store = serde_json::from_reader(file)?;
+        Ok(deserialized)
     }
 }
 
