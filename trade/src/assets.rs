@@ -13,7 +13,7 @@ fn sort_alphabetically<T: Serialize, S: serde::Serializer>(
     value.serialize(serializer)
 }
 
-#[derive(Debug, Clone, TypedBuilder, Serialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, TypedBuilder, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct AssetIndex {
     #[serde(serialize_with = "sort_alphabetically")]
     long_short_idx: HashMap<String, String>,
