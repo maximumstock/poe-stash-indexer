@@ -7,6 +7,13 @@ services:
       target: production
     environment:
       ENV: "production"
-      # disable sinks
       DATABASE_URL:
-      RABBITMQ_SINK_ENABLED: "false"
+      RABBITMQ_SINK_ENABLED: "true"
+
+  trade:
+    build:
+      context: .
+      dockerfile: trade/Dockerfile
+      target: production
+    environment:
+      ENV: "production"
