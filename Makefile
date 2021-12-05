@@ -8,9 +8,9 @@ dc := ${docker-compose} -f docker-compose.yaml
 dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production.yaml
 
 init:
-	$(dc) up -d
+	$(dc) up -d --remove-orphans
 init-prod:
-	$(dc-prod) up -d
+	$(dc-prod) up -d --remove-orphans
 
 up: init
 up-prod: init-prod
