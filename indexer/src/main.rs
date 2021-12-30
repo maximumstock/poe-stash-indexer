@@ -131,7 +131,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         log::info!("Saved resumption state");
     }
 
-    Ok(())
+    if indexer.is_stopping() {
+        Ok(())
+    } else {
+        std::process::exit(-1);
+    }
 }
 
 fn setup_signal_handlers() -> Result<Arc<AtomicBool>, Box<dyn std::error::Error>> {
