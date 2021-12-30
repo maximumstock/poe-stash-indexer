@@ -3,8 +3,11 @@ GID := $(shell id -g)
 
 docker-compose := env UID=${UID} GID=${GID} docker-compose
 
-dc := ${docker-compose} -f docker-compose.yaml --env-file .env
+dc := ${docker-compose} -f docker-compose.yaml --env-file configuration/environments/.env.development
 dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production.yaml
+
+prep-env:
+	cd configuration && ./instantiate.sh
 
 init:
 	$(dc) up -d

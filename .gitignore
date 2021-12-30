@@ -3,3 +3,4 @@
 poe-stash-indexer.iml
 target
 indexer_state.json
+configuration/instantiated/*
