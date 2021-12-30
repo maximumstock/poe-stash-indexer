@@ -3,7 +3,7 @@ GID := $(shell id -g)
 
 docker-compose := env UID=${UID} GID=${GID} docker-compose
 
-dc := ${docker-compose} -f docker-compose.yaml
+dc := ${docker-compose} -f docker-compose.yaml --env-file .env
 dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production.yaml
 
 init:
