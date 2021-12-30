@@ -2,22 +2,17 @@ version: "3"
 services:
   reverse-proxy:
     build:
-      context: reverse-proxy
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: reverse-proxy/Dockerfile
     env_file:
-      - .env
-    depends_on:
-      - grafana
-      - indexer
-      - prometheus
-      - rabbitmq
+      - configuration/environments/.env.development
     ports:
       - 127.0.0.1:8888:80
 
   db:
     image: timescale/timescaledb:2.4.1-pg13
     env_file:
-      - .env
+      - configuration/environments/.env.development
     volumes:
       - ./timescaledb:/pg-data
 
@@ -27,46 +22,39 @@ services:
       dockerfile: indexer/Dockerfile
       target: development
     env_file:
-      - .env
-    user: ${UID}:${GID}
+      - configuration/environments/.env.development
+        # user: ${UID}:${GID}
     depends_on:
       - db
       - rabbitmq
-    restart: "unless-stopped"
+    restart: "on-failure"
     volumes:
       - ".:/app:cached"
-    healthcheck:
-      test: ["CMD-SHELL", "curl", "http://indexer:${METRICS_PORT}/metrics"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   rabbitmq:
     image: rabbitmq:3.9-management-alpine
     restart: "always"
     env_file:
-      - .env
+      - configuration/environments/.env.development
     environment:
       RABBITMQ_CONFIG_FILE: "/etc/rabbitmq/rabbitmq.conf"
     volumes:
-      - "./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf"
+      - "./configuration/instantiated/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf"
 
   prometheus:
     image: prom/prometheus:latest
     restart: "always"
     env_file:
-      - .env
+      - configuration/environments/.env.development
     volumes:
-      - "./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+      - "./configuration/instantiated/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
 
   grafana:
     image: grafana/grafana:8.1.2
     restart: "always"
     env_file:
-      - .env
-    depends_on:
-      - prometheus
+      - configuration/environments/.env.development
     volumes:
-      - "./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards"
-      - "./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources"
-      - "./monitoring/grafana/custom.ini:/etc/grafana/grafana.ini"
+      - "./configuration/instantiated/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards"
+      - "./configuration/instantiated/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources"
+      - "./configuration/instantiated/grafana/custom.ini:/etc/grafana/grafana.ini"
