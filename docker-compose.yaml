@@ -1,9 +1,9 @@
 version: "3"
 services:
-  nginx:
+  reverse-proxy:
     build:
-      context: .
-      dockerfile: nginx/Dockerfile
+      context: reverse-proxy
+      dockerfile: Dockerfile
     depends_on:
       - grafana
       - indexer
