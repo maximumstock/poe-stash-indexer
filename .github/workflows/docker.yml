@@ -26,3 +26,5 @@ jobs:
           file: ./indexer/Dockerfile
           push: true
           tags: maximumstock2/indexer:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
