@@ -22,8 +22,8 @@ in
       rust-analyzer
 
       postgresql
-      (rust-bin.stable."1.55.0".default.override {
-        extensions = ["rust-src"];
+      (rust-bin.stable."1.57.0".default.override {
+        extensions = ["rust-src" "clippy"];
       })
     ];
 
