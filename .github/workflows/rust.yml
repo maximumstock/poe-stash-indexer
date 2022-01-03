@@ -2,7 +2,8 @@ name: Continuous Integration
 on:
   pull_request:
   push:
-    branches: [ master ]
+    branches:
+      - master
 
 env:
   # Because matklad said so https://matklad.github.io/2021/09/04/fast-rust-builds.html
