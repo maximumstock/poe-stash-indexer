@@ -36,8 +36,9 @@ FROM production-builder-deps as production-builder
 WORKDIR /app
 COPY . .
 RUN cargo build --release --bin indexer
+RUN strip /app/target/release/indexer
 
-FROM base as production
+FROM scratch as production
 WORKDIR /app
 COPY . .
 COPY --from=production-builder /app/target/release/indexer /bin/indexer
