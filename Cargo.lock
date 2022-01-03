@@ -805,7 +805,6 @@ dependencies = [
  "log",
  "pretty_env_logger",
  "prometheus_exporter",
- "regex",
  "serde 1.0.130",
  "serde_json",
  "signal-hook",
