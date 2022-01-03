@@ -2,7 +2,7 @@
 
 set -e
 
-cp -r templates/* instantiated/
+cp -r templates instantiated
 
 # todo generalize
 set -o allexport; source environments/.env.development; set +o allexport

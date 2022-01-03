@@ -1,4 +1,4 @@
-FROM rust:1.54-slim-buster as base
+FROM rust:1.57-slim-buster as base
 RUN apt-get update
 RUN apt-get install libpq-dev libssl-dev pkg-config lld -y
 RUN cargo install diesel_cli --no-default-features --features postgres
