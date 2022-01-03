@@ -5,16 +5,9 @@ use crate::{
     stash::{AccountName, AccountStash},
 };
 
+#[derive(Default)]
 pub struct LeagueStore {
     pub inner: HashMap<AccountName, AccountStash>,
-}
-
-impl Default for LeagueStore {
-    fn default() -> Self {
-        Self {
-            inner: HashMap::default(),
-        }
-    }
 }
 
 impl LeagueStore {

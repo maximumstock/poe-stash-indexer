@@ -13,16 +13,18 @@ in
   pkgs.mkShell {
     buildInputs = with pkgs; [
       pkg-config
-      postgresql
+      gettext
       openssl
       openssl.dev
-      (rust-bin.stable."1.55.0".default.override {
-        extensions = ["rust-src"];
-      })
-      rust-analyzer
-      cargo-edit
-      linuxPackages.perf
       docker-compose
+      linuxPackages.perf
+      cargo-edit
+      rust-analyzer
+
+      postgresql
+      (rust-bin.stable."1.57.0".default.override {
+        extensions = ["rust-src" "clippy"];
+      })
     ];
 
     RUST_BACKTRACE = 1;

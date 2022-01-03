@@ -38,7 +38,10 @@ impl FetchTask {
 
 #[derive(Debug)]
 enum FetcherError {
-    HttpError { status: u16 },
+    #[allow(dead_code)]
+    HttpError {
+        status: u16,
+    },
     Transport,
     RateLimited(Duration),
     ParseError,

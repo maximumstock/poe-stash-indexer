@@ -112,6 +112,7 @@ pub mod user_config {
         }
     }
 
+    #[derive(Default)]
     pub struct UserConfigurationBuilder {
         #[allow(dead_code)]
         configuration: UserConfiguration,
@@ -138,14 +139,6 @@ pub mod user_config {
         #[allow(dead_code)]
         pub fn build(self) -> UserConfiguration {
             self.configuration
-        }
-    }
-
-    impl Default for UserConfigurationBuilder {
-        fn default() -> Self {
-            UserConfigurationBuilder {
-                configuration: UserConfiguration::default(),
-            }
         }
     }
 
