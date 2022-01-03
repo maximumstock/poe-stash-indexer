@@ -1,0 +1,21 @@
+restart_mode = "Fresh" # either Resume or Fresh
+# All possible item categories as their API qualifiers
+#
+# "accessories"
+# "armour"
+# "cards"
+# "currency"
+# "flasks"
+# "gems"
+# "heistequipment"
+# "heistmission"
+# "jewels"
+# "leaguestones"
+# "maps"
+# "misc"
+# "monsters"
+# "watchstones"
+# "weapons"
+[filter]
+item_categories = [] # by default, all categories are included
+leagues = [] # by default, all leagues are included
