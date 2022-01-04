@@ -1,4 +1,5 @@
-FROM rust:1.57-slim-buster as base
+FROM ekidd/rust-musl-builder:1.57.0 as base
+USER root
 RUN apt-get update
 RUN apt-get install libpq-dev libssl-dev pkg-config lld -y
 RUN cargo install diesel_cli --no-default-features --features postgres
@@ -12,34 +13,35 @@ WORKDIR /app
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
-FROM base as development-builder-deps
-WORKDIR /app
-COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --recipe-path recipe.json -p indexer
+# FROM base as development-builder-deps
+# WORKDIR /app
+# COPY --from=planner /app/recipe.json recipe.json
+# RUN cargo chef cook --recipe-path recipe.json -p indexer
 
-FROM development-builder-deps as development-builder
-WORKDIR /app
-COPY . .
-RUN cargo build --bin indexer
+# FROM development-builder-deps as development-builder
+# WORKDIR /app
+# COPY . .
+# RUN cargo build --bin indexer
 
-FROM development-builder as development
-WORKDIR /app
-COPY . .
-ENTRYPOINT ["indexer/scripts/run.sh"]
+# FROM development-builder as development
+# WORKDIR /app
+# COPY . .
+# ENTRYPOINT ["indexer/scripts/run.sh"]
 
 FROM base as production-builder-deps
 WORKDIR /app
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json -p indexer
+RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json -p indexer
 
 FROM production-builder-deps as production-builder
 WORKDIR /app
 COPY . .
-RUN cargo build --release --bin indexer
-RUN strip /app/target/release/indexer
+RUN cargo build --release --target x86_64-unknown-linux-musl --bin indexer
+RUN strip /app/target/x86_64-unknown-linux-musl/release/indexer 
 
-FROM scratch as production
+FROM alpine
 WORKDIR /app
-COPY . .
-COPY --from=production-builder /app/target/release/indexer /bin/indexer
-ENTRYPOINT ["indexer/scripts/run.sh"]
+RUN addgroup -S poe && adduser -S poe -G poe
+COPY --from=production-builder /app/target/x86_64-unknown-linux-musl/release/indexer /usr/local/bin/
+USER poe
+CMD ["/usr/local/bin/indexer"]
