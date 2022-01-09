@@ -13,8 +13,6 @@ jobs:
           key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
           host: ${{ secrets.DEPLOY_HOST }}
           user: ${{ secrets.DEPLOY_USER }}
-          scp: |
-            '.' => /home/${{ secrets.DEPLOY_USER }}/deployment
           last_ssh: |
             set -ex
             cd /home/${{ secrets.DEPLOY_USER }}/deployment
