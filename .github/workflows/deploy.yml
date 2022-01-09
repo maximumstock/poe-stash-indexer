@@ -15,10 +15,9 @@ jobs:
         run: |
           eval $(ssh-agent -s)
           ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
-          scp -o StrictHostKeyChecking=no -rCB $PWD $DEPLOY_USER@$DEPLOY_HOST:/home/$DEPLOY_USER/deployment
           ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
             set -ex
-            cd deployment
+            git clone maximumstock/poe-stash-indexer deployment && cd deployment
             docker pull maximumstock2/indexer:latest
             docker-compose -f docker-compose.production.yaml up -d
           EOF
