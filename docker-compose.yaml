@@ -20,7 +20,7 @@ services:
     build:
       context: .
       dockerfile: indexer/Dockerfile
-      target: development
+      # target: development
     env_file:
       - configuration/environments/.env.development
         # user: ${UID}:${GID}
