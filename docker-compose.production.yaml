@@ -11,3 +11,7 @@ services:
       RABBITMQ_SINK_ENABLED: "false"
       RABBITMQ_URL: "amqp://poe:poe@rabbitmq"
       RABBITMQ_PRODUCER_ROUTING_KEY: "stash-record-stream"
+
+  reverse-proxy:
+    ports:
+      - 127.0.0.1:80:80
