@@ -22,16 +22,3 @@ jobs:
             docker pull maximumstock2/indexer:latest
             docker-compose -f docker-compose.production.yaml up -d
           EOF
-
-      - name: Deploy
-        uses: cross-the-world/ssh-scp-ssh-pipelines@latest
-        with:
-          key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
-          host: ${{ secrets.DEPLOY_HOST }}
-          user: ${{ secrets.DEPLOY_USER }}
-          last_ssh: |
-            set -ex
-            cd /home/${{ secrets.DEPLOY_USER }}/deployment
-            docker pull maximumstock2/indexer:latest
-            docker-compose up -f docker-compose.production.yml -d
-            echo "Successfully deployed"
