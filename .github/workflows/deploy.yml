@@ -7,6 +7,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name:
+        run: |
+          ssh-add <(echo "${{ DEPLOY_PRIVATE_KEY }}")
+          ssh ${{ DEPLOY_USER }}@${{ DEPLOY_HOST }} "ls -la"
+
       - name: Deploy
         uses: cross-the-world/ssh-scp-ssh-pipelines@latest
         with:
