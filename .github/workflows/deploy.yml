@@ -15,7 +15,13 @@ jobs:
         run: |
           eval $(ssh-agent -s)
           ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
-          ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "ls -la"
+          scp -o StrictHostKeyChecking=no -rCB . $DEPLOY_USER@$DEPLOY_HOST:/home/$DEPLOY_USER/deployment
+          ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
+            set -ex
+            cd deployment
+            docker pull maximumstock2/indexer:latest
+            docker-compose -f docker-compose.production.yaml up -d
+          EOF
 
       - name: Deploy
         uses: cross-the-world/ssh-scp-ssh-pipelines@latest
