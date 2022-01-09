@@ -7,7 +7,7 @@ services:
     env_file:
       - configuration/environments/.env.development
     ports:
-      - 127.0.0.1:8888:80
+      - 0.0.0.0:8888:80
 
   db:
     image: timescale/timescaledb:2.4.1-pg13
