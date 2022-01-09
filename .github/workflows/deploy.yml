@@ -22,5 +22,6 @@ jobs:
             cd deployment
             git pull
             docker pull maximumstock2/indexer:latest
+            make prep-env
             make up-prod
           EOF
