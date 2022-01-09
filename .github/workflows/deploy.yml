@@ -18,7 +18,7 @@ jobs:
           ssh -q -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
             set -ex
             rm -rf deployment
-            git clone git@github.com:maximumstock/poe-stash-indexer.git deployment
+            git clone https://github.com/maximumstock/poe-stash-indexer.git deployment
             cd deployment
             git pull
             docker pull maximumstock2/indexer:latest
