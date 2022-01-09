@@ -15,7 +15,7 @@ jobs:
         run: |
           eval $(ssh-agent -s)
           ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
-          ssh $DEPLOY_USER@$DEPLOY_HOST "ls -la"
+          ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "ls -la"
 
       - name: Deploy
         uses: cross-the-world/ssh-scp-ssh-pipelines@latest
