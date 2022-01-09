@@ -1,4 +1,4 @@
-name: Docker
+name: Build
 on: workflow_dispatch
 
 env:
@@ -6,7 +6,7 @@ env:
   CARGO_INCREMENTAL: 0
 
 jobs:
-  ci:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

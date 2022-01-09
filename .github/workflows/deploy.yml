@@ -2,15 +2,19 @@ name: Deploy
 on: workflow_dispatch
 
 jobs:
-  ci:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name:
+        env:
+          DEPLOY_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          ssh-add <(echo "${{ DEPLOY_PRIVATE_KEY }}")
-          ssh ${{ DEPLOY_USER }}@${{ DEPLOY_HOST }} "ls -la"
+          ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
+          ssh $DEPLOY_USER@$DEPLOY_HOST "ls -la"
 
       - name: Deploy
         uses: cross-the-world/ssh-scp-ssh-pipelines@latest
