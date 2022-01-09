@@ -17,7 +17,8 @@ jobs:
           ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
           ssh -q -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
             set -ex
-            git clone https://github.com/maximumstock/poe-stash-indexer.git deployment && cd deployment
+            [[ ! -d poe-stash-indexer ]] && git clone https://github.com/maximumstock/poe-stash-indexer.git deployment
+            cd deployment
             docker pull maximumstock2/indexer:latest
             docker-compose -f docker-compose.production.yaml up -d
           EOF
