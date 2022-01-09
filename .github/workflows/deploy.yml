@@ -19,6 +19,7 @@ jobs:
             set -ex
             [[ ! -d deployment ]] && git clone https://github.com/maximumstock/poe-stash-indexer.git deployment
             cd deployment
+            git pull
             docker pull maximumstock2/indexer:latest
             make up-prod
           EOF
