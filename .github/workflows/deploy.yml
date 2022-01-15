@@ -12,13 +12,14 @@ jobs:
           DEPLOY_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          AGE_KEY: ${{ secrets.AGE_KEY }}
+          AGE_KEY: "derp"
         run: |
           eval $(ssh-agent -s)
           ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
           ssh -q -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
-            export AGE_KEY="$AGE_KEY"
             set -ex
+            export AGE_KEY="$AGE_KEY"
+            echo "$AGE_KEY"
             rm -rf deployment
             git clone https://github.com/maximumstock/poe-stash-indexer.git deployment && cd deployment
             docker pull maximumstock2/indexer:latest
