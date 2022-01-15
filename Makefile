@@ -8,6 +8,10 @@ dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production
 
 prep-env:
 	cd configuration && ./instantiate.sh
+encrypt-prod:
+	age --encrypt -i secrets/age.key -o configuration/environments/.env.production.enc configuration/environments/.env.production
+decrypt-prod:
+	age --decrypt -i secrets/age.key -o configuration/environments/.env.production.enc configuration/environments/.env.production
 
 init:
 	$(dc) up -d
