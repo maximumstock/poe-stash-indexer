@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
+mkdir -p instantiated
 cp -r templates/* instantiated
 set -o allexport;
 
