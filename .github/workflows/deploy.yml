@@ -12,6 +12,7 @@ jobs:
           DEPLOY_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          AGE_KEY: ${{ secrets.AGE_KEY }}
         run: |
           eval $(ssh-agent -s)
           ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
