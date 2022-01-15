@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
-cp -r templates instantiated
+cp -r templates/* instantiated
 set -o allexport;
 
 case $ENV in
