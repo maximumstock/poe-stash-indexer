@@ -17,6 +17,7 @@ jobs:
           eval $(ssh-agent -s)
           ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
           ssh -q -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
+            export AGE_KEY="$AGE_KEY"
             set -ex
             rm -rf deployment
             git clone https://github.com/maximumstock/poe-stash-indexer.git deployment && cd deployment
