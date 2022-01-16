@@ -16,7 +16,7 @@ jobs:
         run: |
           eval $(ssh-agent -s)
           ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
-          ssh -q -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
+          ssh -q -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << EOF
             set -ex
             export AGE_KEY='"$AGE_KEY"'
             echo "$AGE_KEY"
