@@ -2,6 +2,7 @@ version: "3"
 services:
   indexer:
     image: maximumstock2/indexer:latest
+    restart: "always"
     environment:
       ENV: "production"
       METRICS_PORT: 4000
