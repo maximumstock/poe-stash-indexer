@@ -3,6 +3,8 @@ services:
   indexer:
     image: maximumstock2/indexer:latest
     restart: "always"
+    env_file:
+      - configuration/environments/.env.production
     environment:
       ENV: "production"
       METRICS_PORT: 4000
@@ -16,3 +18,21 @@ services:
   reverse-proxy:
     ports:
       - 0.0.0.0:80:80
+    env_file:
+      - configuration/environments/.env.production
+
+  db:
+    env_file:
+      - configuration/environments/.env.production
+
+  rabbitmq:
+    env_file:
+      - configuration/environments/.env.production
+
+  prometheus:
+    env_file:
+      - configuration/environments/.env.production
+
+  grafana:
+    env_file:
+      - configuration/environments/.env.production
