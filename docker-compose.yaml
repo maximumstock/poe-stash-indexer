@@ -20,10 +20,8 @@ services:
     build:
       context: .
       dockerfile: indexer/Dockerfile
-      # target: development
     env_file:
       - configuration/environments/.env.development
-        # user: ${UID}:${GID}
     depends_on:
       - db
       - rabbitmq
