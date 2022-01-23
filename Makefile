@@ -6,7 +6,7 @@ docker-compose := env UID=${UID} GID=${GID} docker-compose
 dc := ${docker-compose} -f docker-compose.yaml --env-file configuration/environments/.env.development
 dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production.yaml
 
-prep-env:
+config:
 	cd configuration && ./instantiate.sh
 encrypt-prod:
 	age --encrypt -i secrets/age.key -o configuration/environments/.env.production.enc configuration/environments/.env.production

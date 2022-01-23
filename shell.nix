@@ -20,6 +20,8 @@ in
       linuxPackages.perf
       cargo-edit
       rust-analyzer
+      age
+      apacheHttpd
 
       postgresql
       (rust-bin.stable."1.57.0".default.override {
