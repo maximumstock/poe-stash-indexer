@@ -24,6 +24,7 @@ jobs:
             rm -rf deployment
             git clone https://github.com/maximumstock/poe-stash-indexer.git deployment && cd deployment
             docker pull maximumstock2/indexer:latest
+            docker pull maximumstock2/trade:latest
             echo "Environment: $ENV"
             make config
             docker-compose build --force-rm reverse-proxy
