@@ -16,13 +16,16 @@ in
       gettext
       openssl
       openssl.dev
+      rust-analyzer
+      cargo-edit
+      cargo-feature
+      linuxPackages.perf
       docker-compose
       linuxPackages.perf
       cargo-edit
       rust-analyzer
       age
       apacheHttpd
-
       postgresql
       (rust-bin.stable."1.57.0".default.override {
         extensions = ["rust-src" "clippy"];

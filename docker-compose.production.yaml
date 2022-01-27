@@ -7,13 +7,19 @@ services:
       - configuration/environments/.env.production
     environment:
       ENV: "production"
-      METRICS_PORT: 4000
-      RUST_LOG: "info,ureq=warn"
       # disable sinks
       DATABASE_URL:
       RABBITMQ_SINK_ENABLED: "false"
       RABBITMQ_URL: "amqp://poe:poe@rabbitmq"
       RABBITMQ_PRODUCER_ROUTING_KEY: "stash-record-stream"
+
+  trade:
+    build:
+      context: .
+      dockerfile: trade/Dockerfile
+      target: production
+    environment:
+      ENV: "production"
 
   reverse-proxy:
     ports:
