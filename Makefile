@@ -1,7 +1,8 @@
-UID := $(shell id -u)
-GID := $(shell id -g)
+# UID := $(shell id -u)
+# GID := $(shell id -g)
 
-docker-compose := env UID=${UID} GID=${GID} docker-compose
+#docker-compose := env UID=${UID} GID=${GID} docker-compose
+docker-compose := docker-compose
 
 dc := ${docker-compose} -f docker-compose.yaml --env-file configuration/environments/.env.development
 dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production.yaml
@@ -14,9 +15,9 @@ decrypt-prod:
 	age --decrypt -i secrets/age.key -o configuration/environments/.env.production.enc configuration/environments/.env.production
 
 init:
-	$(dc) up -d
+	$(dc) up -d --remove-orphans
 init-prod:
-	$(dc-prod) up -d
+	$(dc-prod) up -d --remove-orphans
 
 up: init
 up-prod: init-prod

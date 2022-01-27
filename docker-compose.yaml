@@ -14,7 +14,7 @@ services:
     env_file:
       - configuration/environments/.env.development
     volumes:
-      - ./timescaledb:/pg-data
+      - ./timescaledb:/var/lib/postgresql/data
 
   indexer:
     build:
@@ -26,6 +26,21 @@ services:
       - db
       - rabbitmq
     restart: "on-failure"
+    expose:
+      - 80
+    volumes:
+      - ".:/app:cached"
+
+  trade:
+    build:
+      context: .
+      dockerfile: trade/Dockerfile
+      target: development
+    depends_on:
+      - rabbitmq
+    restart: "unless-stopped"
+    env_file:
+      - configuration/environments/.env.development
     volumes:
       - ".:/app:cached"
 
