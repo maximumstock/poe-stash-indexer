@@ -4,8 +4,8 @@ datasources:
   - name: Prometheus
     version: 1
     type: prometheus
-    access: direct
-    url: http://prometheus.localhost:8888
+    access: proxy
+    url: http://prometheus:9090
     editable: true
     jsonData:
       timeInterval: 2s

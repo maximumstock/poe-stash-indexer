@@ -3,3 +3,9 @@
 poe-stash-indexer.iml
 target
 indexer_state.json
+configuration/instantiated/*
+timescaledb
+
+# secret data
+secrets
+configuration/environments/.env.production

@@ -1,0 +1,31 @@
+name: Deploy
+on: workflow_dispatch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name:
+        env:
+          DEPLOY_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          AGE_KEY: ${{ secrets.AGE_KEY }}
+        run: |
+          eval $(ssh-agent -s)
+          ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
+          ssh -q -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << EOF
+            export AGE_KEY="$AGE_KEY"
+            export ENV="production"
+
+            set -ex
+            rm -rf deployment
+            git clone https://github.com/maximumstock/poe-stash-indexer.git deployment && cd deployment
+            docker pull maximumstock2/indexer:latest
+            echo "Environment: $ENV"
+            make config
+            docker-compose build --force-rm reverse-proxy
+            make up-prod
+          EOF
