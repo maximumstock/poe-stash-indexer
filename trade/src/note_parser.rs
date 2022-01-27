@@ -50,6 +50,7 @@ impl PriceParser {
         }
     }
 
+    #[allow(dead_code)]
     pub fn is_price(&self, note: &str) -> bool {
         self.regex.is_match(note)
     }
