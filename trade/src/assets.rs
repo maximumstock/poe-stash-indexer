@@ -95,7 +95,6 @@ struct AssetResponse {
 
 #[derive(Debug, Deserialize)]
 struct AssetCategory {
-    id: String,
     entries: Vec<AssetItem>,
 }
 
