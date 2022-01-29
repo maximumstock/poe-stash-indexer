@@ -14,10 +14,10 @@ services:
       RABBITMQ_PRODUCER_ROUTING_KEY: "stash-record-stream"
 
   trade:
-    build:
-      context: .
-      dockerfile: trade/Dockerfile
-      target: production
+    image: maximumstock2/trade:latest
+    restart: "always"
+    env_file:
+      - configuration/environments/.env.production
     environment:
       ENV: "production"
 

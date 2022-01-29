@@ -35,7 +35,6 @@ services:
     build:
       context: .
       dockerfile: trade/Dockerfile
-      target: development
     depends_on:
       - rabbitmq
     restart: "unless-stopped"
