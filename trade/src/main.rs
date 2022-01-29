@@ -132,6 +132,7 @@ async fn setup_rabbitmq_consumer(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut consumer = setup_consumer().await?;
 
+    println!("Starting to listen to message queue");
     while let Some(incoming) = consumer.next().await {
         let (_, delivery) = incoming.unwrap();
         delivery.ack(BasicAckOptions::default()).await?;

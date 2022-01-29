@@ -5,7 +5,7 @@
 docker-compose := docker-compose
 
 dc := ${docker-compose} -f docker-compose.yaml --env-file configuration/environments/.env.development
-dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production.yaml
+dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production.yaml --env-file configuration/environments/.env.production
 
 config:
 	cd configuration && ./instantiate.sh
@@ -43,10 +43,10 @@ tidy:
 	cargo fmt --all -- --check && cargo clippy -- -D warnings
 
 # Indexer targets
-indexer-migrate: _init
+indexer-migrate: init
 	$(dc) exec indexer bash -c "diesel setup"
 
-indexer-start : _init
+indexer-start : init
 	$(dc) exec indexer indexer
 
 shell-indexer:
