@@ -1,5 +1,4 @@
 target
 indexer/target
 stash-differ/*.csv
-trade
 timescaledb
