@@ -35,10 +35,12 @@ COPY . .
 FROM production-builder-deps as production-builder
 WORKDIR /app
 COPY . .
-RUN cargo build --release --bin trade
+RUN cargo build --release --target x86_64-unknown-linux-musl --bin trade
+RUN strip /app/target/x86_64-unknown-linux-musl/release/trade 
 
-FROM base as production
+FROM alpine
 WORKDIR /app
-COPY . .
-COPY --from=production-builder /app/target/release/trade /bin/trade
-ENTRYPOINT ["trade/scripts/run.sh"]
+RUN addgroup -S poe && adduser -S poe -G poe
+COPY --from=production-builder /app/target/x86_64-unknown-linux-musl/release/trade /usr/local/bin/
+USER poe
+CMD ["/usr/local/bin/trade"]
