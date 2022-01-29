@@ -19,7 +19,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build indexer
-        id: docker_build
+        id: docker_build_indexer
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -27,7 +27,7 @@ jobs:
           push: true
           tags: maximumstock2/indexer:latest
       - name: Build trade
-        id: docker_build
+        id: docker_build_trade
         uses: docker/build-push-action@v2
         with:
           context: .
