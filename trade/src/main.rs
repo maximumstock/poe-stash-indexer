@@ -47,16 +47,16 @@ use crate::source::setup_consumer;
 ///       - log and count unmappable item names
 ///       - metrics for all sorts of index sizes, number of offers, processed offers/service activity
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let runtime = tokio::runtime::Runtime::new()?;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signal_flag = setup_signal_handlers()?;
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     setup_shutdown_handler(signal_flag, shutdown_tx);
 
-    let store = runtime.block_on(setup_work(shutdown_rx, "Scourge".into()));
+    let store = setup_work(shutdown_rx, "Scourge".into()).await;
 
     println!("Saving store...");
-    runtime.block_on(store.lock()).persist()?;
+    store.lock().await.persist()?;
 
     println!("Shutting down");
 
@@ -66,6 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>) {
     std::thread::spawn(move || loop {
         if !signal_flag.load(Ordering::Relaxed) {
+            std::thread::sleep(std::time::Duration::from_secs(1));
             continue;
         }
 
@@ -74,7 +75,7 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
             .expect("Signaling graceful shutdown failed");
 
         println!("Shutting down gracefully");
-        return;
+        std::process::exit(0);
     });
 }
 
@@ -134,7 +135,7 @@ async fn setup_rabbitmq_consumer(
 
     println!("Starting to listen to message queue");
     while let Some(incoming) = consumer.next().await {
-        let (_, delivery) = incoming.unwrap();
+        let (_, delivery) = incoming?;
         delivery.ack(BasicAckOptions::default()).await?;
 
         let stash_records = serde_json::from_slice::<Vec<StashRecord>>(&delivery.data)?;

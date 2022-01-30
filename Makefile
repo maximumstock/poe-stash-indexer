@@ -23,9 +23,9 @@ up: init
 up-prod: init-prod
 
 build:
-	$(dc) build --force-rm
+	$(dc) build --force-rm $(CONTAINERS)
 build-prod:
-	$(dc-prod) build --force-rm
+	$(dc-prod) build --force-rm $(CONTAINERS)
 
 down:
 	$(dc) down --remove-orphans
