@@ -9,9 +9,6 @@ services:
       ENV: "production"
       # disable sinks
       DATABASE_URL:
-      RABBITMQ_SINK_ENABLED: "true"
-      RABBITMQ_URL: "amqp://poe:poe@rabbitmq"
-      RABBITMQ_PRODUCER_ROUTING_KEY: "stash-record-stream"
 
   trade:
     image: maximumstock2/trade:latest
