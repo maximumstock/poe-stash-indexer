@@ -43,7 +43,5 @@ RUN strip /app/target/x86_64-unknown-linux-musl/release/trade
 
 FROM alpine
 WORKDIR /app
-RUN addgroup -S poe && adduser -S poe -G poe
 COPY --from=production-builder /app/target/x86_64-unknown-linux-musl/release/trade /usr/local/bin/
-USER poe
 CMD ["/usr/local/bin/trade"]

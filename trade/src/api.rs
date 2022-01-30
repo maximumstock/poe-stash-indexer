@@ -12,11 +12,12 @@ struct RequestBody {
     buy: String,
 }
 
-pub async fn init<T: Into<SocketAddr>>(options: T, store: Arc<Mutex<Store>>) {
+pub async fn init<T: Into<SocketAddr> + 'static>(options: T, store: Arc<Mutex<Store>>) {
     let routes = healtcheck_endpoint()
         .or(search_endpoint(store))
         .recover(error_handler);
-    warp::serve(routes).run(options).await
+
+    warp::serve(routes).bind(options).await
 }
 
 fn search_endpoint(
