@@ -13,8 +13,6 @@ services:
     image: timescale/timescaledb:2.4.1-pg13
     env_file:
       - configuration/environments/.env.development
-    volumes:
-      - ./timescaledb:/var/lib/postgresql/data
 
   indexer:
     build:
