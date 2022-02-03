@@ -34,5 +34,5 @@ in
     ];
 
     RUST_BACKTRACE = 1;
-    RUSTFLAGS = "-Clink-arg=-fuse-ld=lld" ;
+    RUSTFLAGS = "-Clink-arg=-fuse-ld=lld";
   }
