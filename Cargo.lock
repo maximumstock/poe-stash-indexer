@@ -2391,9 +2391,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-amqp"
-version = "1.0.0"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a236324e1e84931e62c22e2ee47688e077aa33a2a95f14d29ab8ec4dbaf9845"
+checksum = "0ae914c8d18dbd06e6e3906cacd777b23ebded718e9b9a3954c936318673a83b"
 dependencies = [
  "lapin",
  "parking_lot",
