@@ -2260,7 +2260,6 @@ dependencies = [
 name = "stash-api"
 version = "0.1.0"
 dependencies = [
- "flate2",
  "log",
  "ratelimit",
  "serde 1.0.136",

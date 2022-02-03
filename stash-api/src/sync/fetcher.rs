@@ -7,7 +7,6 @@ use std::{
     time::Duration,
 };
 
-use flate2::bufread::GzDecoder;
 use ureq::Response;
 
 use crate::{common::ChangeId, sync::worker::WorkerTask};
@@ -140,9 +139,9 @@ fn ratelimiter() -> ratelimit::Limiter {
 
 fn parse_chunk(
     response: Response,
-) -> Result<(GzDecoder<BufReader<impl Read + Send>>, [u8; 80], ChangeId), FetcherError> {
+) -> Result<(BufReader<impl Read + Send>, [u8; 80], ChangeId), FetcherError> {
     let reader = response.into_reader();
-    let mut decoder = GzDecoder::new(BufReader::new(reader));
+    let mut decoder = BufReader::new(reader);
     let mut next_id_buffer = [0; 80];
 
     match decoder.read_exact(&mut next_id_buffer) {
@@ -170,7 +169,6 @@ fn fetch_chunk(task: &FetchTask) -> Result<Response, FetcherError> {
     );
 
     let response = ureq::request("GET", &url)
-        .set("Accept-Encoding", "gzip")
         .set("Accept", "application/json")
         .call();
 
