@@ -6,7 +6,6 @@ use lapin::{
     Connection, ConnectionProperties, Consumer,
 };
 use serde::Deserialize;
-use tokio_amqp::*;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct StashRecord {
@@ -49,7 +48,7 @@ impl ExampleStream {
 
 pub async fn setup_consumer() -> Result<Consumer, Box<dyn std::error::Error>> {
     let addr = std::env::var("AMQP_ADDR").unwrap_or_else(|_| "amqp://poe:poe@rabbitmq".into());
-    let conn = Connection::connect(&addr, ConnectionProperties::default().with_tokio()).await?; // Note the `with_tokio()` here
+    let conn = Connection::connect(&addr, ConnectionProperties::default()).await?; // Note the `with_tokio()` here
     let channel = conn.create_channel().await?;
     let queue_name = "trade_queue";
 

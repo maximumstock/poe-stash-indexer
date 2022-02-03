@@ -135,7 +135,7 @@ async fn setup_rabbitmq_consumer(
 
     println!("Starting to listen to message queue");
     while let Some(incoming) = consumer.next().await {
-        let (_, delivery) = incoming?;
+        let delivery = incoming?;
         delivery.ack(BasicAckOptions::default()).await?;
 
         let stash_records = serde_json::from_slice::<Vec<StashRecord>>(&delivery.data)?;
