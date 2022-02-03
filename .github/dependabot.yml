@@ -1,12 +1,8 @@
-version: 1
-update_configs:
-  - package_manager: "cargo"
-    directory: "/"
-    update_schedule: "live"
-    commit_message:
-      prefix: "chore"
-      include_scope: true
-    automerged_updates:
-      - match:
-          dependency_name: "*"
-          update_type: "semver:minor"
+version: 2
+updates:
+- package-ecosystem: cargo
+  directory: "/"
+  schedule:
+    interval: daily
+    time: '08:00'
+  open-pull-requests-limit: 99
