@@ -27,10 +27,12 @@ in
       age
       apacheHttpd
       postgresql
-      (rust-bin.stable."1.57.0".default.override {
+      (rust-bin.stable.latest.default.override {
         extensions = ["rust-src" "clippy"];
       })
+      lld
     ];
 
     RUST_BACKTRACE = 1;
+    RUSTFLAGS = "-Clink-arg=-fuse-ld=lld" ;
   }
