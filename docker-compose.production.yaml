@@ -7,7 +7,7 @@ services:
       - configuration/environments/.env.production
     environment:
       ENV: "production"
-      # disable sinks
+      # disable Postgres sink
       DATABASE_URL:
 
   trade:

@@ -18,14 +18,13 @@ services:
     build:
       context: .
       dockerfile: indexer/Dockerfile
+      target: development
     env_file:
       - configuration/environments/.env.development
     depends_on:
-      - db
       - rabbitmq
-    restart: "on-failure"
-    expose:
-      - 80
+      - db
+    restart: "always"
     volumes:
       - ".:/app:cached"
 
@@ -33,9 +32,10 @@ services:
     build:
       context: .
       dockerfile: trade/Dockerfile
+      target: development
     depends_on:
       - rabbitmq
-    restart: "unless-stopped"
+    restart: "always"
     env_file:
       - configuration/environments/.env.development
     volumes:

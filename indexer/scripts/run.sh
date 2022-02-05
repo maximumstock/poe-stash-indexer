@@ -2,8 +2,6 @@
 
 set -ex
 
-while !</dev/tcp/db/5432; do sleep 1; done;
-
 if [[ -v DATABASE_URL ]]; then
   diesel setup \
     --migration-dir indexer/migrations \
@@ -15,7 +13,7 @@ case $ENV in
     exec indexer
     ;;
   *)
-    exec cargo watch -w indexer -x "run --bin indexer"
+    exec cargo watch -w indexer/src -x "run --bin indexer"
     ;;
 esac
 
