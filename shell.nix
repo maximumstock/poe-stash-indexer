@@ -34,5 +34,12 @@ in
     ];
 
     RUST_BACKTRACE = 1;
+
+    # optional lld setup for faster compilation
     RUSTFLAGS = "-Clink-arg=-fuse-ld=lld";
+    OPENSSL_LIB_DIR = "${pkgs.openssl.dev.out}/lib";
+    POSTGRES_LIB_DIR = "${pkgs.postgresql.lib}/lib";
+    shellHook = ''
+      export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$OPENSSL_LIB_DIR:$POSTGRES_LIB_DIR"
+    '';
   }
