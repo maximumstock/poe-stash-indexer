@@ -13,20 +13,10 @@ WORKDIR /app
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
-# FROM base as development-builder-deps
-# WORKDIR /app
-# COPY --from=planner /app/recipe.json recipe.json
-# RUN cargo chef cook --recipe-path recipe.json -p indexer
-
-# FROM development-builder-deps as development-builder
-# WORKDIR /app
-# COPY . .
-# RUN cargo build --bin indexer
-
-# FROM development-builder as development
-# WORKDIR /app
-# COPY . .
-# ENTRYPOINT ["indexer/scripts/run.sh"]
+FROM base as development
+WORKDIR /app
+COPY . .
+ENTRYPOINT ["indexer/scripts/run.sh"]
 
 FROM base as production-builder-deps
 WORKDIR /app

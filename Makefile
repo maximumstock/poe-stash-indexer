@@ -28,16 +28,16 @@ build-prod:
 	$(dc-prod) build --force-rm $(CONTAINERS)
 
 down:
-	$(dc) down --remove-orphans
+	$(dc-prod) down --remove-orphans
 
 restart:
-	$(dc) restart $(CONTAINERS)
+	$(dc-prod) restart $(CONTAINERS)
 
 stop:
-	$(dc) stop $(CONTAINERS)
+	$(dc-prod) stop $(CONTAINERS)
 
 logs:
-	${docker-compose} logs -f --tail=20
+	${dc-prod} logs -f --tail=20
 
 tidy:
 	cargo fmt --all -- --check && cargo clippy -- -D warnings
