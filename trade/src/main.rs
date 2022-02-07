@@ -57,7 +57,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Saving store...");
     store.lock().await.persist()?;
-
     println!("Shutting down");
 
     Ok(())
@@ -75,7 +74,7 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
             .expect("Signaling graceful shutdown failed");
 
         println!("Shutting down gracefully");
-        std::process::exit(0);
+        break;
     });
 }
 
@@ -85,11 +84,13 @@ async fn setup_work(shutdown_rx: Receiver<()>, league: String) -> Arc<Mutex<Stor
             println!("Successfully restored store from file");
             store
         }
-        Err(e) => {
-            println!("Error restoring store: {:?}", e);
+        Err(_) => {
+            eprintln!("Error restoring store, creating new");
             let mut asset_index = AssetIndex::new();
             asset_index.init().await.unwrap();
-            Store::new(league, asset_index)
+            let store = Store::new(league, asset_index);
+            store.persist().unwrap();
+            store
         }
     };
     let store = Arc::new(Mutex::new(store));

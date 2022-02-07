@@ -117,7 +117,7 @@ impl<'a> From<&'a Offer> for Conversion<'a> {
 
 type ConversionIndex = u64;
 
-const STORE_FILE_PATH: &str = "./trade/store.json";
+const STORE_FILE_PATH: &str = "./trade/trade-store/store.json";
 #[derive(Debug, TypedBuilder, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Store {
     league: String,
