@@ -4,6 +4,9 @@ poe-stash-indexer.iml
 target
 indexer_state.json
 configuration/instantiated/*
+
+# volumes
+trade/trade-store
 timescaledb
 
 # secret data
