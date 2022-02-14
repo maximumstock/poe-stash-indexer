@@ -13,7 +13,6 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           AGE_KEY: ${{ secrets.AGE_KEY }}
-          GRAFANA_TOKEN: ${{ secrets.GRAFANA_TOKEN }}
         run: |
           eval $(ssh-agent -s)
           ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
@@ -32,8 +31,12 @@ jobs:
             make up-prod
           EOF
       - name: Grafana Annotation
+        env:
+          GRAFANA_TOKEN: ${{ secrets.GRAFANA_TOKEN }}
         run: |
-          curl -XPOST http://grafana.maximumstock.net/api/annotations -H "Content-Type: application/json" -H "Authorization: Bearer $GRAFANA_TOKEN" \
+          curl -XPOST http://grafana.maximumstock.net/api/annotations \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GRAFANA_TOKEN" \
             --data @- << EOF
             {
               "text": "Deployed backend services",
