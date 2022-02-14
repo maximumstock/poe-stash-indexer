@@ -11,7 +11,7 @@ lapin = "2.0.0"
 regex = "1.5.4"
 reqwest = { version = "0.11.4", features = ["json", "blocking"] }
 serde = { version = "1.0.126", features = ["derive"] }
-serde_json = "1.0.64"
+serde_json = "1.0.79"
 signal-hook = "0.3.9"
 tokio = { version = "1.16.1", features = ["full"] }
 typed-builder = "0.9.0"
