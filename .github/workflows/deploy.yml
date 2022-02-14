@@ -33,12 +33,7 @@ jobs:
           EOF
       - name: Grafana Annotation
         run: |
-          export GRAFANA_TOKEN="$GRAFANA_TOKEN"
           curl -XPOST http://grafana.maximumstock.net/api/annotations \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $GRAFANA_TOKEN" \
-            --data @- << EOF
-            {
-              "text": "Deployed backend services",
-              "tags": [ "deployment" ]
-            }EOF
+            --data '{ "text": "Deployed backend services", "tags": [ "deployment" ] }'
