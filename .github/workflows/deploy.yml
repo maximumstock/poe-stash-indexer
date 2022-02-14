@@ -28,7 +28,7 @@ jobs:
             docker pull maximumstock2/trade:latest
             echo "Environment: $ENV"
             make config
-            docker-compose build --force-rm reverse-proxy grafana prometheus rabbitmq postgres
+            docker-compose build --force-rm reverse-proxy grafana prometheus rabbitmq db
             make up-prod
           EOF
       - name: Grafana Annotation
