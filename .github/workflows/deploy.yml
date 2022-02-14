@@ -37,8 +37,7 @@ jobs:
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $GRAFANA_TOKEN" \
             --data @- << EOF
-              {
-                "text": "Deployed backend services",
-                "tags": [ "deployment" ]
-              }
-          EOF
+            {
+              "text": "Deployed backend services",
+              "tags": [ "deployment" ]
+            }EOF
