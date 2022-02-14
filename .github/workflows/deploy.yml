@@ -35,7 +35,7 @@ jobs:
         run: |
           curl -XPOST http://grafana.maximumstock.net/api/annotations \
             -H "Content-Type: application/json" \
-            -H <(cat <<<"\"Authorization: Bearer $GRAFANA_TOKEN\"") \
+            -H "Authorization: Bearer $GRAFANA_TOKEN" \
             --data @- << EOF
               {
                 "text": "Deployed backend services",
