@@ -3,7 +3,7 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": "Prometheus",
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -15,13 +15,25 @@
           "type": "dashboard"
         },
         "type": "dashboard"
+      },
+      {
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "iconColor": "red",
+        "name": "Deployment",
+        "target": {
+          "limit": 100,
+          "matchAny": true,
+          "tags": ["deployment"],
+          "type": "tags"
+        }
       }
     ]
   },
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 1,
+  "id": 3,
   "links": [],
   "panels": [
     {
@@ -258,5 +270,5 @@
   "timezone": "",
   "title": "Indexer",
   "uid": "RLLUdddnk",
-  "version": 14
+  "version": 4
 }

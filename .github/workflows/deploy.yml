@@ -7,12 +7,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name:
+      - name: Deployment
         env:
           DEPLOY_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           AGE_KEY: ${{ secrets.AGE_KEY }}
+          GRAFANA_TOKEN: ${{ secrets.GRAFANA_TOKEN }}
         run: |
           eval $(ssh-agent -s)
           ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
@@ -30,3 +31,14 @@ jobs:
             docker-compose build --force-rm reverse-proxy
             make up-prod
           EOF
+      - name: Grafana Annotation
+        run: |
+          curl -XPOST http://grafana.maximumstock.net/api/annotations \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GRAFANA_TOKEN" \
+            --data @- << EOF
+              {
+                "text": "Deployed backend services",
+                "tags": [ "deployment" ]
+              }
+            EOF
