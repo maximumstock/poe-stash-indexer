@@ -28,17 +28,17 @@ jobs:
             docker pull maximumstock2/trade:latest
             echo "Environment: $ENV"
             make config
-            docker-compose build --force-rm reverse-proxy
+            docker-compose build --force-rm reverse-proxy grafana prometheus rabbitmq postgres
             make up-prod
           EOF
       - name: Grafana Annotation
         run: |
           curl -XPOST http://grafana.maximumstock.net/api/annotations \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $GRAFANA_TOKEN" \
+            -H <cat <<<"\"Authorization: Bearer $GRAFANA_TOKEN\"" \
             --data @- << EOF
               {
                 "text": "Deployed backend services",
                 "tags": [ "deployment" ]
               }
-            EOF
+          EOF
