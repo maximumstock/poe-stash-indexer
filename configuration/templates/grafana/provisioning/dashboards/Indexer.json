@@ -3,7 +3,7 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "Prometheus",
+        "datasource": "-- Grafana --",
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -17,7 +17,7 @@
         "type": "dashboard"
       },
       {
-        "datasource": "-- Grafana --",
+        "datasource": null,
         "enable": true,
         "iconColor": "red",
         "name": "Deployment",
@@ -33,9 +33,94 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 3,
+  "id": 4,
   "links": [],
   "panels": [
+    {
+      "datasource": "Prometheus",
+      "description": "Indicates intervals in which we most likely hit the API rate limit and could not process any messages up until one minute",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Was rate limited?",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 9,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "exemplar": true,
+          "expr": "(rate(stashes_processed[10s]) == 0) + 1",
+          "interval": "",
+          "legendFormat": "",
+          "queryType": "randomWalk",
+          "refId": "A"
+        }
+      ],
+      "title": "Rate Limited Intervals",
+      "type": "timeseries"
+    },
     {
       "datasource": "Prometheus",
       "fieldConfig": {
@@ -93,7 +178,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 6
       },
       "id": 4,
       "options": {
@@ -211,7 +296,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 14
       },
       "id": 2,
       "options": {
