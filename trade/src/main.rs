@@ -84,8 +84,26 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
 async fn setup_work(
     shutdown_rx: Receiver<()>,
     league: String,
-    metrics: impl Metrics + Clone + Send + Sync + 'static,
+    mut metrics: impl Metrics + Clone + Send + Sync + 'static,
 ) -> Arc<Mutex<Store>> {
+    let store = Arc::new(Mutex::new(load_store(league).await));
+    let metrics2 = metrics.clone();
+    metrics.set_store_size(store.lock().await.size() as i64);
+
+    tokio::select! {
+        _ = async {
+            match setup_rabbitmq_consumer(shutdown_rx, store.clone(), metrics).await {
+                Err(e) => eprintln!("Error setting up RabbitMQ consumer: {:?}", e),
+                Ok(_) => println!("Initialized RabbitMQ consumer")
+            }
+        } => {},
+        _ = api::init(([0, 0, 0, 0], 4001), store.clone(), metrics2) => {},
+    };
+
+    store
+}
+
+async fn load_store(league: String) -> Store {
     let store = match Store::restore() {
         Ok(store) => {
             println!("Successfully restored store from file");
@@ -100,19 +118,6 @@ async fn setup_work(
             store
         }
     };
-    let store = Arc::new(Mutex::new(store));
-    let metrics2 = metrics.clone();
-
-    tokio::select! {
-        _ = async {
-            match setup_rabbitmq_consumer(shutdown_rx, store.clone(), metrics).await {
-                Err(e) => eprintln!("Error setting up RabbitMQ consumer: {:?}", e),
-                Ok(_) => println!("Initialized RabbitMQ consumer")
-            }
-        } => {},
-        _ = api::init(([0, 0, 0, 0], 4001), store.clone(), metrics2) => {},
-    };
-
     store
 }
 
