@@ -6,6 +6,7 @@ mod store;
 
 use futures::StreamExt;
 use lapin::options::BasicAckOptions;
+use metrics::Metrics;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -19,7 +20,7 @@ use assets::AssetIndex;
 use source::{ExampleStream, StashRecord};
 use store::Store;
 
-use crate::source::setup_consumer;
+use crate::{metrics::setup_metrics, source::setup_consumer};
 
 /// TODO
 /// [x] - a module to maintain `StashRecord`s as offers /w indices to answer:
@@ -46,14 +47,16 @@ use crate::source::setup_consumer;
 ///       - only log errors and debug info
 ///       - log and count unmappable item names
 ///       - metrics for all sorts of index sizes, number of offers, processed offers/service activity
+mod metrics;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let metrics = setup_metrics(std::env::var("METRICS_PORT")?.parse()?)?;
     let signal_flag = setup_signal_handlers()?;
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     setup_shutdown_handler(signal_flag, shutdown_tx);
 
-    let store = setup_work(shutdown_rx, "Scourge".into()).await;
+    let store = setup_work(shutdown_rx, "Scourge".into(), metrics).await;
 
     println!("Saving store...");
     store.lock().await.persist()?;
@@ -78,7 +81,11 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
     });
 }
 
-async fn setup_work(shutdown_rx: Receiver<()>, league: String) -> Arc<Mutex<Store>> {
+async fn setup_work(
+    shutdown_rx: Receiver<()>,
+    league: String,
+    metrics: impl Metrics + Clone + Send + Sync + 'static,
+) -> Arc<Mutex<Store>> {
     let store = match Store::restore() {
         Ok(store) => {
             println!("Successfully restored store from file");
@@ -94,15 +101,16 @@ async fn setup_work(shutdown_rx: Receiver<()>, league: String) -> Arc<Mutex<Stor
         }
     };
     let store = Arc::new(Mutex::new(store));
+    let metrics2 = metrics.clone();
 
     tokio::select! {
         _ = async {
-            match setup_rabbitmq_consumer(shutdown_rx, store.clone()).await {
+            match setup_rabbitmq_consumer(shutdown_rx, store.clone(), metrics).await {
                 Err(e) => eprintln!("Error setting up RabbitMQ consumer: {:?}", e),
                 Ok(_) => println!("Initialized RabbitMQ consumer")
             }
         } => {},
-        _ = api::init(([0, 0, 0, 0], 4001), store.clone()) => {},
+        _ = api::init(([0, 0, 0, 0], 4001), store.clone(), metrics2) => {},
     };
 
     store
@@ -131,6 +139,7 @@ async fn setup_local_consumer(store: Arc<Mutex<Store>>) {
 async fn setup_rabbitmq_consumer(
     mut shutdown_rx: Receiver<()>,
     store: Arc<Mutex<Store>>,
+    mut metrics: impl Metrics,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut consumer = setup_consumer().await?;
 
@@ -140,12 +149,17 @@ async fn setup_rabbitmq_consumer(
         delivery.ack(BasicAckOptions::default()).await?;
 
         let stash_records = serde_json::from_slice::<Vec<StashRecord>>(&delivery.data)?;
+        metrics.set_stashes_ingested(stash_records.len() as i64);
 
         let mut store = store.lock().await;
-        for stash_record in stash_records {
-            store.ingest_stash(stash_record);
-        }
+        let n_ingested_offers = stash_records
+            .into_iter()
+            .map(|s| store.ingest_stash(s))
+            .sum::<usize>();
+        metrics.set_offers_ingested(n_ingested_offers as i64);
+
         println!("Store has {:#?} offers", store.size());
+        metrics.set_store_size(store.size() as i64);
 
         if let Ok(_) | Err(tokio::sync::oneshot::error::TryRecvError::Closed) =
             shutdown_rx.try_recv()
