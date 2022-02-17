@@ -201,15 +201,19 @@ impl Store {
         self.offers.insert(offer_index, offer);
     }
 
-    pub fn ingest_stash(&mut self, stash: StashRecord) {
+    pub fn ingest_stash(&mut self, stash: StashRecord) -> usize {
         self.invalidate_stash(&stash.stash_id);
 
         let offers: Vec<Offer> = stash.into();
+        let n_offers = offers.len();
+
         for o in offers {
             if self.asset_index.has_item(&o.sell) {
                 self.ingest_offer(o);
             }
         }
+
+        n_offers
     }
 
     pub fn query(&self, sell: &str, buy: &str) -> Option<Vec<&Offer>> {

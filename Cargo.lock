@@ -2919,6 +2919,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "lapin",
+ "prometheus_exporter",
  "regex",
  "reqwest",
  "serde 1.0.136",
