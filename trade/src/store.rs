@@ -216,7 +216,7 @@ impl Store {
         n_offers
     }
 
-    pub fn query(&self, sell: &str, buy: &str) -> Option<Vec<&Offer>> {
+    pub fn query(&self, sell: &str, buy: &str, limit: Option<usize>) -> Option<Vec<&Offer>> {
         let conversion_idx = Conversion::new(sell, buy).get_index();
 
         if let Some(offer_idxs) = self.conversion_to_offers_idx.get(&conversion_idx) {
@@ -224,6 +224,7 @@ impl Store {
                 offer_idxs
                     .iter()
                     .filter_map(|offer_idx| self.offers.get(offer_idx))
+                    .take(limit.unwrap_or(50).min(100))
                     .collect::<Vec<_>>(),
             );
         }

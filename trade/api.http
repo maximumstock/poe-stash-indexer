@@ -20,3 +20,13 @@ content-type: application/json
     "sell": "Chaos Orb",
     "buy": "Exalted Orb"
 }
+
+###
+
+POST http://trade.localhost:8888/trade?limit=3
+content-type: application/json
+
+{
+    "sell": "Chaos Orb",
+    "buy": "Exalted Orb"
+}

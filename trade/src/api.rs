@@ -27,6 +27,11 @@ pub async fn init<T: Into<SocketAddr> + 'static>(
     warp::serve(routes).bind(options).await
 }
 
+#[derive(Deserialize)]
+struct SearchQuery {
+    limit: Option<usize>,
+}
+
 fn search_endpoint(
     store: Arc<Mutex<Store>>,
     metrics: impl Metrics + Clone + Send + 'static,
@@ -35,6 +40,7 @@ fn search_endpoint(
         .and(warp::path("trade"))
         .and(warp::path::end())
         .and(warp::body::json())
+        .and(warp::query::<SearchQuery>())
         .and(with_store(store))
         .and(with_metrics(metrics))
         .and_then(handle_search)
@@ -42,13 +48,14 @@ fn search_endpoint(
 
 async fn handle_search(
     payload: RequestBody,
+    query: SearchQuery,
     store: Arc<Mutex<Store>>,
     mut metrics: impl Metrics,
 ) -> Result<Json, Rejection> {
     metrics.inc_search_requests();
     let store = store.lock().await;
 
-    if let Some(offers) = store.query(&payload.sell, &payload.buy) {
+    if let Some(offers) = store.query(&payload.sell, &payload.buy, query.limit) {
         return Ok(warp::reply::json(&QueryResponse {
             count: offers.len(),
             offers,
