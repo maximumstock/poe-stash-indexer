@@ -14,3 +14,6 @@ scrape_configs:
     scrape_interval: 2s
     static_configs:
       - targets: ["$TRADE_HOST:$METRICS_PORT"]
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['localhost:9323']
