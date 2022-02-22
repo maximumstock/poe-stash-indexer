@@ -237,16 +237,14 @@ impl Store {
             .create(true)
             .write(true)
             .open(STORE_FILE_PATH)?;
-        serde_json::to_writer(file, &self).unwrap();
-        Ok(())
+        serde_json::to_writer(file, &self).map_err(|e| e.into())
     }
 
     pub fn restore() -> Result<Self, Box<dyn std::error::Error>> {
         let file = std::fs::OpenOptions::new()
             .read(true)
             .open(STORE_FILE_PATH)?;
-        let deserialized: Store = serde_json::from_reader(file)?;
-        Ok(deserialized)
+        serde_json::from_reader(file).map_err(|e| e.into())
     }
 }
 

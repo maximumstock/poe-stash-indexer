@@ -42,7 +42,8 @@ use crate::{metrics::setup_metrics, source::setup_consumer};
 /// [x] - extend API response to contain number of offers as metadata
 /// [ ] - add proper logging
 /// [ ] - pagination
-/// [ ] - compression (its fine to do this server-side in this case)
+///       - [x] limit query parameter
+/// [x] - compression (its fine to do this server-side in this case)
 /// [ ] - move from logs to metrics
 ///       - only log errors and debug info
 ///       - log and count unmappable item names
@@ -109,8 +110,8 @@ async fn load_store(league: String) -> Store {
             println!("Successfully restored store from file");
             store
         }
-        Err(_) => {
-            eprintln!("Error restoring store, creating new");
+        Err(e) => {
+            eprintln!("Error restoring store, creating new: {:?}", e);
             let mut asset_index = AssetIndex::new();
             asset_index.init().await.unwrap();
             let store = Store::new(league, asset_index);
