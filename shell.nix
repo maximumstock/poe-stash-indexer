@@ -12,34 +12,27 @@ let
 in
   pkgs.mkShell {
     buildInputs = with pkgs; [
+      lld
       pkg-config
       gettext
       openssl
       openssl.dev
+      postgresql
+      age
+      apacheHttpd
+
       rust-analyzer
       cargo-edit
       cargo-feature
       linuxPackages.perf
       docker-compose
-      linuxPackages.perf
-      cargo-edit
-      rust-analyzer
-      age
-      apacheHttpd
-      postgresql
       (rust-bin.stable.latest.default.override {
         extensions = ["rust-src" "clippy"];
       })
-      lld
     ];
 
     RUST_BACKTRACE = 1;
 
     # optional lld setup for faster compilation
     RUSTFLAGS = "-Clink-arg=-fuse-ld=lld";
-    OPENSSL_LIB_DIR = "${pkgs.openssl.dev.out}/lib";
-    POSTGRES_LIB_DIR = "${pkgs.postgresql.lib}/lib";
-    shellHook = ''
-      export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$OPENSSL_LIB_DIR:$POSTGRES_LIB_DIR"
-    '';
   }
