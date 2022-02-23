@@ -10,13 +10,12 @@ let
     overlays = [ (import rustOverlay) ];
   };
 in
-  pkgs.mkShell {
+  pkgs.mkShell rec {
     buildInputs = with pkgs; [
       lld
       pkg-config
       gettext
       openssl
-      openssl.dev
       postgresql
       age
       apacheHttpd
@@ -40,4 +39,5 @@ in
 
     # optional lld setup for faster compilation
     RUSTFLAGS = "-Clink-arg=-fuse-ld=lld";
+    LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath buildInputs;
   }
