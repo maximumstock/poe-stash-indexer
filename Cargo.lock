@@ -2634,7 +2634,6 @@ dependencies = [
  "chrono",
  "csv",
  "dotenv",
- "futures",
  "log",
  "pretty_env_logger",
  "serde 1.0.136",
