@@ -24,8 +24,13 @@ in
       rust-analyzer
       cargo-edit
       cargo-feature
+      cargo-udeps
+      cargo-bloat
       linuxPackages.perf
       docker-compose
+      (rust-bin.nightly.latest.default.override {
+        extensions = ["rust-src" "clippy"];
+      })
       (rust-bin.stable.latest.default.override {
         extensions = ["rust-src" "clippy"];
       })
