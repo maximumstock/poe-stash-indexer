@@ -237,7 +237,7 @@ impl Store {
             .create(true)
             .write(true)
             .open(STORE_FILE_PATH)?;
-        serde_json::to_writer(file, &self).map_err(|e| e.into())
+        serde_json::to_writer_pretty(file, &self).map_err(|e| e.into())
     }
 
     pub fn restore() -> Result<Self, Box<dyn std::error::Error>> {
