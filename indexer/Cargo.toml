@@ -7,18 +7,18 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.126", features = ["derive"] }
-serde_json = "1.0.64"
-diesel = { version = "1.4.7", features = ["postgres", "chrono", "serde_json"] }
+serde = { version = "1.0.136", features = ["derive"] }
+serde_json = "1.0.79"
+diesel = { version = "1.4.8", features = ["postgres", "chrono", "serde_json"] }
 dotenv = "0.15.0"
 chrono = { version = "0.4.19", features = ["serde"] }
 stash-api = { path = "../stash-api" }
 log = "0.4.14"
 pretty_env_logger = "0.4.0"
-config = "0.11.0"
-signal-hook = "0.3.9"
-amiquip = "0.4.0"
-prometheus_exporter = "0.8.3"
+config = "0.12.0"
+signal-hook = "0.3.13"
+amiquip = "0.4.2"
+prometheus_exporter = "0.8.4"
 
 [[bin]]
 name = "indexer"
