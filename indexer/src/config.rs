@@ -64,6 +64,7 @@ impl RabbitMqConfig {
 }
 
 pub mod user_config {
+
     use config::{Config, ConfigError, File};
     use serde::Deserialize;
 
@@ -88,10 +89,10 @@ pub mod user_config {
 
     impl UserConfiguration {
         pub fn read() -> Result<Self, ConfigError> {
-            let mut s = Config::new();
-            // Its fine if the file does not exist
-            let _ = s.merge(File::with_name(CONFIG_FILE_PATH));
-            Ok(s.try_into().unwrap_or_default())
+            Config::builder()
+                .add_source(File::with_name(CONFIG_FILE_PATH))
+                .build()?
+                .try_deserialize()
         }
 
         #[allow(dead_code)]
