@@ -15,6 +15,18 @@
           "type": "dashboard"
         },
         "type": "dashboard"
+      },
+      {
+        "datasource": null,
+        "enable": true,
+        "iconColor": "red",
+        "name": "Deployment",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": ["deployment"],
+          "type": "tags"
+        }
       }
     ]
   },
@@ -361,7 +373,7 @@
     "list": []
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-7d",
     "to": "now"
   },
   "timepicker": {
@@ -382,5 +394,5 @@
   "timezone": "",
   "title": "Trade",
   "uid": "GeBonnfnz",
-  "version": 12
+  "version": 3
 }
