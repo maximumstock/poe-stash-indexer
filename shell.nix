@@ -27,10 +27,10 @@ in
       cargo-bloat
       linuxPackages.perf
       docker-compose
-      (rust-bin.nightly.latest.default.override {
-        extensions = ["rust-src" "clippy"];
-      })
-      (rust-bin.stable.latest.default.override {
+      # (rust-bin.nightly.latest.default.override {
+      #   extensions = ["rust-src" "clippy"];
+      # })
+      (rust-bin.stable."1.59.0".default.override {
         extensions = ["rust-src" "clippy"];
       })
     ];
