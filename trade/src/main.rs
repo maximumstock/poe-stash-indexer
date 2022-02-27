@@ -87,7 +87,7 @@ async fn setup_work(
     league: String,
     mut metrics: impl Metrics + Clone + Send + Sync + 'static,
 ) -> Arc<Mutex<Store>> {
-    let store = Arc::new(Mutex::new(load_store(league).await));
+    let store = Arc::new(Mutex::new(load_store(league).await.unwrap()));
     let metrics2 = metrics.clone();
     metrics.set_store_size(store.lock().await.size() as i64);
 
@@ -95,7 +95,7 @@ async fn setup_work(
         _ = async {
             match setup_rabbitmq_consumer(shutdown_rx, store.clone(), metrics).await {
                 Err(e) => eprintln!("Error setting up RabbitMQ consumer: {:?}", e),
-                Ok(_) => println!("Initialized RabbitMQ consumer")
+                Ok(_) => println!("Consumer decomissioned")
             }
         } => {},
         _ = api::init(([0, 0, 0, 0], 4001), store.clone(), metrics2) => {},
@@ -104,7 +104,7 @@ async fn setup_work(
     store
 }
 
-async fn load_store(league: String) -> Store {
+async fn load_store(league: String) -> Result<Store, Box<dyn std::error::Error>> {
     let store = match Store::restore() {
         Ok(store) => {
             println!("Successfully restored store from file");
@@ -113,13 +113,13 @@ async fn load_store(league: String) -> Store {
         Err(e) => {
             eprintln!("Error restoring store, creating new: {:?}", e);
             let mut asset_index = AssetIndex::new();
-            asset_index.init().await.unwrap();
+            asset_index.init().await?;
             let store = Store::new(league, asset_index);
-            store.persist().unwrap();
+            store.persist()?;
             store
         }
     };
-    store
+    Ok(store)
 }
 
 fn setup_signal_handlers() -> Result<Arc<AtomicBool>, Box<dyn std::error::Error>> {

@@ -3,6 +3,7 @@ use std::{
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
     fmt::Debug,
     hash::{Hash, Hasher},
+    io::Write,
 };
 use typed_builder::TypedBuilder;
 
@@ -117,7 +118,7 @@ impl<'a> From<&'a Offer> for Conversion<'a> {
 
 type ConversionIndex = u64;
 
-const STORE_FILE_PATH: &str = "./trade/trade-store/store.json";
+const STORE_FILE_PATH: &str = "./trade/trade-store/store.bin";
 #[derive(Debug, TypedBuilder, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Store {
     league: String,
@@ -233,18 +234,19 @@ impl Store {
     }
 
     pub fn persist(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let file = std::fs::OpenOptions::new()
+        let serialized = bincode::serialize(&self)?;
+        let mut file = std::fs::OpenOptions::new()
             .create(true)
             .write(true)
             .open(STORE_FILE_PATH)?;
-        serde_json::to_writer_pretty(file, &self).map_err(|e| e.into())
+        file.write_all(&serialized).map_err(|e| e.into())
     }
 
     pub fn restore() -> Result<Self, Box<dyn std::error::Error>> {
-        let file = std::fs::OpenOptions::new()
+        let mut file = std::fs::OpenOptions::new()
             .read(true)
             .open(STORE_FILE_PATH)?;
-        serde_json::from_reader(file).map_err(|e| e.into())
+        bincode::deserialize_from(&mut file).map_err(|e| e.into())
     }
 }
 

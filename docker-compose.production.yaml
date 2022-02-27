@@ -17,8 +17,6 @@ services:
       - configuration/environments/.env.production
     environment:
       ENV: "production"
-    volumes:
-      - "~/:/app/trade/trade-store:rw"
 
   reverse-proxy:
     ports:
@@ -41,3 +39,6 @@ services:
   grafana:
     env_file:
       - configuration/environments/.env.production
+  
+volumes:
+  trade-store:
