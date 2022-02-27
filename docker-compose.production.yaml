@@ -18,7 +18,7 @@ services:
     environment:
       ENV: "production"
     volumes:
-      - "/home/poe:/app/trade/trade-store:rw"
+      - "~/:/app/trade/trade-store:rw"
 
   reverse-proxy:
     ports:
