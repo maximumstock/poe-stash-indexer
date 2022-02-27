@@ -23,12 +23,12 @@ jobs:
             set -ex
             rm -rf deployment
             git clone https://github.com/maximumstock/poe-stash-indexer.git deployment && cd deployment
-            touch ~/store.json # to avoid root permissions on the file
             docker pull maximumstock2/indexer:latest
             docker pull maximumstock2/trade:latest
             echo "Environment: $ENV"
             make config
             docker-compose build --force-rm reverse-proxy grafana prometheus rabbitmq db
+            docker-compose stop --timeout 60 trade # give it time to save
             make up-prod
           EOF
       - name: Grafana Annotation
