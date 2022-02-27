@@ -1,9 +1,9 @@
-FROM maximumstock/base:latest as development
+FROM maximumstock2/base:latest as development
 WORKDIR /app
 COPY . .
 ENTRYPOINT ["indexer/scripts/run.sh"]
 
-FROM maximumstock/base:latest as planner
+FROM maximumstock2/base:latest as planner
 WORKDIR /app
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
