@@ -1,24 +1,14 @@
-FROM ekidd/rust-musl-builder:1.57.0 as base
-USER root
-RUN apt-get update
-RUN apt-get install libpq-dev libssl-dev pkg-config lld -y
-RUN cargo install diesel_cli --no-default-features --features postgres
-RUN cargo install cargo-watch
-RUN cargo install cargo-chef
-
-ENV RUSTFLAGS="-Clink-arg=-fuse-ld=lld" 
-
-FROM base as planner
-WORKDIR /app
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
-FROM base as development
+FROM maximumstock/base:latest as development
 WORKDIR /app
 COPY . .
 ENTRYPOINT ["indexer/scripts/run.sh"]
 
-FROM base as production-builder-deps
+FROM maximumstock/base:latest as planner
+WORKDIR /app
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM planner as production-builder-deps
 WORKDIR /app
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json -p indexer
