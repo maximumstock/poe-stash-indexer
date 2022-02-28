@@ -3,7 +3,7 @@ use std::{fs::File, io::BufReader, path::Path};
 use lapin::{
     options::{BasicConsumeOptions, QueueBindOptions, QueueDeclareOptions},
     types::FieldTable,
-    Connection, ConnectionProperties, Consumer,
+    Connection, ConnectionProperties, Consumer, Result,
 };
 use serde::Deserialize;
 
@@ -46,7 +46,19 @@ impl ExampleStream {
     }
 }
 
-pub async fn setup_consumer() -> Result<Consumer, Box<dyn std::error::Error>> {
+pub async fn retry_setup_consumer() -> Result<Consumer> {
+    let mut consumer = setup_consumer().await;
+
+    while let Err(e) = consumer {
+        eprintln!("Encountered an error when connecting to RabbitMQ: {:?}", e);
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        consumer = setup_consumer().await;
+    }
+
+    consumer
+}
+
+pub async fn setup_consumer() -> Result<Consumer> {
     let addr = std::env::var("AMQP_ADDR").unwrap_or_else(|_| "amqp://poe:poe@rabbitmq".into());
     let conn = Connection::connect(&addr, ConnectionProperties::default()).await?; // Note the `with_tokio()` here
     let channel = conn.create_channel().await?;
