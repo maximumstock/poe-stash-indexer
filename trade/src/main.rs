@@ -1,11 +1,10 @@
 mod api;
 mod assets;
+mod consumer;
 mod note_parser;
 mod source;
 mod store;
 
-use futures::StreamExt;
-use lapin::options::BasicAckOptions;
 use metrics::Metrics;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -17,10 +16,9 @@ use tokio::sync::{
 };
 
 use assets::AssetIndex;
-use source::{ExampleStream, StashRecord};
 use store::Store;
 
-use crate::{metrics::setup_metrics, source::retry_setup_consumer};
+use crate::metrics::setup_metrics;
 
 /// TODO
 /// [x] - a module to maintain `StashRecord`s as offers /w indices to answer:
@@ -96,7 +94,7 @@ async fn setup_work(
 
     tokio::select! {
         _ = async {
-            match setup_rabbitmq_consumer(shutdown_rx, store.clone(), metrics).await {
+            match consumer::setup_rabbitmq_consumer(shutdown_rx, store.clone(), metrics).await {
                 Err(e) => eprintln!("Error setting up RabbitMQ consumer: {:?}", e),
                 Ok(_) => println!("Consumer decomissioned")
             }
@@ -130,54 +128,4 @@ fn setup_signal_handlers() -> Result<Arc<AtomicBool>, Box<dyn std::error::Error>
     signal_hook::flag::register(signal_hook::consts::SIGINT, signal_flag.clone())?;
     signal_hook::flag::register(signal_hook::consts::SIGTERM, signal_flag.clone())?;
     Ok(signal_flag)
-}
-
-#[allow(dead_code)]
-async fn setup_local_consumer(store: Arc<Mutex<Store>>) {
-    let example_stream = ExampleStream::new("./data.json");
-
-    for stash_record in example_stream {
-        let mut store = store.lock().await;
-        store.ingest_stash(stash_record);
-        println!("Store has {:#?} offers", store.size());
-        drop(store);
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    }
-}
-
-async fn setup_rabbitmq_consumer(
-    mut shutdown_rx: Receiver<()>,
-    store: Arc<Mutex<Store>>,
-    mut metrics: impl Metrics,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let mut consumer = retry_setup_consumer().await?;
-
-    println!("Starting to listen to message queue");
-    while let Some(incoming) = consumer.next().await {
-        let delivery = incoming?;
-        delivery.ack(BasicAckOptions::default()).await?;
-
-        let stash_records = serde_json::from_slice::<Vec<StashRecord>>(&delivery.data)?;
-        metrics.set_stashes_ingested(stash_records.len() as i64);
-
-        let mut store = store.lock().await;
-        let n_ingested_offers = stash_records
-            .into_iter()
-            .map(|s| store.ingest_stash(s))
-            .sum::<usize>();
-        metrics.set_offers_ingested(n_ingested_offers as i64);
-
-        println!("Store has {:#?} offers", store.size());
-        metrics.set_store_size(store.size() as i64);
-
-        if let Ok(_) | Err(tokio::sync::oneshot::error::TryRecvError::Closed) =
-            shutdown_rx.try_recv()
-        {
-            break;
-        }
-    }
-
-    println!("Stopping RabbitMQ consumer");
-
-    Ok(())
 }
