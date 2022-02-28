@@ -20,7 +20,7 @@ use assets::AssetIndex;
 use source::{ExampleStream, StashRecord};
 use store::Store;
 
-use crate::{metrics::setup_metrics, source::setup_consumer};
+use crate::{metrics::setup_metrics, source::retry_setup_consumer};
 
 /// TODO
 /// [x] - a module to maintain `StashRecord`s as offers /w indices to answer:
@@ -52,12 +52,17 @@ mod metrics;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "debug");
+    }
+
+    let store = Arc::new(Mutex::new(load_store("Scourge".into()).await.unwrap()));
     let metrics = setup_metrics(std::env::var("METRICS_PORT")?.parse()?)?;
     let signal_flag = setup_signal_handlers()?;
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     setup_shutdown_handler(signal_flag, shutdown_tx);
 
-    let store = setup_work(shutdown_rx, "Scourge".into(), metrics).await;
+    let store = setup_work(shutdown_rx, store, metrics).await;
 
     println!("Saving store...");
     store.lock().await.persist()?;
@@ -84,12 +89,10 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
 
 async fn setup_work(
     shutdown_rx: Receiver<()>,
-    league: String,
-    mut metrics: impl Metrics + Clone + Send + Sync + 'static,
+    store: Arc<Mutex<Store>>,
+    metrics: impl Metrics + Clone + Send + Sync + 'static,
 ) -> Arc<Mutex<Store>> {
-    let store = Arc::new(Mutex::new(load_store(league).await.unwrap()));
     let metrics2 = metrics.clone();
-    metrics.set_store_size(store.lock().await.size() as i64);
 
     tokio::select! {
         _ = async {
@@ -147,7 +150,7 @@ async fn setup_rabbitmq_consumer(
     store: Arc<Mutex<Store>>,
     mut metrics: impl Metrics,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut consumer = setup_consumer().await?;
+    let mut consumer = retry_setup_consumer().await?;
 
     println!("Starting to listen to message queue");
     while let Some(incoming) = consumer.next().await {
