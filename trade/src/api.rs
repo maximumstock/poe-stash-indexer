@@ -2,6 +2,7 @@ use std::{convert::Infallible, net::SocketAddr, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
+use tracing::trace_span;
 use warp::{reply::Json, Filter, Rejection, Reply};
 
 use crate::{
@@ -18,7 +19,7 @@ struct RequestBody {
 pub async fn init<T: Into<SocketAddr> + 'static>(
     options: T,
     store: Arc<Mutex<Store>>,
-    metrics: impl Metrics + Clone + Send + Sync + 'static,
+    metrics: impl Metrics + Clone + Send + Sync + std::fmt::Debug + 'static,
 ) {
     let routes = healtcheck_endpoint()
         .or(search_endpoint(store, metrics))
@@ -27,14 +28,14 @@ pub async fn init<T: Into<SocketAddr> + 'static>(
     warp::serve(routes).bind(options).await
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct SearchQuery {
     limit: Option<usize>,
 }
 
 fn search_endpoint(
     store: Arc<Mutex<Store>>,
-    metrics: impl Metrics + Clone + Send + 'static,
+    metrics: impl Metrics + Clone + Send + std::fmt::Debug + 'static,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     warp::post()
         .and(warp::path("trade"))
@@ -46,11 +47,12 @@ fn search_endpoint(
         .and_then(handle_search)
 }
 
+#[tracing::instrument(skip(store, metrics))]
 async fn handle_search(
     payload: RequestBody,
     query: SearchQuery,
     store: Arc<Mutex<Store>>,
-    mut metrics: impl Metrics,
+    mut metrics: impl Metrics + std::fmt::Debug,
 ) -> Result<Json, Rejection> {
     metrics.inc_search_requests();
     let store = store.lock().await;
@@ -89,14 +91,16 @@ fn healtcheck_endpoint() -> impl Filter<Extract = impl Reply, Error = Rejection>
         .map(|| "{\"health\": \"ok\"}")
 }
 
+// #[tracing::instrument]
 fn with_store(
     store: Arc<Mutex<Store>>,
 ) -> impl Filter<Extract = (Arc<Mutex<Store>>,), Error = Infallible> + Clone {
     warp::any().map(move || store.clone())
 }
 
+// #[tracing::instrument]
 fn with_metrics(
-    metrics: impl Metrics + Clone + Send + 'static,
-) -> impl Filter<Extract = (impl Metrics,), Error = Infallible> + Clone {
+    metrics: impl Metrics + Clone + Send + std::fmt::Debug + 'static,
+) -> impl Filter<Extract = (impl Metrics + std::fmt::Debug,), Error = Infallible> + Clone {
     warp::any().map(move || metrics.clone())
 }

@@ -6,6 +6,7 @@ use lapin::{
     Connection, ConnectionProperties, Consumer, Result,
 };
 use serde::Deserialize;
+use tracing::{error, info};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct StashRecord {
@@ -50,7 +51,7 @@ pub async fn retry_setup_consumer() -> Result<Consumer> {
     let mut consumer = setup_consumer().await;
 
     while let Err(e) = consumer {
-        eprintln!("Encountered an error when connecting to RabbitMQ: {:?}", e);
+        error!("Encountered an error when connecting to RabbitMQ: {:?}", e);
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         consumer = setup_consumer().await;
     }
@@ -71,7 +72,7 @@ pub async fn setup_consumer() -> Result<Consumer> {
             FieldTable::default(),
         )
         .await?;
-    println!("Declared {:?}", queue_name);
+    info!("Declared {:?}", queue_name);
 
     channel
         .queue_bind(
@@ -83,7 +84,7 @@ pub async fn setup_consumer() -> Result<Consumer> {
         )
         .await?;
 
-    println!("Connected to {:?}", queue_name);
+    info!("Connected to {:?}", queue_name);
 
     let consumer = channel
         .basic_consume(
