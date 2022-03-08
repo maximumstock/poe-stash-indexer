@@ -28,6 +28,7 @@ pub async fn setup_rabbitmq_consumer(
     store: Arc<Mutex<Store>>,
     mut metrics: impl Metrics,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    // todo: we are trapped here when stopping signal comes
     let mut consumer = retry_setup_consumer().await?;
 
     println!("Trying to connect to RabbitMQ...");
@@ -35,6 +36,7 @@ pub async fn setup_rabbitmq_consumer(
         let delivery = incoming;
 
         if delivery.is_err() {
+            // todo: we are trapped here when stopping signal comes
             consumer = retry_setup_consumer().await?;
         }
 
