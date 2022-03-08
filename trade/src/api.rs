@@ -2,7 +2,6 @@ use std::{convert::Infallible, net::SocketAddr, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
-use tracing::trace_span;
 use warp::{reply::Json, Filter, Rejection, Reply};
 
 use crate::{
