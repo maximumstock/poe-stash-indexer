@@ -3,6 +3,7 @@ use std::sync::Arc;
 use futures::StreamExt;
 use lapin::options::BasicAckOptions;
 use tokio::sync::{oneshot::Receiver, Mutex};
+use tracing::info;
 
 use crate::{
     metrics::Metrics,
@@ -17,7 +18,7 @@ async fn setup_local_consumer(store: Arc<Mutex<Store>>) {
     for stash_record in example_stream {
         let mut store = store.lock().await;
         store.ingest_stash(stash_record);
-        println!("Store has {:#?} offers", store.size());
+        info!("Store has {:#?} offers", store.size());
         drop(store);
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
@@ -31,7 +32,7 @@ pub async fn setup_rabbitmq_consumer(
     // todo: we are trapped here when stopping signal comes
     let mut consumer = retry_setup_consumer().await?;
 
-    println!("Trying to connect to RabbitMQ...");
+    info!("Trying to connect to RabbitMQ...");
     while let Some(incoming) = consumer.next().await {
         let delivery = incoming;
 
@@ -54,7 +55,7 @@ pub async fn setup_rabbitmq_consumer(
             .sum::<usize>();
         metrics.set_offers_ingested(n_ingested_offers as i64);
 
-        println!("Store has {:#?} offers", store.size());
+        info!("Store has {:#?} offers", store.size());
         metrics.set_store_size(store.size() as i64);
 
         if let Ok(_) | Err(tokio::sync::oneshot::error::TryRecvError::Closed) =
@@ -64,7 +65,7 @@ pub async fn setup_rabbitmq_consumer(
         }
     }
 
-    println!("Stopping RabbitMQ consumer");
+    info!("Stopping RabbitMQ consumer");
 
     Ok(())
 }

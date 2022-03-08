@@ -15,6 +15,11 @@ use tokio::sync::{
     Mutex,
 };
 
+use tracing::{error, info};
+use tracing_subscriber::{
+    prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry,
+};
+
 use assets::AssetIndex;
 use store::Store;
 
@@ -38,11 +43,11 @@ use crate::metrics::setup_metrics;
 /// [ ] - extend for multiple leagues
 /// [ ] - a web API that mimics pathofexile.com/trade API
 /// [x] - extend API response to contain number of offers as metadata
-/// [ ] - add proper logging
-/// [ ] - pagination
+/// [x] - add proper logging
+/// [x] - pagination
 ///       - [x] limit query parameter
 /// [x] - compression (its fine to do this server-side in this case)
-/// [ ] - move from logs to metrics
+/// [ ] - move from logs to metrics + traces
 ///       - only log errors and debug info
 ///       - log and count unmappable item names
 ///       - metrics for all sorts of index sizes, number of offers, processed offers/service activity
@@ -51,8 +56,16 @@ mod metrics;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "debug");
+        std::env::set_var("RUST_LOG", "info");
     }
+
+    setup_tracing().expect("Tracing setup failed");
+    info!("Setup tracing");
+
+    let span = tracing::trace_span!("my span");
+    span.in_scope(|| {
+        tracing::info!("derp");
+    });
 
     let store = Arc::new(Mutex::new(load_store("Scourge".into()).await.unwrap()));
     let metrics = setup_metrics(std::env::var("METRICS_PORT")?.parse()?)?;
@@ -62,9 +75,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let store = setup_work(shutdown_rx, store, metrics).await;
 
-    println!("Saving store...");
+    info!("Saving store...");
+    teardown(store).await?;
+    info!("Shutting down");
+
+    Ok(())
+}
+
+async fn teardown(store: Arc<Mutex<Store>>) -> Result<(), Box<dyn std::error::Error>> {
     store.lock().await.persist()?;
-    println!("Shutting down");
+    opentelemetry::global::shutdown_tracer_provider();
+    Ok(())
+}
+
+fn setup_tracing() -> Result<(), opentelemetry::trace::TraceError> {
+    std::env::set_var("OTEL_EXPORTER_JAEGER_AGENT_HOST", "jaeger");
+    std::env::set_var("OTEL_EXPORTER_JAEGER_AGENT_PORT", "6831");
+
+    let tracer = opentelemetry_jaeger::new_pipeline()
+        .with_service_name("trade")
+        .install_batch(opentelemetry::runtime::Tokio)?;
+
+    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
+    Registry::default()
+        .with(EnvFilter::from_default_env())
+        .with(telemetry)
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 
     Ok(())
 }
@@ -80,7 +118,7 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
             .send(())
             .expect("Signaling graceful shutdown failed");
 
-        println!("Shutting down gracefully");
+        info!("Shutting down gracefully");
         break;
     });
 }
@@ -88,15 +126,15 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
 async fn setup_work(
     shutdown_rx: Receiver<()>,
     store: Arc<Mutex<Store>>,
-    metrics: impl Metrics + Clone + Send + Sync + 'static,
+    metrics: impl Metrics + Clone + Send + Sync + std::fmt::Debug + 'static,
 ) -> Arc<Mutex<Store>> {
     let metrics2 = metrics.clone();
 
     tokio::select! {
         _ = async {
             match consumer::setup_rabbitmq_consumer(shutdown_rx, store.clone(), metrics).await {
-                Err(e) => eprintln!("Error setting up RabbitMQ consumer: {:?}", e),
-                Ok(_) => println!("Consumer decomissioned")
+                Err(e) => error!("Error setting up RabbitMQ consumer: {:?}", e),
+                Ok(_) => info!("Consumer decomissioned")
             }
         } => {},
         _ = api::init(([0, 0, 0, 0], 4001), store.clone(), metrics2) => {},
@@ -108,11 +146,11 @@ async fn setup_work(
 async fn load_store(league: String) -> Result<Store, Box<dyn std::error::Error>> {
     let store = match Store::restore() {
         Ok(store) => {
-            println!("Successfully restored store from file");
+            info!("Successfully restored store from file");
             store
         }
         Err(e) => {
-            eprintln!("Error restoring store, creating new: {:?}", e);
+            error!("Error restoring store, creating new: {:?}", e);
             let mut asset_index = AssetIndex::new();
             asset_index.init().await?;
             let store = Store::new(league, asset_index);

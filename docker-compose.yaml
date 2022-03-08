@@ -69,6 +69,18 @@ services:
       - "./configuration/instantiated/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards"
       - "./configuration/instantiated/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources"
       - "./configuration/instantiated/grafana/custom.ini:/etc/grafana/grafana.ini"
+  
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    restart: "always"
+    env_file:
+      - configuration/environments/.env.development
+    # ports:
+    #   - 6831:6831/udp 
+    #   - 6832:6832/udp 
+    #   - 16686:16686 
+    #   - 14268:14268
+
 
 volumes:
   trade-store:
