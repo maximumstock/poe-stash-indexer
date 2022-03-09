@@ -89,11 +89,10 @@ async fn teardown(store: Arc<Mutex<Store>>) -> Result<(), Box<dyn std::error::Er
 }
 
 fn setup_tracing() -> Result<(), opentelemetry::trace::TraceError> {
-    std::env::set_var("OTEL_EXPORTER_JAEGER_AGENT_HOST", "jaeger");
-    std::env::set_var("OTEL_EXPORTER_JAEGER_AGENT_PORT", "6831");
-
+    let jaeger_endpoint = std::env::var("JAEGER_AGENT")?;
     let tracer = opentelemetry_jaeger::new_pipeline()
         .with_service_name("trade")
+        .with_agent_endpoint(jaeger_endpoint)
         .install_batch(opentelemetry::runtime::Tokio)?;
 
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
