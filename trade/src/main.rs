@@ -20,7 +20,6 @@ use tracing_subscriber::{
     prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry,
 };
 
-use assets::AssetIndex;
 use store::Store;
 
 use crate::metrics::setup_metrics;
@@ -62,12 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_tracing().expect("Tracing setup failed");
     info!("Setup tracing");
 
-    let span = tracing::trace_span!("my span");
-    span.in_scope(|| {
-        tracing::info!("derp");
-    });
-
-    let store = Arc::new(Mutex::new(load_store("Scourge".into()).await.unwrap()));
+    let store = Arc::new(Mutex::new(store::load_store("Scourge".into()).await?));
     let metrics = setup_metrics(std::env::var("METRICS_PORT")?.parse()?)?;
     let signal_flag = setup_signal_handlers()?;
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
@@ -89,10 +83,11 @@ async fn teardown(store: Arc<Mutex<Store>>) -> Result<(), Box<dyn std::error::Er
 }
 
 fn setup_tracing() -> Result<(), opentelemetry::trace::TraceError> {
-    let jaeger_endpoint = std::env::var("JAEGER_AGENT")?;
+    std::env::set_var("OTEL_EXPORTER_JAEGER_AGENT_HOST", "jaeger");
+    std::env::set_var("OTEL_EXPORTER_JAEGER_AGENT_PORT", "6831");
+
     let tracer = opentelemetry_jaeger::new_pipeline()
         .with_service_name("trade")
-        .with_agent_endpoint(jaeger_endpoint)
         .install_batch(opentelemetry::runtime::Tokio)?;
 
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
@@ -140,24 +135,6 @@ async fn setup_work(
     };
 
     store
-}
-
-async fn load_store(league: String) -> Result<Store, Box<dyn std::error::Error>> {
-    let store = match Store::restore() {
-        Ok(store) => {
-            info!("Successfully restored store from file");
-            store
-        }
-        Err(e) => {
-            error!("Error restoring store, creating new: {:?}", e);
-            let mut asset_index = AssetIndex::new();
-            asset_index.init().await?;
-            let store = Store::new(league, asset_index);
-            store.persist()?;
-            store
-        }
-    };
-    Ok(store)
 }
 
 fn setup_signal_handlers() -> Result<Arc<AtomicBool>, Box<dyn std::error::Error>> {

@@ -27,36 +27,20 @@ async fn setup_local_consumer(store: Arc<Mutex<Store>>) {
 pub async fn setup_rabbitmq_consumer(
     mut shutdown_rx: Receiver<()>,
     store: Arc<Mutex<Store>>,
-    mut metrics: impl Metrics,
+    mut metrics: impl Metrics + std::fmt::Debug,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // todo: we are trapped here when stopping signal comes
     let mut consumer = retry_setup_consumer().await?;
 
-    info!("Trying to connect to RabbitMQ...");
-    while let Some(incoming) = consumer.next().await {
-        let delivery = incoming;
-
+    while let Some(delivery) = consumer.next().await {
         if delivery.is_err() {
             // todo: we are trapped here when stopping signal comes
             consumer = retry_setup_consumer().await?;
         }
 
         let delivery = delivery?;
-
+        consume(&delivery, &mut metrics, &store).await?;
         delivery.ack(BasicAckOptions::default()).await?;
-
-        let stash_records = serde_json::from_slice::<Vec<StashRecord>>(&delivery.data)?;
-        metrics.set_stashes_ingested(stash_records.len() as i64);
-
-        let mut store = store.lock().await;
-        let n_ingested_offers = stash_records
-            .into_iter()
-            .map(|s| store.ingest_stash(s))
-            .sum::<usize>();
-        metrics.set_offers_ingested(n_ingested_offers as i64);
-
-        info!("Store has {:#?} offers", store.size());
-        metrics.set_store_size(store.size() as i64);
 
         if let Ok(_) | Err(tokio::sync::oneshot::error::TryRecvError::Closed) =
             shutdown_rx.try_recv()
@@ -67,5 +51,31 @@ pub async fn setup_rabbitmq_consumer(
 
     info!("Stopping RabbitMQ consumer");
 
+    Ok(())
+}
+
+#[tracing::instrument(skip(store, metrics, delivery))]
+async fn consume(
+    delivery: &lapin::message::Delivery,
+    metrics: &mut (impl Metrics + std::fmt::Debug),
+    store: &Arc<Mutex<Store>>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let stash_records = tracing::info_span!("deserialization")
+        .in_scope(|| serde_json::from_slice::<Vec<StashRecord>>(&delivery.data))?;
+    metrics.set_stashes_ingested(stash_records.len() as i64);
+
+    let mut store = store.lock().await;
+    let n_ingested_offers = tracing::info_span!("ingestion")
+        .in_scope(|| async {
+            stash_records
+                .into_iter()
+                .map(|s| store.ingest_stash(s))
+                .sum::<usize>()
+        })
+        .await;
+
+    metrics.set_offers_ingested(n_ingested_offers as i64);
+    info!("Store has {:#?} offers", store.size());
+    metrics.set_store_size(store.size() as i64);
     Ok(())
 }
