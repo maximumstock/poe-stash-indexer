@@ -7,7 +7,7 @@ pub trait Metrics {
     fn inc_search_requests(&mut self);
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct MetricStore {
     store_size: GenericGauge<AtomicI64>,
     offers_ingested: GenericGauge<AtomicI64>,
@@ -33,7 +33,9 @@ impl Metrics for MetricStore {
     }
 }
 
-pub fn setup_metrics(port: u32) -> Result<impl Metrics + Clone, Box<dyn std::error::Error>> {
+pub fn setup_metrics(
+    port: u32,
+) -> Result<impl Metrics + Clone + std::fmt::Debug, Box<dyn std::error::Error>> {
     let binding = format!("0.0.0.0:{}", port).parse()?;
     prometheus_exporter::start(binding)?;
 

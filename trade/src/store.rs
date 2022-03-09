@@ -5,6 +5,7 @@ use std::{
     hash::{Hash, Hasher},
     io::Write,
 };
+use tracing::{error, info};
 use typed_builder::TypedBuilder;
 
 use crate::{assets::AssetIndex, note_parser::PriceParser, source::StashRecord};
@@ -204,6 +205,7 @@ impl Store {
 
     pub fn ingest_stash(&mut self, stash: StashRecord) -> usize {
         self.invalidate_stash(&stash.stash_id);
+        tracing::trace!("Ingested {}", stash.stash_id);
 
         let offers: Vec<Offer> = stash.into();
         let n_offers = offers.len();
@@ -217,6 +219,7 @@ impl Store {
         n_offers
     }
 
+    #[tracing::instrument(skip(self))]
     pub fn query(&self, sell: &str, buy: &str, limit: Option<usize>) -> Option<Vec<&Offer>> {
         let conversion_idx = Conversion::new(sell, buy).get_index();
 
@@ -233,6 +236,7 @@ impl Store {
         None
     }
 
+    #[tracing::instrument(skip(self))]
     pub fn persist(&self) -> Result<(), Box<dyn std::error::Error>> {
         let serialized = bincode::serialize(&self)?;
         let mut file = std::fs::OpenOptions::new()
@@ -242,12 +246,32 @@ impl Store {
         file.write_all(&serialized).map_err(|e| e.into())
     }
 
+    #[tracing::instrument]
     pub fn restore() -> Result<Self, Box<dyn std::error::Error>> {
         let mut file = std::fs::OpenOptions::new()
             .read(true)
             .open(STORE_FILE_PATH)?;
         bincode::deserialize_from(&mut file).map_err(|e| e.into())
     }
+}
+
+#[tracing::instrument]
+pub async fn load_store(league: String) -> Result<Store, Box<dyn std::error::Error>> {
+    let store = match Store::restore() {
+        Ok(store) => {
+            info!("Successfully restored store from file");
+            store
+        }
+        Err(e) => {
+            error!("Error restoring store, creating new: {:?}", e);
+            let mut asset_index = AssetIndex::new();
+            asset_index.init().await?;
+            let store = Store::new(league, asset_index);
+            store.persist()?;
+            store
+        }
+    };
+    Ok(store)
 }
 
 #[cfg(test)]
