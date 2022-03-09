@@ -40,7 +40,7 @@ services:
       - configuration/environments/.env.development
     volumes:
       - ".:/app:cached"
-      - "trade-store:/app/trade/trade-store:rw"
+      - "trade-store:/app/trade/trade-store:cached"
 
   rabbitmq:
     image: rabbitmq:3.9-management-alpine
