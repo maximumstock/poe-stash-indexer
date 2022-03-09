@@ -69,6 +69,13 @@ services:
       - "./configuration/instantiated/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards"
       - "./configuration/instantiated/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources"
       - "./configuration/instantiated/grafana/custom.ini:/etc/grafana/grafana.ini"
+  
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    restart: "always"
+    env_file:
+      - configuration/environments/.env.development
+
 
 volumes:
   trade-store:
