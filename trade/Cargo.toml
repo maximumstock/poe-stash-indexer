@@ -7,7 +7,7 @@ edition = "2018"
 
 [dependencies]
 futures = "0.3.21"
-lapin = "2.0.2"
+lapin = "2.0.3"
 regex = "1.5.4"
 reqwest = { version = "0.11.9", features = ["json", "blocking"] }
 serde = { version = "1.0.136", features = ["derive"] }
