@@ -66,6 +66,7 @@ async fn handle_search(
     Err(QueryEmptyResultError {}.into())
 }
 
+#[tracing::instrument(skip(_rejection))]
 async fn error_handler(_rejection: warp::Rejection) -> Result<impl Reply, Rejection> {
     Ok(warp::reply::with_status(
         "error",
@@ -90,14 +91,12 @@ fn healtcheck_endpoint() -> impl Filter<Extract = impl Reply, Error = Rejection>
         .map(|| "{\"health\": \"ok\"}")
 }
 
-// #[tracing::instrument]
 fn with_store(
     store: Arc<Mutex<Store>>,
 ) -> impl Filter<Extract = (Arc<Mutex<Store>>,), Error = Infallible> + Clone {
     warp::any().map(move || store.clone())
 }
 
-// #[tracing::instrument]
 fn with_metrics(
     metrics: impl Metrics + Clone + Send + std::fmt::Debug + 'static,
 ) -> impl Filter<Extract = (impl Metrics + std::fmt::Debug,), Error = Infallible> + Clone {

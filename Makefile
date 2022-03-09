@@ -37,7 +37,7 @@ stop:
 	$(dc-prod) stop $(CONTAINERS)
 
 logs:
-	${dc-prod} logs -f --tail=20
+	${dc-prod} logs -f -t --tail=20
 
 tidy:
 	cargo fmt --all -- --check && cargo clippy -- -D warnings

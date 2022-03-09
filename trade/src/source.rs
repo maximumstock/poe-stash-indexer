@@ -47,6 +47,7 @@ impl ExampleStream {
     }
 }
 
+#[tracing::instrument]
 pub async fn retry_setup_consumer() -> Result<Consumer> {
     let mut consumer = setup_consumer().await;
 
@@ -56,9 +57,11 @@ pub async fn retry_setup_consumer() -> Result<Consumer> {
         consumer = setup_consumer().await;
     }
 
+    info!("Connected to RabbitMQ");
     consumer
 }
 
+#[tracing::instrument]
 pub async fn setup_consumer() -> Result<Consumer> {
     let addr = std::env::var("AMQP_ADDR").unwrap_or_else(|_| "amqp://poe:poe@rabbitmq".into());
     let conn = Connection::connect(&addr, ConnectionProperties::default()).await?; // Note the `with_tokio()` here
