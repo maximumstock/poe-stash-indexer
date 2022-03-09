@@ -22,6 +22,7 @@ pub async fn init<T: Into<SocketAddr> + 'static>(
 ) {
     let routes = healtcheck_endpoint()
         .or(search_endpoint(store, metrics))
+        .with(warp::trace::request())
         .recover(error_handler);
 
     warp::serve(routes).bind(options).await
