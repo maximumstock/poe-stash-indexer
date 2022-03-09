@@ -18,9 +18,9 @@ FROM production-builder-deps as production-builder
 WORKDIR /app
 COPY . .
 RUN cargo build --release --target x86_64-unknown-linux-musl --bin trade
-RUN strip /app/target/x86_64-unknown-linux-musl/release/trade 
+RUN strip /app/target/x86_64-unknown-linux-musl/release/trade
 
-FROM alpine
+FROM alpine as production
 WORKDIR /app
 COPY --from=production-builder /app/target/x86_64-unknown-linux-musl/release/trade /usr/local/bin/
 CMD ["/usr/local/bin/trade"]
