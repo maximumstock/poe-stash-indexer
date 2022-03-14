@@ -39,6 +39,3 @@ services:
   grafana:
     env_file:
       - configuration/environments/.env.production
-  
-volumes:
-  trade-store:
