@@ -22,5 +22,6 @@ RUN strip /app/target/x86_64-unknown-linux-musl/release/trade
 
 FROM alpine as production
 WORKDIR /app
+USER root
 COPY --from=production-builder /app/target/x86_64-unknown-linux-musl/release/trade /usr/local/bin/
 CMD ["/usr/local/bin/trade"]
