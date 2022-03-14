@@ -27,9 +27,9 @@ jobs:
             docker pull maximumstock2/trade:latest
             echo "Environment: $ENV"
             make config
-            docker-compose build --force-rm reverse-proxy prometheus rabbitmq db
-            docker-compose build grafana
-            docker-compose stop --timeout 60 trade # give it time to save
+            docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build --force-rm reverse-proxy prometheus rabbitmq db
+            docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build grafana
+            docker-compose -f docker-compose.yaml -f docker-compose.production.yaml stop --timeout 60 trade # give it time to save
             make up-prod
           EOF
       - name: Grafana Annotation
