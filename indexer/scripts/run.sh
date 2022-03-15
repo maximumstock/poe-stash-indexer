@@ -2,7 +2,7 @@
 
 set -ex
 
-if [[ -v DATABASE_URL ]]; then
+if [[ -v $DATABASE_URL ]]; then
   diesel setup \
     --migration-dir indexer/migrations \
     --config-file indexer/diesel.toml
