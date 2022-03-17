@@ -6,4 +6,4 @@ RUN cargo install diesel_cli --no-default-features --features postgres
 RUN cargo install cargo-watch
 RUN cargo install cargo-chef
 
-ENV RUSTFLAGS="-Clink-arg=-fuse-ld=lld" 
+ENV RUSTFLAGS="-Clink-arg=-fuse-ld=lld"

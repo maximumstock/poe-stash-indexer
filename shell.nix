@@ -12,7 +12,7 @@ let
 in
   pkgs.mkShell rec {
     buildInputs = with pkgs; [
-      lld
+      llvmPackages.bintools
       pkg-config
       gettext
       openssl
@@ -39,5 +39,4 @@ in
 
     # optional lld setup for faster compilation
     RUSTFLAGS = "-Clink-arg=-fuse-ld=lld";
-    LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath buildInputs;
   }
