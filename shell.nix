@@ -15,24 +15,26 @@ in
       llvmPackages.bintools
       pkg-config
       gettext
-      openssl
-      postgresql
       age
       apacheHttpd
-
-      rust-analyzer
-      cargo-edit
-      cargo-feature
-      cargo-udeps
-      cargo-bloat
       linuxPackages.perf
-      docker-compose
+      vegeta
+
+      openssl
+      postgresql
       # (rust-bin.nightly.latest.default.override {
       #   extensions = ["rust-src" "clippy"];
       # })
       (rust-bin.stable."1.59.0".default.override {
         extensions = ["rust-src" "clippy"];
       })
+
+      rust-analyzer
+      cargo-edit
+      cargo-feature
+      cargo-udeps
+      cargo-bloat
+      docker-compose
     ];
 
     RUST_BACKTRACE = 1;
