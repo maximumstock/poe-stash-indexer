@@ -1,9 +1,9 @@
 
-GET http://trade.localhost:8888/healthcheck
+GET http://trade.maximumstock.net/healthcheck
 
 ###
 
-POST http://trade.localhost:8888/trade
+POST http://trade.maximumstock.net/trade
 content-type: application/json
 
 {
@@ -13,7 +13,7 @@ content-type: application/json
 
 ###
 
-POST http://trade.localhost:8888/trade
+POST http://trade.maximumstock.net/trade
 content-type: application/json
 
 {
@@ -23,7 +23,7 @@ content-type: application/json
 
 ###
 
-POST http://trade.localhost:8888/trade?limit=3
+POST http://trade.maximumstock.net/trade?limit=3
 content-type: application/json
 
 {
