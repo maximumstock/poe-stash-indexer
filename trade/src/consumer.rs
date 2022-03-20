@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use futures::StreamExt;
 use lapin::options::BasicAckOptions;
-use tokio::sync::{oneshot::Receiver, Mutex};
+use tokio::sync::Mutex;
 use tracing::info;
 
 use crate::{
@@ -27,33 +27,26 @@ async fn setup_local_consumer(store: Arc<Mutex<Store>>) {
 
 pub async fn setup_rabbitmq_consumer(
     config: &Config,
-    mut shutdown_rx: Receiver<()>,
     store: Arc<Mutex<Store>>,
     mut metrics: impl Metrics + std::fmt::Debug,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // todo: we are trapped here when stopping signal comes
-    let mut consumer = retry_setup_consumer(config).await?;
+    // Initial connection should be retried until it works
+    let mut consumer = retry_setup_consumer(config).await;
 
-    while let Some(delivery) = consumer.next().await {
-        if delivery.is_err() {
-            // todo: we are trapped here when stopping signal comes
-            consumer = retry_setup_consumer(config).await?;
-        }
-
-        let delivery = delivery?;
-        consume(&delivery, &mut metrics, &store).await?;
-        delivery.ack(BasicAckOptions::default()).await?;
-
-        if let Ok(_) | Err(tokio::sync::oneshot::error::TryRecvError::Closed) =
-            shutdown_rx.try_recv()
-        {
-            break;
+    loop {
+        if let Some(delivery) = consumer.next().await {
+            match delivery {
+                Err(_) => {
+                    // This takes care of reconnection if the connection drops after the initial connect
+                    consumer = retry_setup_consumer(config).await;
+                }
+                Ok(delivery) => {
+                    consume(&delivery, &mut metrics, &store).await?;
+                    delivery.ack(BasicAckOptions::default()).await?;
+                }
+            }
         }
     }
-
-    info!("Stopping RabbitMQ consumer");
-
-    Ok(())
 }
 
 #[tracing::instrument(skip(store, metrics, delivery))]
