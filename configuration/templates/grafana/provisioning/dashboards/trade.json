@@ -354,7 +354,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "search_requests",
+          "expr": "irate(search_requests[5s])",
           "interval": "",
           "legendFormat": "",
           "queryType": "randomWalk",
@@ -373,7 +373,7 @@
     "list": []
   },
   "time": {
-    "from": "now-7d",
+    "from": "now-5m",
     "to": "now"
   },
   "timepicker": {
@@ -394,5 +394,5 @@
   "timezone": "",
   "title": "Trade",
   "uid": "GeBonnfnz",
-  "version": 3
+  "version": 2
 }

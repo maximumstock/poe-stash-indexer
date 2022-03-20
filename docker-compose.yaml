@@ -40,7 +40,7 @@ services:
       - configuration/environments/.env.development
     volumes:
       - ".:/app:cached"
-      - "trade-store:/app/trade/trade-store:cached"
+      - "trade-store:/app/trade/trade-store"
 
   rabbitmq:
     image: rabbitmq:3.9-management-alpine
@@ -65,7 +65,9 @@ services:
     restart: "always"
     env_file:
       - configuration/environments/.env.development
+    user: "root"
     volumes:
+      - "grafana-store:/var/lib/grafana"
       - "./configuration/instantiated/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards"
       - "./configuration/instantiated/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources"
       - "./configuration/instantiated/grafana/custom.ini:/etc/grafana/grafana.ini"
@@ -79,3 +81,4 @@ services:
 
 volumes:
   trade-store:
+  grafana-store:
