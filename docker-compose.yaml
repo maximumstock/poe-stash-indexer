@@ -77,6 +77,9 @@ services:
     restart: "always"
     env_file:
       - configuration/environments/.env.development
+  
+  node-exporter:
+    image: prom/node-exporter
 
 
 volumes:
