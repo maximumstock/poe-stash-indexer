@@ -118,7 +118,7 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
 
 async fn setup_work(
     config: &Config,
-    shutdown_rx: Receiver<()>,
+    mut shutdown_rx: Receiver<()>,
     store: Arc<Mutex<Store>>,
     metrics: impl Metrics + Clone + Send + Sync + std::fmt::Debug + 'static,
 ) -> Arc<Mutex<Store>> {
@@ -126,9 +126,17 @@ async fn setup_work(
 
     tokio::select! {
         _ = async {
-            match consumer::setup_rabbitmq_consumer(config, shutdown_rx, store.clone(), metrics).await {
+            match consumer::setup_rabbitmq_consumer(config, store.clone(), metrics).await {
                 Err(e) => error!("Error setting up RabbitMQ consumer: {:?}", e),
                 Ok(_) => info!("Consumer decomissioned")
+            }
+        } => {},
+        _ = async {
+            loop {
+                if let Ok(_) | Err(tokio::sync::oneshot::error::TryRecvError::Closed) = shutdown_rx.try_recv() {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
             }
         } => {},
         _ = api::init(([0, 0, 0, 0], 4001), store.clone(), metrics2) => {},

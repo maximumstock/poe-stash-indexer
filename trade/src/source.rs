@@ -50,17 +50,17 @@ impl ExampleStream {
 }
 
 #[tracing::instrument(skip(config))]
-pub async fn retry_setup_consumer(config: &Config) -> Result<Consumer> {
+pub async fn retry_setup_consumer(config: &Config) -> Consumer {
     let mut consumer = setup_consumer(config).await;
 
     while let Err(e) = consumer {
         error!("Encountered an error when connecting to RabbitMQ: {:?}", e);
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         consumer = setup_consumer(config).await;
     }
 
     info!("Connected to RabbitMQ");
-    consumer
+    consumer.unwrap()
 }
 
 #[tracing::instrument(skip(config))]
