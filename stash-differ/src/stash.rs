@@ -16,10 +16,12 @@ pub struct AccountStash {
 }
 
 impl AccountStash {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[allow(dead_code)]
     pub fn with_stash(mut self, stash_id: impl Into<StashId>, stash: Stash) -> Self {
         self.stashes.insert(stash_id.into(), stash);
         self
@@ -34,10 +36,12 @@ pub struct Stash {
 }
 
 impl Stash {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[allow(dead_code)]
     pub fn with_item(mut self, item_id: impl Into<ItemId>, item: Item) -> Self {
         self.content.insert(item_id.into(), item);
         self
@@ -97,6 +101,7 @@ pub struct Item {
 }
 
 impl Item {
+    #[allow(dead_code)]
     pub fn new(id: impl Into<String>, type_line: impl Into<String>) -> Self {
         Self {
             id: id.into(),
