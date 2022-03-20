@@ -6,6 +6,7 @@ use tokio::sync::{oneshot::Receiver, Mutex};
 use tracing::info;
 
 use crate::{
+    config::Config,
     metrics::Metrics,
     source::{retry_setup_consumer, ExampleStream, StashRecord},
     store::Store,
@@ -25,17 +26,18 @@ async fn setup_local_consumer(store: Arc<Mutex<Store>>) {
 }
 
 pub async fn setup_rabbitmq_consumer(
+    config: &Config,
     mut shutdown_rx: Receiver<()>,
     store: Arc<Mutex<Store>>,
     mut metrics: impl Metrics + std::fmt::Debug,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // todo: we are trapped here when stopping signal comes
-    let mut consumer = retry_setup_consumer().await?;
+    let mut consumer = retry_setup_consumer(config).await?;
 
     while let Some(delivery) = consumer.next().await {
         if delivery.is_err() {
             // todo: we are trapped here when stopping signal comes
-            consumer = retry_setup_consumer().await?;
+            consumer = retry_setup_consumer(config).await?;
         }
 
         let delivery = delivery?;

@@ -1,10 +1,13 @@
 mod api;
 mod assets;
+mod config;
 mod consumer;
+mod metrics;
 mod note_parser;
 mod source;
 mod store;
 
+use config::Config;
 use metrics::Metrics;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -46,28 +49,26 @@ use crate::metrics::setup_metrics;
 /// [x] - pagination
 ///       - [x] limit query parameter
 /// [x] - compression (its fine to do this server-side in this case)
-/// [ ] - move from logs to metrics + traces
+/// [-] - move from logs to metrics + traces
 ///       - only log errors and debug info
 ///       - log and count unmappable item names
 ///       - metrics for all sorts of index sizes, number of offers, processed offers/service activity
-mod metrics;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info");
-    }
+    let config = config::Config::from_env()?;
 
+    info!("Setup tracing...");
     setup_tracing().expect("Tracing setup failed");
-    info!("Setup tracing");
 
     let store = Arc::new(Mutex::new(store::load_store("Scourge".into()).await?));
-    let metrics = setup_metrics(std::env::var("METRICS_PORT")?.parse()?)?;
+    let metrics = setup_metrics(&config)?;
+
     let signal_flag = setup_signal_handlers()?;
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     setup_shutdown_handler(signal_flag, shutdown_tx);
 
-    let store = setup_work(shutdown_rx, store, metrics).await;
+    let store = setup_work(&config, shutdown_rx, store, metrics).await;
 
     info!("Saving store...");
     teardown(store).await?;
@@ -83,9 +84,6 @@ async fn teardown(store: Arc<Mutex<Store>>) -> Result<(), Box<dyn std::error::Er
 }
 
 fn setup_tracing() -> Result<(), opentelemetry::trace::TraceError> {
-    std::env::set_var("OTEL_EXPORTER_JAEGER_AGENT_HOST", "jaeger");
-    std::env::set_var("OTEL_EXPORTER_JAEGER_AGENT_PORT", "6831");
-
     let tracer = opentelemetry_jaeger::new_pipeline()
         .with_service_name("trade")
         .install_batch(opentelemetry::runtime::Tokio)?;
@@ -118,6 +116,7 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
 }
 
 async fn setup_work(
+    config: &Config,
     shutdown_rx: Receiver<()>,
     store: Arc<Mutex<Store>>,
     metrics: impl Metrics + Clone + Send + Sync + std::fmt::Debug + 'static,
@@ -126,7 +125,7 @@ async fn setup_work(
 
     tokio::select! {
         _ = async {
-            match consumer::setup_rabbitmq_consumer(shutdown_rx, store.clone(), metrics).await {
+            match consumer::setup_rabbitmq_consumer(config, shutdown_rx, store.clone(), metrics).await {
                 Err(e) => error!("Error setting up RabbitMQ consumer: {:?}", e),
                 Ok(_) => info!("Consumer decomissioned")
             }

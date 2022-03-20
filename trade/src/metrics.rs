@@ -1,5 +1,7 @@
 use prometheus_exporter::prometheus::core::{AtomicI64, AtomicU64, GenericCounter, GenericGauge};
 
+use crate::config::Config;
+
 pub trait Metrics {
     fn set_offers_ingested(&mut self, value: i64);
     fn set_stashes_ingested(&mut self, value: i64);
@@ -34,9 +36,9 @@ impl Metrics for MetricStore {
 }
 
 pub fn setup_metrics(
-    port: u32,
+    config: &Config,
 ) -> Result<impl Metrics + Clone + std::fmt::Debug, Box<dyn std::error::Error>> {
-    let binding = format!("0.0.0.0:{}", port).parse()?;
+    let binding = format!("0.0.0.0:{}", config.metrics_port).parse()?;
     prometheus_exporter::start(binding)?;
 
     Ok(MetricStore {
