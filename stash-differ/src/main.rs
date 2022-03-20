@@ -4,7 +4,7 @@ extern crate pretty_env_logger;
 mod db;
 mod differ;
 mod processing;
-pub mod stash;
+mod stash;
 mod store;
 
 use std::sync::Arc;
@@ -16,11 +16,6 @@ use sqlx::postgres::PgPoolOptions;
 
 fn main() -> Result<(), sqlx::Error> {
     dotenv().ok();
-
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info");
-    }
-
     pretty_env_logger::init();
 
     let database_url =

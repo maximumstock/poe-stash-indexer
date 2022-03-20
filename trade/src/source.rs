@@ -8,6 +8,8 @@ use lapin::{
 use serde::Deserialize;
 use tracing::{error, info};
 
+use crate::config::Config;
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct StashRecord {
     pub stash_id: String,
@@ -47,24 +49,23 @@ impl ExampleStream {
     }
 }
 
-#[tracing::instrument]
-pub async fn retry_setup_consumer() -> Result<Consumer> {
-    let mut consumer = setup_consumer().await;
+#[tracing::instrument(skip(config))]
+pub async fn retry_setup_consumer(config: &Config) -> Result<Consumer> {
+    let mut consumer = setup_consumer(config).await;
 
     while let Err(e) = consumer {
         error!("Encountered an error when connecting to RabbitMQ: {:?}", e);
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        consumer = setup_consumer().await;
+        consumer = setup_consumer(config).await;
     }
 
     info!("Connected to RabbitMQ");
     consumer
 }
 
-#[tracing::instrument]
-pub async fn setup_consumer() -> Result<Consumer> {
-    let addr = std::env::var("AMQP_ADDR").unwrap_or_else(|_| "amqp://poe:poe@rabbitmq".into());
-    let conn = Connection::connect(&addr, ConnectionProperties::default()).await?; // Note the `with_tokio()` here
+#[tracing::instrument(skip(config))]
+pub async fn setup_consumer(config: &Config) -> Result<Consumer> {
+    let conn = Connection::connect(&config.amqp_addr, ConnectionProperties::default()).await?; // Note the `with_tokio()` here
     let channel = conn.create_channel().await?;
     let queue_name = "trade_queue";
 
