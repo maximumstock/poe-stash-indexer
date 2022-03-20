@@ -7,7 +7,8 @@ impl Config {
     pub fn from_env() -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {
             metrics_port: int_from_env("METRICS_PORT").unwrap_or(4000),
-            amqp_addr: std::env::var("AMQP_ADDR").unwrap_or("amqp://poe:poe@rabbitmq".into()),
+            amqp_addr: std::env::var("AMQP_ADDR")
+                .unwrap_or_else(|_| "amqp://poe:poe@rabbitmq".into()),
         })
     }
 }
