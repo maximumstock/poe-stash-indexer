@@ -86,6 +86,7 @@ async fn teardown(store: Arc<Mutex<Store>>) -> Result<(), Box<dyn std::error::Er
 fn setup_tracing() -> Result<(), opentelemetry::trace::TraceError> {
     let tracer = opentelemetry_jaeger::new_pipeline()
         .with_service_name("trade")
+        .with_auto_split_batch(true)
         .install_batch(opentelemetry::runtime::Tokio)?;
 
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
