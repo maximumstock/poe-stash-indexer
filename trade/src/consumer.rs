@@ -67,14 +67,12 @@ async fn consume(
     metrics.set_stashes_ingested(stash_records.len() as i64);
 
     let mut store = store.lock().await;
-    let n_ingested_offers = tracing::info_span!("ingestion")
-        .in_scope(|| async {
-            stash_records
-                .into_iter()
-                .map(|s| store.ingest_stash(s))
-                .sum::<usize>()
-        })
-        .await;
+    let n_ingested_offers = tracing::info_span!("ingestion").in_scope(|| {
+        stash_records
+            .into_iter()
+            .map(|s| store.ingest_stash(s))
+            .sum::<usize>()
+    });
 
     metrics.set_offers_ingested(n_ingested_offers as i64);
     info!("Store has {:#?} offers", store.size());
