@@ -15,7 +15,7 @@ use std::sync::{
 };
 use tokio::sync::{
     oneshot::{Receiver, Sender},
-    Mutex,
+    RwLock,
 };
 
 use tracing::{error, info};
@@ -61,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Setup tracing...");
     setup_tracing().expect("Tracing setup failed");
 
-    let store = Arc::new(Mutex::new(store::load_store("Scourge".into()).await?));
+    let store = Arc::new(RwLock::new(store::load_store("Scourge".into()).await?));
     let metrics = setup_metrics(&config)?;
 
     let signal_flag = setup_signal_handlers()?;
@@ -77,8 +77,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn teardown(store: Arc<Mutex<Store>>) -> Result<(), Box<dyn std::error::Error>> {
-    store.lock().await.persist()?;
+async fn teardown(store: Arc<RwLock<Store>>) -> Result<(), Box<dyn std::error::Error>> {
+    store.read().await.persist()?;
     opentelemetry::global::shutdown_tracer_provider();
     Ok(())
 }
@@ -119,9 +119,9 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
 async fn setup_work(
     config: &Config,
     mut shutdown_rx: Receiver<()>,
-    store: Arc<Mutex<Store>>,
+    store: Arc<RwLock<Store>>,
     metrics: impl Metrics + Clone + Send + Sync + std::fmt::Debug + 'static,
-) -> Arc<Mutex<Store>> {
+) -> Arc<RwLock<Store>> {
     let metrics2 = metrics.clone();
 
     tokio::select! {
