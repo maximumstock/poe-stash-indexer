@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use futures::StreamExt;
 use lapin::options::BasicAckOptions;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 use tracing::info;
 
 use crate::{
@@ -27,7 +27,7 @@ async fn setup_local_consumer(store: Arc<Mutex<Store>>) {
 
 pub async fn setup_rabbitmq_consumer(
     config: &Config,
-    store: Arc<Mutex<Store>>,
+    store: Arc<RwLock<Store>>,
     mut metrics: impl Metrics + std::fmt::Debug,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Initial connection should be retried until it works
@@ -53,13 +53,13 @@ pub async fn setup_rabbitmq_consumer(
 async fn consume(
     delivery: &lapin::message::Delivery,
     metrics: &mut (impl Metrics + std::fmt::Debug),
-    store: &Arc<Mutex<Store>>,
+    store: &Arc<RwLock<Store>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let stash_records = tracing::info_span!("deserialization")
         .in_scope(|| serde_json::from_slice::<Vec<StashRecord>>(&delivery.data))?;
     metrics.set_stashes_ingested(stash_records.len() as i64);
 
-    let mut store = store.lock().await;
+    let mut store = store.write().await;
     let n_ingested_offers = tracing::info_span!("ingestion").in_scope(|| {
         stash_records
             .into_iter()
