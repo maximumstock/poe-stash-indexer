@@ -33,7 +33,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 2,
-  "id": 8,
+  "id": 9,
   "links": [],
   "panels": [
     {
@@ -108,7 +108,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(offers_ingested_challenge[10s])",
+          "expr": "rate(offers_ingested_challenge_hc[10s])",
           "interval": "",
           "legendFormat": "",
           "queryType": "randomWalk",
@@ -190,7 +190,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "store_size_challenge",
+          "expr": "store_size_challenge_hc",
           "interval": "",
           "legendFormat": "",
           "queryType": "randomWalk",
@@ -272,7 +272,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(stashes_ingested_challenge[10s])",
+          "expr": "rate(stashes_ingested_challenge_hc[10s])",
           "interval": "",
           "legendFormat": "",
           "queryType": "randomWalk",
@@ -392,7 +392,7 @@
     ]
   },
   "timezone": "",
-  "title": "Trade Challenge",
-  "uid": "GeBonnfnz",
-  "version": 2
+  "title": "Trade Challenge HC",
+  "uid": "3A_iths7k",
+  "version": 3
 }
