@@ -49,11 +49,6 @@ async fn consume(
 
     metrics.inc_stashes_ingested(stash_records.len() as u64);
 
-    let stash_records = stash_records
-        .into_iter()
-        .filter(|s| s.league.eq(league.to_str()))
-        .collect::<Vec<_>>();
-
     if !stash_records.is_empty() {
         ingest(store_map, metrics, league, stash_records).await?;
     }
@@ -72,6 +67,7 @@ async fn ingest(
         let mut store = store.write().await;
         let n_ingested_offers = stash_records
             .into_iter()
+            .filter(|s| s.league.eq(league.to_str()))
             .map(|s| store.ingest_stash(s))
             .sum::<usize>();
 
