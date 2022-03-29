@@ -4,11 +4,13 @@ use std::{
     fmt::Debug,
     hash::{Hash, Hasher},
     io::Write,
+    sync::Arc,
 };
+use tokio::sync::RwLock;
 use tracing::{error, info};
 use typed_builder::TypedBuilder;
 
-use crate::{assets::AssetIndex, note_parser::PriceParser, source::StashRecord};
+use crate::{assets::AssetIndex, league::League, note_parser::PriceParser, source::StashRecord};
 
 type StashId = String;
 type ItemId = String;
@@ -119,10 +121,11 @@ impl<'a> From<&'a Offer> for Conversion<'a> {
 
 type ConversionIndex = u64;
 
-const STORE_FILE_PATH: &str = "/app/trade/trade-store/store.bin";
+const STORE_BASE_PATH: &str = "/app/trade/trade-store";
+
 #[derive(Debug, TypedBuilder, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Store {
-    league: String,
+    league: League,
     /// Holds _all_ offers for the given league indexed by a manually created hash.
     #[builder(default)]
     offers: HashMap<OfferIndex, Offer>,
@@ -140,9 +143,9 @@ pub struct Store {
 }
 
 impl Store {
-    pub fn new<T: ToString>(league: T, asset_index: AssetIndex) -> Self {
+    pub fn new(league: League, asset_index: AssetIndex) -> Self {
         Self::builder()
-            .league(league.to_string())
+            .league(league)
             .asset_index(asset_index)
             .build()
     }
@@ -239,25 +242,28 @@ impl Store {
     #[tracing::instrument(skip(self))]
     pub fn persist(&self) -> Result<(), Box<dyn std::error::Error>> {
         let serialized = bincode::serialize(&self)?;
+        let file_path = format!("{}/{}.bin", STORE_BASE_PATH, self.league.to_ident());
         let mut file = std::fs::OpenOptions::new()
             .create(true)
             .write(true)
-            .open(STORE_FILE_PATH)?;
+            .open(file_path)?;
         file.write_all(&serialized).map_err(|e| e.into())
     }
 
     #[tracing::instrument]
-    pub fn restore() -> Result<Self, Box<dyn std::error::Error>> {
-        let mut file = std::fs::OpenOptions::new()
-            .read(true)
-            .open(STORE_FILE_PATH)?;
-        bincode::deserialize_from(&mut file).map_err(|e| e.into())
+    pub fn restore(league: &League) -> Result<Self, Box<dyn std::error::Error>> {
+        let file_path = format!("{}/{}.bin", STORE_BASE_PATH, league.to_ident());
+        let mut file = std::fs::OpenOptions::new().read(true).open(file_path)?;
+        let store = bincode::deserialize_from(&mut file).map_err(|e| e.to_string())?;
+        Ok(store)
     }
 }
 
+pub type StoreMap = HashMap<League, Arc<RwLock<Store>>>;
+
 #[tracing::instrument]
-pub async fn load_store(league: String) -> Result<Store, Box<dyn std::error::Error>> {
-    let store = match Store::restore() {
+pub async fn load_store(league: League) -> Result<Store, Box<dyn std::error::Error>> {
+    let store = match Store::restore(&league) {
         Ok(store) => {
             info!("Successfully restored store from file");
             store
@@ -281,6 +287,7 @@ mod tests {
     use crate::{
         assets::AssetIndex,
         collection,
+        league::League,
         source::{Item, StashRecord},
         store::Store,
     };
@@ -327,7 +334,7 @@ mod tests {
             ],
         };
 
-        let mut store = Store::new("Standard", asset_index.clone());
+        let mut store = Store::new(League::Challenge, asset_index.clone());
 
         store.ingest_stash(input.clone());
         store.invalidate_stash(&input.stash_id);
@@ -343,7 +350,7 @@ mod tests {
         };
 
         let expected = Store::builder()
-            .league("Standard".into())
+            .league(League::Challenge)
             .stash_to_offers_idx(stash_to_offers_idx)
             .conversion_to_offers_idx(conversion_to_offers_idx)
             .asset_index(asset_index)

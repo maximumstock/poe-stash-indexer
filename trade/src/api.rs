@@ -1,12 +1,13 @@
-use std::{convert::Infallible, net::SocketAddr, sync::Arc};
+use std::{convert::Infallible, net::SocketAddr, str::FromStr, sync::Arc};
 
 use serde::{Deserialize, Serialize};
-use tokio::sync::RwLock;
+
 use warp::{reply::Json, Filter, Rejection, Reply};
 
 use crate::{
-    metrics::Metrics,
-    store::{Offer, Store},
+    league::League,
+    metrics::api::ApiMetrics,
+    store::{Offer, StoreMap},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -17,11 +18,11 @@ struct RequestBody {
 
 pub async fn init<T: Into<SocketAddr> + 'static>(
     options: T,
-    store: Arc<RwLock<Store>>,
-    metrics: impl Metrics + Clone + Send + Sync + std::fmt::Debug + 'static,
+    store_map: Arc<StoreMap>,
+    metrics: impl ApiMetrics + Clone + Send + Sync + std::fmt::Debug + 'static,
 ) {
     let routes = healtcheck_endpoint()
-        .or(search_endpoint(store, metrics))
+        .or(search_endpoint(store_map, metrics))
         .with(warp::trace::request())
         .recover(error_handler);
 
@@ -31,40 +32,51 @@ pub async fn init<T: Into<SocketAddr> + 'static>(
 #[derive(Deserialize, Debug)]
 struct SearchQuery {
     limit: Option<usize>,
+    league: Option<String>,
 }
 
 fn search_endpoint(
-    store: Arc<RwLock<Store>>,
-    metrics: impl Metrics + Clone + Send + std::fmt::Debug + 'static,
+    store_map: Arc<StoreMap>,
+    metrics: impl ApiMetrics + Clone + Send + std::fmt::Debug + 'static,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     warp::post()
         .and(warp::path("trade"))
         .and(warp::path::end())
         .and(warp::body::json())
         .and(warp::query::<SearchQuery>())
-        .and(with_store(store))
+        .and(with_store(store_map))
         .and(with_metrics(metrics))
         .and_then(handle_search)
 }
 
-#[tracing::instrument(skip(store, metrics))]
+#[tracing::instrument(skip(store_map, metrics))]
 async fn handle_search(
     payload: RequestBody,
     query: SearchQuery,
-    store: Arc<RwLock<Store>>,
-    mut metrics: impl Metrics + std::fmt::Debug,
+    store_map: Arc<StoreMap>,
+    mut metrics: impl ApiMetrics + std::fmt::Debug,
 ) -> Result<Json, Rejection> {
     metrics.inc_search_requests();
-    let store = store.read().await;
+    let league = match query.league {
+        Some(s) => League::from_str(&s).unwrap_or_default(),
+        None => League::default(),
+    };
 
-    if let Some(offers) = store.query(&payload.sell, &payload.buy, query.limit) {
-        return Ok(warp::reply::json(&QueryResponse {
-            count: offers.len(),
-            offers,
-        }));
+    match store_map.get(&league) {
+        Some(store) => {
+            let store = store.read().await;
+
+            if let Some(offers) = store.query(&payload.sell, &payload.buy, query.limit) {
+                return Ok(warp::reply::json(&QueryResponse {
+                    count: offers.len(),
+                    offers,
+                }));
+            }
+
+            Err(QueryEmptyResultError {}.into())
+        }
+        None => Err(QueryEmptyResultError {}.into()),
     }
-
-    Err(QueryEmptyResultError {}.into())
 }
 
 #[tracing::instrument(skip(_rejection))]
@@ -93,13 +105,13 @@ fn healtcheck_endpoint() -> impl Filter<Extract = impl Reply, Error = Rejection>
 }
 
 fn with_store(
-    store: Arc<RwLock<Store>>,
-) -> impl Filter<Extract = (Arc<RwLock<Store>>,), Error = Infallible> + Clone {
-    warp::any().map(move || store.clone())
+    store_map: Arc<StoreMap>,
+) -> impl Filter<Extract = (Arc<StoreMap>,), Error = Infallible> + Clone {
+    warp::any().map(move || Arc::clone(&store_map))
 }
 
 fn with_metrics(
-    metrics: impl Metrics + Clone + Send + std::fmt::Debug + 'static,
-) -> impl Filter<Extract = (impl Metrics + std::fmt::Debug,), Error = Infallible> + Clone {
+    metrics: impl ApiMetrics + Clone + Send + std::fmt::Debug + 'static,
+) -> impl Filter<Extract = (impl ApiMetrics + std::fmt::Debug,), Error = Infallible> + Clone {
     warp::any().map(move || metrics.clone())
 }

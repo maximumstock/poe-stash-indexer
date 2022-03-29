@@ -8,7 +8,7 @@ use lapin::{
 use serde::Deserialize;
 use tracing::{error, info};
 
-use crate::config::Config;
+use crate::{config::Config, league::League};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct StashRecord {
@@ -41,6 +41,7 @@ impl IntoIterator for ExampleStream {
 }
 
 impl ExampleStream {
+    #[allow(dead_code)]
     pub fn new<T: AsRef<Path>>(file_path: T) -> Self {
         let reader = BufReader::new(File::open(file_path).unwrap());
         let stash_records = serde_json::de::from_reader::<_, Vec<StashRecord>>(reader).unwrap();
@@ -50,13 +51,13 @@ impl ExampleStream {
 }
 
 #[tracing::instrument(skip(config))]
-pub async fn retry_setup_consumer(config: &Config) -> Consumer {
-    let mut consumer = setup_consumer(config).await;
+pub async fn retry_setup_consumer(config: &Config, league: &League) -> Consumer {
+    let mut consumer = setup_consumer(config, league).await;
 
     while let Err(e) = consumer {
         error!("Encountered an error when connecting to RabbitMQ: {:?}", e);
         tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-        consumer = setup_consumer(config).await;
+        consumer = setup_consumer(config, league).await;
     }
 
     info!("Connected to RabbitMQ");
@@ -64,12 +65,12 @@ pub async fn retry_setup_consumer(config: &Config) -> Consumer {
 }
 
 #[tracing::instrument(skip(config))]
-pub async fn setup_consumer(config: &Config) -> Result<Consumer> {
+pub async fn setup_consumer(config: &Config, league: &League) -> Result<Consumer> {
     let conn = Connection::connect(&config.amqp_addr, ConnectionProperties::default()).await?; // Note the `with_tokio()` here
     let channel = conn.create_channel().await?;
-    let queue_name = "trade_queue";
+    let queue_name = league.to_ident();
 
-    channel
+    let queue = channel
         .queue_declare(
             queue_name,
             QueueDeclareOptions::default(),
@@ -80,7 +81,7 @@ pub async fn setup_consumer(config: &Config) -> Result<Consumer> {
 
     channel
         .queue_bind(
-            queue_name,
+            queue.name().as_str(),
             "amq.fanout",
             "stash-record-stream",
             QueueBindOptions::default(),
