@@ -21,6 +21,14 @@ content-type: application/json
     "buy": "Exalted Orb"
 }
 
+POST http://trade.localhost:8888/trade?league=Hardcore%20Archnemesis
+content-type: application/json
+
+{
+    "sell": "Chaos Orb",
+    "buy": "Exalted Orb"
+}
+
 ###
 
 POST http://trade.localhost:8888/trade?limit=3

@@ -57,10 +57,13 @@ async fn handle_search(
     mut metrics: impl ApiMetrics + std::fmt::Debug,
 ) -> Result<Json, Rejection> {
     metrics.inc_search_requests();
-    let league = match query.league {
-        Some(s) => League::from_str(&s).unwrap_or_default(),
-        None => League::default(),
-    };
+
+    let league = {
+        match query.league {
+            None => Ok(League::Challenge),
+            Some(str) => League::from_str(&str).map_err(|_| QueryEmptyResultError {}),
+        }
+    }?;
 
     match store_map.get(&league) {
         Some(store) => {
