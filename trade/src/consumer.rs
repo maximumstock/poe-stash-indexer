@@ -2,46 +2,34 @@ use std::sync::Arc;
 
 use futures::StreamExt;
 use lapin::options::BasicAckOptions;
-use tokio::sync::{Mutex, RwLock};
 use tracing::info;
 
 use crate::{
     config::Config,
-    metrics::Metrics,
-    source::{retry_setup_consumer, ExampleStream, StashRecord},
-    store::Store,
+    league::League,
+    metrics::store::StoreMetrics,
+    source::{retry_setup_consumer, StashRecord},
+    store::StoreMap,
 };
-
-#[allow(dead_code)]
-async fn setup_local_consumer(store: Arc<Mutex<Store>>) {
-    let example_stream = ExampleStream::new("./data.json");
-
-    for stash_record in example_stream {
-        let mut store = store.lock().await;
-        store.ingest_stash(stash_record);
-        info!("Store has {:#?} offers", store.size());
-        drop(store);
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    }
-}
 
 pub async fn setup_rabbitmq_consumer(
     config: &Config,
-    store: Arc<RwLock<Store>>,
-    mut metrics: impl Metrics + std::fmt::Debug,
+    store_map: Arc<StoreMap>,
+    mut metrics: impl StoreMetrics + std::fmt::Debug,
+    league: League,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Initial connection should be retried until it works
-    let mut consumer = retry_setup_consumer(config).await;
+    let mut consumer = retry_setup_consumer(config, &league).await;
 
     loop {
         if let Some(delivery) = consumer.next().await {
             match delivery {
                 Err(_) => {
                     // This takes care of reconnection if the connection drops after the initial connect
-                    consumer = retry_setup_consumer(config).await;
+                    consumer = retry_setup_consumer(config, &league).await;
                 }
                 Ok(delivery) => {
-                    consume(&delivery, &mut metrics, &store).await?;
+                    consume(&delivery, &mut metrics, &store_map, &league).await?;
                     delivery.ack(BasicAckOptions::default()).await?;
                 }
             }
@@ -49,26 +37,47 @@ pub async fn setup_rabbitmq_consumer(
     }
 }
 
-#[tracing::instrument(skip(store, metrics, delivery))]
+#[tracing::instrument(skip(store_map, metrics, delivery))]
 async fn consume(
     delivery: &lapin::message::Delivery,
-    metrics: &mut (impl Metrics + std::fmt::Debug),
-    store: &Arc<RwLock<Store>>,
+    metrics: &mut (impl StoreMetrics + std::fmt::Debug),
+    store_map: &StoreMap,
+    league: &League,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let stash_records = tracing::info_span!("deserialization")
         .in_scope(|| serde_json::from_slice::<Vec<StashRecord>>(&delivery.data))?;
-    metrics.set_stashes_ingested(stash_records.len() as i64);
 
-    let mut store = store.write().await;
-    let n_ingested_offers = tracing::info_span!("ingestion").in_scope(|| {
-        stash_records
+    metrics.inc_stashes_ingested(stash_records.len() as u64);
+
+    let stash_records = stash_records
+        .into_iter()
+        .filter(|s| s.league.eq(league.to_str()))
+        .collect::<Vec<_>>();
+
+    if !stash_records.is_empty() {
+        ingest(store_map, metrics, league, stash_records).await?;
+    }
+
+    Ok(())
+}
+
+#[tracing::instrument(skip(store_map, metrics, stash_records))]
+async fn ingest(
+    store_map: &StoreMap,
+    metrics: &mut (impl StoreMetrics + std::fmt::Debug),
+    league: &League,
+    stash_records: Vec<StashRecord>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(store) = store_map.get(league) {
+        let mut store = store.write().await;
+        let n_ingested_offers = stash_records
             .into_iter()
             .map(|s| store.ingest_stash(s))
-            .sum::<usize>()
-    });
+            .sum::<usize>();
 
-    metrics.set_offers_ingested(n_ingested_offers as i64);
-    info!("Store has {:#?} offers", store.size());
-    metrics.set_store_size(store.size() as i64);
+        metrics.inc_offers_ingested(n_ingested_offers as u64);
+        info!("{} store has {:#?} offers", league.to_str(), store.size());
+        metrics.set_store_size(store.size() as i64);
+    }
     Ok(())
 }
