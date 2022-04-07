@@ -207,6 +207,7 @@ impl Store {
     }
 
     pub fn ingest_stash(&mut self, stash: StashRecord) -> usize {
+        // Need to invalidate first, since we can't handle delisting items/tabs otherwise
         self.invalidate_stash(&stash.stash_id);
         tracing::trace!("Ingested {}", stash.stash_id);
 
