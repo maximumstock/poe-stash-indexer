@@ -77,7 +77,7 @@ pub(crate) fn start_fetcher(
 
                     scheduler_tx
                         .send(SchedulerMessage::Fetch(FetchTask {
-                            change_id: next_change_id,
+                            change_id: next_change_id.clone(),
                         }))
                         .unwrap();
 
@@ -85,7 +85,7 @@ pub(crate) fn start_fetcher(
                         .send(SchedulerMessage::Work(WorkerTask {
                             reader: Box::new(decoder),
                             fetch_partial: change_id_buffer,
-                            change_id: task.change_id,
+                            change_id: task.change_id.clone(),
                         }))
                         .unwrap();
 
