@@ -11,4 +11,4 @@ serde = { version = "1.0.136", features = ["derive"] }
 ureq = "2.4.0"
 serde_json = "1.0.79"
 ratelimit = "0.4.4"
-log = "0.4.14"
+log = "0.4.16"
