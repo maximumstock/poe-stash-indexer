@@ -16,6 +16,7 @@ pub struct StashRecord {
     pub league: String,
     pub account_name: String,
     pub items: Vec<Item>,
+    pub created_at: usize,
 }
 
 #[derive(Debug, Clone, Deserialize)]
