@@ -75,10 +75,6 @@ pub(crate) fn start_fetcher(
                         next_change_id
                     );
 
-                    if next_change_id.eq(&task.change_id) {
-                        ratelimit.wait_for(2);
-                    }
-
                     scheduler_tx
                         .send(SchedulerMessage::Fetch(FetchTask {
                             change_id: next_change_id,
@@ -92,6 +88,10 @@ pub(crate) fn start_fetcher(
                             change_id: task.change_id,
                         }))
                         .unwrap();
+
+                    if next_change_id.eq(&task.change_id) {
+                        ratelimit.wait_for(4);
+                    }
                 }
                 Err(
                     FetcherError::Transport
