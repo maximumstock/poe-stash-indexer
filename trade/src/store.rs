@@ -333,7 +333,7 @@ mod tests {
                     type_line: "Mirror of Kalandra".into(),
                 },
             ],
-            created_at: std::time::SystemTime::now().elapsed().unwrap().as_secs() as usize,
+            created_at: chrono::prelude::Utc::now().naive_utc(),
         };
 
         let mut store = Store::new(League::Challenge, asset_index.clone());
