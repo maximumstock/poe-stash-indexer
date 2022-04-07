@@ -3132,6 +3132,7 @@ name = "trade"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "chrono",
  "futures",
  "lapin",
  "opentelemetry",
