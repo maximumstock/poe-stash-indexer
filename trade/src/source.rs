@@ -1,5 +1,6 @@
 use std::{fs::File, io::BufReader, path::Path};
 
+use chrono::NaiveDateTime;
 use lapin::{
     options::{BasicConsumeOptions, QueueBindOptions, QueueDeclareOptions},
     types::FieldTable,
@@ -16,7 +17,7 @@ pub struct StashRecord {
     pub league: String,
     pub account_name: String,
     pub items: Vec<Item>,
-    pub created_at: usize,
+    pub created_at: NaiveDateTime,
 }
 
 #[derive(Debug, Clone, Deserialize)]
