@@ -1,0 +1,32 @@
+
+GET http://trade.maximumstock.net/healthcheck
+
+###
+
+POST http://trade.maximumstock.net/trade
+content-type: application/json
+
+{
+    "buy": "Chaos Orb",
+    "sell": "Maze of the Minotaur Map"
+}
+
+###
+
+POST http://trade.maximumstock.net/trade
+content-type: application/json
+
+{
+    "sell": "Chaos Orb",
+    "buy": "Exalted Orb"
+}
+
+###
+
+POST http://trade.maximumstock.net/trade?limit=3
+content-type: application/json
+
+{
+    "sell": "Chaos Orb",
+    "buy": "Exalted Orb"
+}
