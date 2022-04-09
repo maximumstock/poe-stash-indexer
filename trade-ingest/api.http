@@ -1,0 +1,40 @@
+
+GET http://trade.localhost:8888/healthcheck
+
+###
+
+POST http://trade.localhost:8888/trade
+content-type: application/json
+
+{
+    "buy": "Chaos Orb",
+    "sell": "Maze of the Minotaur Map"
+}
+
+###
+
+POST http://trade.localhost:8888/trade
+content-type: application/json
+
+{
+    "sell": "Chaos Orb",
+    "buy": "Exalted Orb"
+}
+
+POST http://trade.localhost:8888/trade?league=Hardcore%20Archnemesis
+content-type: application/json
+
+{
+    "sell": "Chaos Orb",
+    "buy": "Exalted Orb"
+}
+
+###
+
+POST http://trade.localhost:8888/trade?limit=3
+content-type: application/json
+
+{
+    "sell": "Chaos Orb",
+    "buy": "Exalted Orb"
+}
