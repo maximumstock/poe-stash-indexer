@@ -5,11 +5,11 @@ use lapin::options::BasicAckOptions;
 
 use sqlx::{Pool, Postgres};
 use tracing::info;
+use trade_common::league::League;
 
 use crate::{
     assets::AssetIndex,
     config::Config,
-    league::League,
     metrics::store::StoreMetrics,
     source::{retry_setup_consumer, StashRecord},
     store::Offer,
@@ -18,7 +18,7 @@ use crate::{
 pub async fn setup_rabbitmq_consumer(
     config: &Config,
     pool: Arc<Pool<Postgres>>,
-    mut metrics: impl StoreMetrics + std::fmt::Debug,
+    mut metrics: impl StoreMetrics,
     asset_index: Arc<AssetIndex>,
     league: League,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -45,7 +45,7 @@ pub async fn setup_rabbitmq_consumer(
 async fn consume(
     delivery: &lapin::message::Delivery,
     pool: &Arc<Pool<Postgres>>,
-    metrics: &mut (impl StoreMetrics + std::fmt::Debug),
+    metrics: &mut impl StoreMetrics,
     asset_index: &Arc<AssetIndex>,
     league: &League,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -60,7 +60,7 @@ async fn consume(
         .collect::<Vec<_>>();
 
     if !ingestable_stashes.is_empty() {
-        ingest(metrics, pool, league, &asset_index, ingestable_stashes).await?;
+        ingest(metrics, pool, league, asset_index, ingestable_stashes).await?;
     }
 
     Ok(())
@@ -68,7 +68,7 @@ async fn consume(
 
 #[tracing::instrument(skip(metrics, pool, asset_index, stash_records))]
 async fn ingest(
-    metrics: &mut (impl StoreMetrics + std::fmt::Debug),
+    metrics: &mut impl StoreMetrics,
     pool: &Arc<Pool<Postgres>>,
     league: &League,
     asset_index: &Arc<AssetIndex>,
@@ -93,8 +93,8 @@ async fn ingest(
 
     let offers = stash_records
         .into_iter()
-        .flat_map(|stash| Vec::<Offer>::from(stash))
-        .map(|o| map_offer(o, &asset_index))
+        .flat_map(Vec::<Offer>::from)
+        .map(|o| map_offer(o, asset_index))
         .collect::<Vec<VectorizedOffer>>();
 
     if offers.is_empty() {
@@ -125,8 +125,6 @@ async fn ingest(
     );
 
     metrics.inc_offers_ingested(n_ingested_offers as u64);
-    // info!("{} store has {:#?} offers", league.to_str(), store.size());
-    metrics.set_store_size(0);
     Ok(())
 }
 
@@ -158,5 +156,5 @@ fn map_offer(offer: Offer, asset_index: &Arc<AssetIndex>) -> VectorizedOffer {
 }
 
 fn escape(s: String) -> String {
-    s.replace("'", "''")
+    s.replace('\'', "''")
 }

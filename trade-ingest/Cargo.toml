@@ -28,3 +28,4 @@ sqlx = { version = "0.5.13", features = [
     "migrate",
 ] }
 scooby = "0.4.0"
+trade-common = { path = "../trade-common" }

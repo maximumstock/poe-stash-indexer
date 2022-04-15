@@ -1,26 +1,19 @@
 mod api;
 mod assets;
 mod config;
-mod league;
 mod metrics;
-mod note_parser;
 mod store;
 
 use config::Config;
-use league::League;
 
 use sqlx::PgPool;
-use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
 };
-use tokio::sync::{
-    oneshot::{Receiver, Sender},
-};
+use tokio::sync::oneshot::{Receiver, Sender};
 
-use tracing::{info};
+use tracing::info;
 use tracing_subscriber::{
     prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry,
 };
@@ -28,31 +21,7 @@ use tracing_subscriber::{
 use crate::{assets::AssetIndex, metrics::setup_metrics, store::Store};
 
 /// TODO
-/// [x] - a module to maintain `StashRecord`s as offers /w indices to answer:
-///   - What offers are there for selling X for Y?
-///   - What offers can we delete if a new stash is updated
-///   - turning `StashRecord` into a set of Offers
-/// [x] - filter currency items from `StashRecord`
-///   - need asset mapping from pathofexile.com/trade
-/// [x] - note parsing to extract price
-///       - look at https://github.com/maximumstock/poe-stash-indexer/blob/f7424546ffd40e1a74ecf6ca44584a74c2028957/src/parser.rs
-///       - look at example stream to build note corpus -> sort -> unit test cases
-/// [x] - created_at timestamp on offers
-/// [x] - validate offer results
-/// [x] - RabbitMQ client that produces a stream of `StashRecord`s
-/// [x] - will need state snapshots + restoration down the road
-/// [x] - fix file paths
-/// [ ] - extend for multiple leagues
 /// [ ] - a web API that mimics pathofexile.com/trade API
-/// [x] - extend API response to contain number of offers as metadata
-/// [x] - add proper logging
-/// [x] - pagination
-///       - [x] limit query parameter
-/// [x] - compression (its fine to do this server-side in this case)
-/// [-] - move from logs to metrics + traces
-///       - only log errors and debug info
-///       - log and count unmappable item names
-///       - metrics for all sorts of index sizes, number of offers, processed offers/service activity
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -61,9 +30,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::env::set_var("DATABASE_URL", &config.db_url);
 
     let pool = Arc::new(PgPool::connect(&config.db_url).await?);
-    // let service = Service::new(Arc::clone(&pool));
-    let index = AssetIndex::new();
-    let store = Store::new(League::Challenge, index, pool);
+    let mut index = AssetIndex::new();
+    index.init().await?;
+    let store = Store::new(index, pool);
 
     setup_tracing().expect("Tracing setup failed");
 
@@ -120,7 +89,7 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
 }
 
 async fn setup_work(config: &Config, mut shutdown_rx: Receiver<()>, store: Store) {
-    let (api_metrics, _, _) = setup_metrics(config).expect("failed to setup metrics");
+    let (api_metrics,) = setup_metrics(config).expect("failed to setup metrics");
 
     tokio::select! {
         _ = async {

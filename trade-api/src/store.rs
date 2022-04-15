@@ -1,20 +1,14 @@
-
-use serde::{Serialize};
-use sqlx::{FromRow, Pool, Postgres, Row};
-use std::{
-    fmt::Debug,
-    hash::{Hasher},
-    sync::Arc,
-};
-
+use serde::Serialize;
+use sqlx::{FromRow, Pool, Postgres};
+use std::{fmt::Debug, sync::Arc};
+use trade_common::league::League;
 
 use typed_builder::TypedBuilder;
 
-use crate::{assets::AssetIndex, league::League};
+use crate::assets::AssetIndex;
 
 type StashId = String;
 type ItemId = String;
-type OfferIndex = u64;
 
 #[derive(Debug, Serialize, FromRow)]
 /// Describes an offer from the view of the seller.
@@ -33,19 +27,14 @@ pub struct Offer {
 
 #[derive(Debug, TypedBuilder)]
 pub struct Store {
-    league: League,
     #[builder(default)]
     asset_index: AssetIndex,
     pool: Arc<Pool<Postgres>>,
 }
 
 impl Store {
-    pub fn new(league: League, asset_index: AssetIndex, pool: Arc<Pool<Postgres>>) -> Self {
-        Self::builder()
-            .league(league)
-            .asset_index(asset_index)
-            .pool(pool)
-            .build()
+    pub fn new(asset_index: AssetIndex, pool: Arc<Pool<Postgres>>) -> Self {
+        Self::builder().asset_index(asset_index).pool(pool).build()
     }
 
     #[tracing::instrument(skip(self))]
