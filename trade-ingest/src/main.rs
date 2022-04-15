@@ -1,25 +1,20 @@
 mod assets;
 mod config;
 mod consumer;
-mod league;
 mod metrics;
 mod note_parser;
 mod source;
 mod store;
 
 use config::Config;
-use league::League;
 use metrics::store::StoreMetrics;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
-use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
 };
-use tokio::sync::{
-    oneshot::{Receiver, Sender},
-};
+use tokio::sync::oneshot::{Receiver, Sender};
+use trade_common::league::League;
 
 use tracing::{error, info};
 use tracing_subscriber::{
@@ -96,8 +91,7 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
 }
 
 async fn setup_work(config: &Config, pool: Arc<Pool<Postgres>>, mut shutdown_rx: Receiver<()>) {
-    let (_api_metrics, store_metrics, store_metrics_hc) =
-        setup_metrics(config).expect("failed to setup metrics");
+    let (store_metrics, store_metrics_hc) = setup_metrics(config).expect("failed to setup metrics");
 
     let mut asset_index = AssetIndex::new();
     asset_index.init().await.unwrap();
@@ -120,7 +114,7 @@ async fn setup_work(config: &Config, pool: Arc<Pool<Postgres>>, mut shutdown_rx:
 async fn setup_league(
     config: &Config,
     pool: Arc<Pool<Postgres>>,
-    metrics: impl StoreMetrics + Clone + Send + Sync + std::fmt::Debug + 'static,
+    metrics: impl StoreMetrics + Send + Sync + 'static,
     asset_index: Arc<AssetIndex>,
     league: League,
 ) {

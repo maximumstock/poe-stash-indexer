@@ -75,9 +75,9 @@ impl AssetIndex {
         Ok(asset_response)
     }
 
-    pub fn has_item(&self, input: &str) -> bool {
-        self.short_long_idx.contains_key(input) || self.long_short_idx.contains_key(input)
-    }
+    // pub fn has_item(&self, input: &str) -> bool {
+    //     self.short_long_idx.contains_key(input) || self.long_short_idx.contains_key(input)
+    // }
 
     pub fn get_name(&self, id: &str) -> Option<&String> {
         self.short_long_idx.get(id)

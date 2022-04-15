@@ -8,8 +8,9 @@ use lapin::{
 };
 use serde::Deserialize;
 use tracing::{error, info};
+use trade_common::league::League;
 
-use crate::{config::Config, league::League};
+use crate::config::Config;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct StashRecord {

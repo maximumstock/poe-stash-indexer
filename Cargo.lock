@@ -3147,8 +3147,16 @@ dependencies = [
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",
+ "trade-common",
  "typed-builder",
  "warp",
+]
+
+[[package]]
+name = "trade-common"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -3172,6 +3180,7 @@ dependencies = [
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",
+ "trade-common",
  "typed-builder",
 ]
 

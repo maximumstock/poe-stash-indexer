@@ -27,3 +27,4 @@ sqlx = { version = "0.5.13", features = [
     "postgres",
     "chrono",
 ] }
+trade-common = { path = "../trade-common" }

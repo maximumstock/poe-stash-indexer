@@ -2,12 +2,11 @@ use std::{convert::Infallible, net::SocketAddr, str::FromStr, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 
-
 use tracing::log::error;
+use trade_common::league::League;
 use warp::{reply::Json, Filter, Rejection, Reply};
 
 use crate::{
-    league::League,
     metrics::api::ApiMetrics,
     store::{Offer, Store},
 };
@@ -20,7 +19,7 @@ struct RequestBody {
 
 pub async fn init<T: Into<SocketAddr> + 'static>(
     options: T,
-    metrics: impl ApiMetrics + Clone + Send + Sync + std::fmt::Debug + 'static,
+    metrics: impl ApiMetrics + Send + Sync + 'static,
     store: Arc<Store>,
 ) {
     let routes = healtcheck_endpoint()
@@ -38,7 +37,7 @@ struct SearchQuery {
 }
 
 fn search_endpoint(
-    metrics: impl ApiMetrics + Clone + Send + std::fmt::Debug + 'static,
+    metrics: impl ApiMetrics + Send + 'static,
     store: Arc<Store>,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     warp::post()
@@ -56,7 +55,7 @@ async fn handle_search(
     payload: RequestBody,
     query: SearchQuery,
     store: Arc<Store>,
-    mut metrics: impl ApiMetrics + std::fmt::Debug,
+    mut metrics: impl ApiMetrics,
 ) -> Result<Json, Rejection> {
     metrics.inc_search_requests();
 
@@ -120,7 +119,7 @@ fn with_store(
 }
 
 fn with_metrics(
-    metrics: impl ApiMetrics + Clone + Send + std::fmt::Debug + 'static,
-) -> impl Filter<Extract = (impl ApiMetrics + std::fmt::Debug,), Error = Infallible> + Clone {
+    metrics: impl ApiMetrics + Send + 'static,
+) -> impl Filter<Extract = (impl ApiMetrics,), Error = Infallible> + Clone {
     warp::any().map(move || metrics.clone())
 }

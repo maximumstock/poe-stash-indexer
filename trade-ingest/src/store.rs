@@ -1,17 +1,10 @@
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt::Debug,
-    hash::{Hash, Hasher},
-};
-
-
-
+use std::{fmt::Debug, hash::Hash};
 
 use crate::{note_parser::PriceParser, source::StashRecord};
 
 type StashId = String;
 type ItemId = String;
-type OfferIndex = u64;
 
 #[derive(Debug, Serialize, Deserialize)]
 /// Describes an offer from the view of the seller.
