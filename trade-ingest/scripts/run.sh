@@ -4,10 +4,10 @@ set -ex
 
 case $ENV in
   "production")
-    exec trade
+    exec trade-ingest
     ;;
   *)
-    exec cargo watch -w trade/src -x "run --bin trade"
+    exec cargo watch -w trade-ingest/src -x "run --bin trade-ingest --release"
     ;;
 esac
 

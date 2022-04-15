@@ -2,12 +2,14 @@ use std::{convert::Infallible, net::SocketAddr, str::FromStr, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 
+use sqlx::{PgPool, Postgres};
+use tracing::log::error;
 use warp::{reply::Json, Filter, Rejection, Reply};
 
 use crate::{
     league::League,
     metrics::api::ApiMetrics,
-    store::{Offer, StoreMap},
+    store::{Offer, Store},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -18,11 +20,11 @@ struct RequestBody {
 
 pub async fn init<T: Into<SocketAddr> + 'static>(
     options: T,
-    store_map: Arc<StoreMap>,
     metrics: impl ApiMetrics + Clone + Send + Sync + std::fmt::Debug + 'static,
+    store: Arc<Store>,
 ) {
     let routes = healtcheck_endpoint()
-        .or(search_endpoint(store_map, metrics))
+        .or(search_endpoint(metrics, store))
         .with(warp::trace::request())
         .recover(error_handler);
 
@@ -31,29 +33,29 @@ pub async fn init<T: Into<SocketAddr> + 'static>(
 
 #[derive(Deserialize, Debug)]
 struct SearchQuery {
-    limit: Option<usize>,
+    limit: Option<u32>,
     league: Option<String>,
 }
 
 fn search_endpoint(
-    store_map: Arc<StoreMap>,
     metrics: impl ApiMetrics + Clone + Send + std::fmt::Debug + 'static,
+    store: Arc<Store>,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     warp::post()
         .and(warp::path("trade"))
         .and(warp::path::end())
         .and(warp::body::json())
         .and(warp::query::<SearchQuery>())
-        .and(with_store(store_map))
+        .and(with_store(store))
         .and(with_metrics(metrics))
         .and_then(handle_search)
 }
 
-#[tracing::instrument(skip(store_map, metrics))]
+#[tracing::instrument(skip(store, metrics))]
 async fn handle_search(
     payload: RequestBody,
     query: SearchQuery,
-    store_map: Arc<StoreMap>,
+    store: Arc<Store>,
     mut metrics: impl ApiMetrics + std::fmt::Debug,
 ) -> Result<Json, Rejection> {
     metrics.inc_search_requests();
@@ -65,20 +67,15 @@ async fn handle_search(
         }
     }?;
 
-    match store_map.get(&league) {
-        Some(store) => {
-            let store = store.read().await;
-
-            if let Some(offers) = store.query(&payload.sell, &payload.buy, query.limit) {
-                return Ok(warp::reply::json(&QueryResponse {
-                    count: offers.len(),
-                    offers,
-                }));
-            }
-
+    match store
+        .fetch_offers(league, payload.sell, payload.buy, query.limit)
+        .await
+    {
+        Ok(offers) => Ok(warp::reply::json(&QueryResponse::new(offers))),
+        Err(e) => {
+            error!("{:?}", e);
             Err(QueryEmptyResultError {}.into())
         }
-        None => Err(QueryEmptyResultError {}.into()),
     }
 }
 
@@ -96,9 +93,18 @@ struct QueryEmptyResultError {}
 impl warp::reject::Reject for QueryEmptyResultError {}
 
 #[derive(Debug, Serialize)]
-struct QueryResponse<'a> {
+struct QueryResponse {
     count: usize,
-    offers: Vec<&'a Offer>,
+    offers: Vec<Offer>,
+}
+
+impl QueryResponse {
+    fn new(offers: Vec<Offer>) -> Self {
+        Self {
+            count: offers.len(),
+            offers,
+        }
+    }
 }
 
 fn healtcheck_endpoint() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -108,9 +114,9 @@ fn healtcheck_endpoint() -> impl Filter<Extract = impl Reply, Error = Rejection>
 }
 
 fn with_store(
-    store_map: Arc<StoreMap>,
-) -> impl Filter<Extract = (Arc<StoreMap>,), Error = Infallible> + Clone {
-    warp::any().map(move || Arc::clone(&store_map))
+    store: Arc<Store>,
+) -> impl Filter<Extract = (Arc<Store>,), Error = Infallible> + Clone {
+    warp::any().map(move || Arc::clone(&store))
 }
 
 fn with_metrics(

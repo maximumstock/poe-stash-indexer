@@ -1,16 +1,15 @@
 mod api;
 mod assets;
 mod config;
-mod consumer;
 mod league;
 mod metrics;
 mod note_parser;
-mod source;
 mod store;
 
 use config::Config;
 use league::League;
 use metrics::store::StoreMetrics;
+use sqlx::PgPool;
 use std::{
     collections::HashMap,
     sync::{
@@ -28,9 +27,7 @@ use tracing_subscriber::{
     prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry,
 };
 
-use store::StoreMap;
-
-use crate::metrics::setup_metrics;
+use crate::{assets::AssetIndex, metrics::setup_metrics, store::Store};
 
 /// TODO
 /// [x] - a module to maintain `StashRecord`s as offers /w indices to answer:
@@ -63,50 +60,29 @@ use crate::metrics::setup_metrics;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = config::Config::from_env()?;
 
+    std::env::set_var("DATABASE_URL", &config.db_url);
+
+    let pool = Arc::new(PgPool::connect(&config.db_url).await?);
+    // let service = Service::new(Arc::clone(&pool));
+    let index = AssetIndex::new();
+    let store = Store::new(League::Challenge, index, pool);
+
     setup_tracing().expect("Tracing setup failed");
-    let store_map = setup_store_map().await?;
 
     let signal_flag = setup_signal_handlers()?;
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     setup_shutdown_handler(signal_flag, shutdown_tx);
 
-    setup_work(&config, shutdown_rx, Arc::clone(&store_map)).await;
+    setup_work(&config, shutdown_rx, store).await;
 
     info!("Saving store...");
-    teardown(store_map).await?;
+    teardown().await?;
     info!("Shutting down");
 
     Ok(())
 }
 
-async fn setup_store_map(
-) -> Result<Arc<HashMap<League, Arc<RwLock<store::Store>>>>, Box<dyn std::error::Error>> {
-    let store = Arc::new(RwLock::new(store::load_store(League::Challenge).await?));
-    let store_hc = Arc::new(RwLock::new(
-        store::load_store(League::ChallengeHardcore).await?,
-    ));
-
-    let mut store_map = HashMap::new();
-    store_map.insert(League::Challenge, store);
-    store_map.insert(League::ChallengeHardcore, store_hc);
-    let store_map = Arc::new(store_map);
-
-    Ok(store_map)
-}
-
-async fn teardown(store_map: Arc<StoreMap>) -> Result<(), Box<dyn std::error::Error>> {
-    store_map
-        .get(&League::Challenge)
-        .unwrap()
-        .read()
-        .await
-        .persist()?;
-    store_map
-        .get(&League::ChallengeHardcore)
-        .unwrap()
-        .read()
-        .await
-        .persist()?;
+async fn teardown() -> Result<(), Box<dyn std::error::Error>> {
     opentelemetry::global::shutdown_tracer_provider();
     Ok(())
 }
@@ -145,13 +121,10 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
     });
 }
 
-async fn setup_work(config: &Config, mut shutdown_rx: Receiver<()>, store_map: Arc<StoreMap>) {
-    let (api_metrics, store_metrics, store_metrics_hc) =
-        setup_metrics(config).expect("failed to setup metrics");
+async fn setup_work(config: &Config, mut shutdown_rx: Receiver<()>, store: Store) {
+    let (api_metrics, _, _) = setup_metrics(config).expect("failed to setup metrics");
 
     tokio::select! {
-        _ = setup_league(config, Arc::clone(&store_map), store_metrics, League::Challenge) => {},
-        _ = setup_league(config, Arc::clone(&store_map), store_metrics_hc, League::ChallengeHardcore) => {},
         _ = async {
             loop {
                 if let Ok(_) | Err(tokio::sync::oneshot::error::TryRecvError::Closed) = shutdown_rx.try_recv() {
@@ -160,20 +133,8 @@ async fn setup_work(config: &Config, mut shutdown_rx: Receiver<()>, store_map: A
                 tokio::time::sleep(std::time::Duration::from_secs(2)).await;
             }
         } => {},
-        _ = api::init(([0, 0, 0, 0], 4001), Arc::clone(&store_map), api_metrics) => {},
+        _ = api::init(([0, 0, 0, 0], 4001), api_metrics, Arc::new(store)) => {},
     };
-}
-
-async fn setup_league(
-    config: &Config,
-    store_map: Arc<StoreMap>,
-    metrics: impl StoreMetrics + Clone + Send + Sync + std::fmt::Debug + 'static,
-    league: League,
-) {
-    match consumer::setup_rabbitmq_consumer(config, store_map, metrics, league).await {
-        Err(e) => error!("Error setting up RabbitMQ consumer: {:?}", e),
-        Ok(_) => info!("Consumer decomissioned"),
-    }
 }
 
 fn setup_signal_handlers() -> Result<Arc<AtomicBool>, Box<dyn std::error::Error>> {
