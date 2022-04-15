@@ -2,20 +2,24 @@ use std::sync::Arc;
 
 use futures::StreamExt;
 use lapin::options::BasicAckOptions;
+use sea_query::PostgresQueryBuilder;
+use sqlx::{Pool, Postgres};
 use tracing::info;
 
 use crate::{
+    assets::AssetIndex,
     config::Config,
     league::League,
     metrics::store::StoreMetrics,
     source::{retry_setup_consumer, StashRecord},
-    store::StoreMap,
+    store::Offer,
 };
 
 pub async fn setup_rabbitmq_consumer(
     config: &Config,
-    store_map: Arc<StoreMap>,
+    pool: Arc<Pool<Postgres>>,
     mut metrics: impl StoreMetrics + std::fmt::Debug,
+    asset_index: Arc<AssetIndex>,
     league: League,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Initial connection should be retried until it works
@@ -29,7 +33,7 @@ pub async fn setup_rabbitmq_consumer(
                     consumer = retry_setup_consumer(config, &league).await;
                 }
                 Ok(delivery) => {
-                    consume(&delivery, &mut metrics, &store_map, &league).await?;
+                    consume(&delivery, &pool, &mut metrics, &asset_index, &league).await?;
                     delivery.ack(BasicAckOptions::default()).await?;
                 }
             }
@@ -37,11 +41,12 @@ pub async fn setup_rabbitmq_consumer(
     }
 }
 
-#[tracing::instrument(skip(store_map, metrics, delivery))]
+#[tracing::instrument(skip(metrics, pool, asset_index, delivery))]
 async fn consume(
     delivery: &lapin::message::Delivery,
+    pool: &Arc<Pool<Postgres>>,
     metrics: &mut (impl StoreMetrics + std::fmt::Debug),
-    store_map: &StoreMap,
+    asset_index: &Arc<AssetIndex>,
     league: &League,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let stash_records = tracing::info_span!("deserialization")
@@ -49,31 +54,109 @@ async fn consume(
 
     metrics.inc_stashes_ingested(stash_records.len() as u64);
 
-    if !stash_records.is_empty() {
-        ingest(store_map, metrics, league, stash_records).await?;
+    let ingestable_stashes = stash_records
+        .into_iter()
+        .filter(|s| s.league.eq(league.to_str()))
+        .collect::<Vec<_>>();
+
+    if !ingestable_stashes.is_empty() {
+        ingest(metrics, pool, league, &asset_index, ingestable_stashes).await?;
     }
 
     Ok(())
 }
 
-#[tracing::instrument(skip(store_map, metrics, stash_records))]
+#[tracing::instrument(skip(metrics, pool, asset_index, stash_records))]
 async fn ingest(
-    store_map: &StoreMap,
     metrics: &mut (impl StoreMetrics + std::fmt::Debug),
+    pool: &Arc<Pool<Postgres>>,
     league: &League,
+    asset_index: &Arc<AssetIndex>,
     stash_records: Vec<StashRecord>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if let Some(store) = store_map.get(league) {
-        let mut store = store.write().await;
-        let n_ingested_offers = stash_records
-            .into_iter()
-            .filter(|s| s.league.eq(league.to_str()))
-            .map(|s| store.ingest_stash(s))
-            .sum::<usize>();
+    let n_invalidated_stashes = stash_records.len();
+    let stash_ids = stash_records
+        .iter()
+        .map(|s| format!("'{}'", s.stash_id))
+        .collect::<Vec<_>>()
+        .join(",");
 
-        metrics.inc_offers_ingested(n_ingested_offers as u64);
-        info!("{} store has {:#?} offers", league.to_str(), store.size());
-        metrics.set_store_size(store.size() as i64);
+    let query = scooby::postgres::delete_from(league.to_ident())
+        .where_(format!("stash_id in ({})", stash_ids))
+        .to_string();
+
+    sqlx::query(&query)
+        .bind(league.to_ident())
+        .bind(&stash_ids)
+        .execute(&**pool)
+        .await?;
+
+    let offers = stash_records
+        .into_iter()
+        .flat_map(|stash| Vec::<Offer>::from(stash))
+        .map(|o| map_offer(o, &asset_index))
+        .collect::<Vec<VectorizedOffer>>();
+
+    if offers.is_empty() {
+        return Ok(());
     }
+
+    let n_ingested_offers = offers.len();
+    let query = scooby::postgres::insert_into(league.to_ident())
+        .columns((
+            "item_id",
+            "stash_id",
+            "seller_account",
+            "stock",
+            "sell",
+            "buy",
+            "conversion_rate",
+            "created_at",
+        ))
+        .values(offers)
+        .to_string();
+    if let Err(e) = sqlx::query(&query).execute(&**pool).await {
+        tracing::error!("{}, {}", &query, e);
+    }
+
+    info!(
+        "Invalidate {} stashes, Insert {} offers",
+        n_invalidated_stashes, n_ingested_offers
+    );
+
+    metrics.inc_offers_ingested(n_ingested_offers as u64);
+    // info!("{} store has {:#?} offers", league.to_str(), store.size());
+    metrics.set_store_size(0);
     Ok(())
+}
+
+type VectorizedOffer = (
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+);
+
+fn map_offer(offer: Offer, asset_index: &Arc<AssetIndex>) -> VectorizedOffer {
+    let sell = asset_index.get_name(&offer.sell).unwrap_or(&offer.sell);
+    let buy = asset_index.get_name(&offer.buy).unwrap_or(&offer.buy);
+
+    (
+        format!("'{}'", offer.item_id),
+        format!("'{}'", offer.stash_id),
+        format!("'{}'", offer.seller_account),
+        offer.stock.to_string(),
+        format!("'{}'", escape(sell.clone())),
+        format!("'{}'", escape(buy.clone())),
+        format!("{}", offer.conversion_rate),
+        format!("to_timestamp({})", offer.created_at),
+    )
+}
+
+fn escape(s: String) -> String {
+    s.replace("'", "''")
 }

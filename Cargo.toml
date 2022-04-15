@@ -1,6 +1,6 @@
 [workspace]
 
-members = ["indexer", "stash-api", "stash-differ", "trade"]
+members = ["indexer", "stash-api", "stash-differ", "trade-ingest", "trade-api"]
 
 [profile.dev]
 # Disabling debug info speeds up builds a bunch,

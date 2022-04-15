@@ -1,4 +1,3 @@
-mod api;
 mod assets;
 mod config;
 mod consumer;
@@ -11,6 +10,7 @@ mod store;
 use config::Config;
 use league::League;
 use metrics::store::StoreMetrics;
+use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use std::{
     collections::HashMap,
     sync::{
@@ -28,85 +28,37 @@ use tracing_subscriber::{
     prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry,
 };
 
-use store::StoreMap;
-
-use crate::metrics::setup_metrics;
-
-/// TODO
-/// [x] - a module to maintain `StashRecord`s as offers /w indices to answer:
-///   - What offers are there for selling X for Y?
-///   - What offers can we delete if a new stash is updated
-///   - turning `StashRecord` into a set of Offers
-/// [x] - filter currency items from `StashRecord`
-///   - need asset mapping from pathofexile.com/trade
-/// [x] - note parsing to extract price
-///       - look at https://github.com/maximumstock/poe-stash-indexer/blob/f7424546ffd40e1a74ecf6ca44584a74c2028957/src/parser.rs
-///       - look at example stream to build note corpus -> sort -> unit test cases
-/// [x] - created_at timestamp on offers
-/// [x] - validate offer results
-/// [x] - RabbitMQ client that produces a stream of `StashRecord`s
-/// [x] - will need state snapshots + restoration down the road
-/// [x] - fix file paths
-/// [ ] - extend for multiple leagues
-/// [ ] - a web API that mimics pathofexile.com/trade API
-/// [x] - extend API response to contain number of offers as metadata
-/// [x] - add proper logging
-/// [x] - pagination
-///       - [x] limit query parameter
-/// [x] - compression (its fine to do this server-side in this case)
-/// [-] - move from logs to metrics + traces
-///       - only log errors and debug info
-///       - log and count unmappable item names
-///       - metrics for all sorts of index sizes, number of offers, processed offers/service activity
+use crate::{assets::AssetIndex, metrics::setup_metrics};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = config::Config::from_env()?;
 
+    let pool = Arc::new(
+        PgPoolOptions::new()
+            .max_connections(5)
+            .connect(&config.db_url)
+            .await?,
+    );
+
+    sqlx::migrate!("./migrations").run(&*pool).await?;
+
     setup_tracing().expect("Tracing setup failed");
-    let store_map = setup_store_map().await?;
 
     let signal_flag = setup_signal_handlers()?;
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     setup_shutdown_handler(signal_flag, shutdown_tx);
 
-    setup_work(&config, shutdown_rx, Arc::clone(&store_map)).await;
+    setup_work(&config, pool, shutdown_rx).await;
 
     info!("Saving store...");
-    teardown(store_map).await?;
+    teardown().await?;
     info!("Shutting down");
 
     Ok(())
 }
 
-async fn setup_store_map(
-) -> Result<Arc<HashMap<League, Arc<RwLock<store::Store>>>>, Box<dyn std::error::Error>> {
-    let store = Arc::new(RwLock::new(store::load_store(League::Challenge).await?));
-    let store_hc = Arc::new(RwLock::new(
-        store::load_store(League::ChallengeHardcore).await?,
-    ));
-
-    let mut store_map = HashMap::new();
-    store_map.insert(League::Challenge, store);
-    store_map.insert(League::ChallengeHardcore, store_hc);
-    let store_map = Arc::new(store_map);
-
-    Ok(store_map)
-}
-
-async fn teardown(store_map: Arc<StoreMap>) -> Result<(), Box<dyn std::error::Error>> {
-    store_map
-        .get(&League::Challenge)
-        .unwrap()
-        .read()
-        .await
-        .persist()?;
-    store_map
-        .get(&League::ChallengeHardcore)
-        .unwrap()
-        .read()
-        .await
-        .persist()?;
+async fn teardown() -> Result<(), Box<dyn std::error::Error>> {
     opentelemetry::global::shutdown_tracer_provider();
     Ok(())
 }
@@ -145,13 +97,17 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
     });
 }
 
-async fn setup_work(config: &Config, mut shutdown_rx: Receiver<()>, store_map: Arc<StoreMap>) {
+async fn setup_work(config: &Config, pool: Arc<Pool<Postgres>>, mut shutdown_rx: Receiver<()>) {
     let (api_metrics, store_metrics, store_metrics_hc) =
         setup_metrics(config).expect("failed to setup metrics");
 
+    let mut asset_index = AssetIndex::new();
+    asset_index.init().await.unwrap();
+    let asset_index = Arc::new(asset_index);
+
     tokio::select! {
-        _ = setup_league(config, Arc::clone(&store_map), store_metrics, League::Challenge) => {},
-        _ = setup_league(config, Arc::clone(&store_map), store_metrics_hc, League::ChallengeHardcore) => {},
+        _ = setup_league(config, Arc::clone(&pool), store_metrics, Arc::clone(&asset_index), League::Challenge) => {},
+        _ = setup_league(config, pool,  store_metrics_hc,Arc::clone(&asset_index),League::ChallengeHardcore) => {},
         _ = async {
             loop {
                 if let Ok(_) | Err(tokio::sync::oneshot::error::TryRecvError::Closed) = shutdown_rx.try_recv() {
@@ -160,17 +116,17 @@ async fn setup_work(config: &Config, mut shutdown_rx: Receiver<()>, store_map: A
                 tokio::time::sleep(std::time::Duration::from_secs(2)).await;
             }
         } => {},
-        _ = api::init(([0, 0, 0, 0], 4001), Arc::clone(&store_map), api_metrics) => {},
     };
 }
 
 async fn setup_league(
     config: &Config,
-    store_map: Arc<StoreMap>,
+    pool: Arc<Pool<Postgres>>,
     metrics: impl StoreMetrics + Clone + Send + Sync + std::fmt::Debug + 'static,
+    asset_index: Arc<AssetIndex>,
     league: League,
 ) {
-    match consumer::setup_rabbitmq_consumer(config, store_map, metrics, league).await {
+    match consumer::setup_rabbitmq_consumer(config, pool, metrics, asset_index, league).await {
         Err(e) => error!("Error setting up RabbitMQ consumer: {:?}", e),
         Ok(_) => info!("Consumer decomissioned"),
     }

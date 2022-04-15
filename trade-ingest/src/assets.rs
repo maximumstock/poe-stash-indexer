@@ -21,7 +21,7 @@ pub struct AssetIndex {
     short_long_idx: HashMap<String, String>,
 }
 
-const ASSET_INDEX_FILE_PATH: &str = "trade/asset_index.json";
+const ASSET_INDEX_FILE_PATH: &str = "trade-ingest/asset_index.json";
 
 impl AssetIndex {
     pub fn new() -> Self {

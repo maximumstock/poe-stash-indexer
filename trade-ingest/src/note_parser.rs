@@ -40,6 +40,10 @@ impl PriceParser {
             let numerator = parts.next().and_then(|x| x.parse::<f32>().ok());
             let denominator = parts.next().and_then(|x| x.parse::<f32>().ok());
 
+            if numerator == Some(0.0) || denominator == Some(0.0) {
+                return Err(());
+            }
+
             if let (Some(left), Some(right)) = (numerator, denominator) {
                 return Ok(left / right);
             }
@@ -121,7 +125,7 @@ mod tests {
         ),
     ];
 
-    const INVALID: [&str; 8] = [
+    const SYNTACTICALLY_INVALID: [&str; 8] = [
         "",
         "~price  chaos",
         "~b/o  chaos",
@@ -132,6 +136,8 @@ mod tests {
         "~b/o 13/123/1 chaos",
     ];
 
+    const SEMANTICALLY_INVALID: [&str; 2] = ["~price 1/0 chaos", "~price 0/1 chaos"];
+
     #[test]
     fn test_price_parsing() {
         let parser = PriceParser::new();
@@ -141,8 +147,13 @@ mod tests {
             assert!(matches!(parser.parse_price(input), Ok(_expected)));
         }
 
-        for input in INVALID {
+        for input in SYNTACTICALLY_INVALID {
             assert!(!parser.is_price(input));
+            assert!(matches!(parser.parse_price(input), Err(())));
+        }
+
+        for input in SEMANTICALLY_INVALID {
+            assert!(parser.is_price(input));
             assert!(matches!(parser.parse_price(input), Err(())));
         }
     }

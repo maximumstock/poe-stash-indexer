@@ -24,10 +24,6 @@ services:
     env_file:
       - configuration/environments/.env.production
 
-  db:
-    env_file:
-      - configuration/environments/.env.production
-
   rabbitmq:
     env_file:
       - configuration/environments/.env.production
