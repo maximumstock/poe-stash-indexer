@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use futures::StreamExt;
 use lapin::options::BasicAckOptions;
-use sea_query::PostgresQueryBuilder;
+
 use sqlx::{Pool, Postgres};
 use tracing::info;
 

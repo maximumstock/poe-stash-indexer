@@ -2,7 +2,7 @@ use std::{convert::Infallible, net::SocketAddr, str::FromStr, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 
-use sqlx::{PgPool, Postgres};
+
 use tracing::log::error;
 use warp::{reply::Json, Filter, Rejection, Reply};
 

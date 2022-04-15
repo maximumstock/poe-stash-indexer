@@ -1,18 +1,16 @@
-use chrono::{Local, Utc};
-use serde::{Deserialize, Serialize};
-use sqlx::{postgres::PgArguments, Arguments, FromRow, IntoArguments, Pool, Postgres, Row};
+
+use serde::{Serialize};
+use sqlx::{FromRow, Pool, Postgres, Row};
 use std::{
-    collections::{hash_map::DefaultHasher, HashMap, HashSet},
     fmt::Debug,
-    hash::{Hash, Hasher},
-    io::Write,
+    hash::{Hasher},
     sync::Arc,
 };
-use tokio::sync::RwLock;
-use tracing::{error, info};
+
+
 use typed_builder::TypedBuilder;
 
-use crate::{assets::AssetIndex, league::League, note_parser::PriceParser};
+use crate::{assets::AssetIndex, league::League};
 
 type StashId = String;
 type ItemId = String;

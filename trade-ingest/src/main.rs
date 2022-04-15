@@ -12,7 +12,6 @@ use league::League;
 use metrics::store::StoreMetrics;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use std::{
-    collections::HashMap,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -20,7 +19,6 @@ use std::{
 };
 use tokio::sync::{
     oneshot::{Receiver, Sender},
-    RwLock,
 };
 
 use tracing::{error, info};
@@ -98,7 +96,7 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
 }
 
 async fn setup_work(config: &Config, pool: Arc<Pool<Postgres>>, mut shutdown_rx: Receiver<()>) {
-    let (api_metrics, store_metrics, store_metrics_hc) =
+    let (_api_metrics, store_metrics, store_metrics_hc) =
         setup_metrics(config).expect("failed to setup metrics");
 
     let mut asset_index = AssetIndex::new();
