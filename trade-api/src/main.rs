@@ -8,10 +8,9 @@ mod store;
 
 use config::Config;
 use league::League;
-use metrics::store::StoreMetrics;
+
 use sqlx::PgPool;
 use std::{
-    collections::HashMap,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -19,10 +18,9 @@ use std::{
 };
 use tokio::sync::{
     oneshot::{Receiver, Sender},
-    RwLock,
 };
 
-use tracing::{error, info};
+use tracing::{info};
 use tracing_subscriber::{
     prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry,
 };
