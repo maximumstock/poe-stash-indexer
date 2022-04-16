@@ -27,32 +27,17 @@ use crate::{assets::AssetIndex, metrics::setup_metrics};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = config::Config::from_env()?;
 
-    let pool = Arc::new(
-        PgPoolOptions::new()
-            .max_connections(5)
-            .connect(&config.db_url)
-            .await?,
-    );
-
-    sqlx::migrate!("./migrations").run(&*pool).await?;
-
     setup_tracing().expect("Tracing setup failed");
-
     let signal_flag = setup_signal_handlers()?;
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     setup_shutdown_handler(signal_flag, shutdown_tx);
 
-    setup_work(&config, pool, shutdown_rx).await;
+    setup_work(&config, shutdown_rx).await?;
 
-    info!("Saving store...");
-    teardown().await?;
+    info!("Tearing down...");
+    opentelemetry::global::shutdown_tracer_provider();
     info!("Shutting down");
 
-    Ok(())
-}
-
-async fn teardown() -> Result<(), Box<dyn std::error::Error>> {
-    opentelemetry::global::shutdown_tracer_provider();
     Ok(())
 }
 
@@ -90,7 +75,19 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
     });
 }
 
-async fn setup_work(config: &Config, pool: Arc<Pool<Postgres>>, mut shutdown_rx: Receiver<()>) {
+async fn setup_work(
+    config: &Config,
+    mut shutdown_rx: Receiver<()>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let pool = Arc::new(
+        PgPoolOptions::new()
+            .max_connections(5)
+            .connect(&config.db_url)
+            .await?,
+    );
+
+    sqlx::migrate!("./migrations").run(&*pool).await?;
+
     let (store_metrics, store_metrics_hc) = setup_metrics(config).expect("failed to setup metrics");
 
     let mut asset_index = AssetIndex::new();
@@ -99,7 +96,7 @@ async fn setup_work(config: &Config, pool: Arc<Pool<Postgres>>, mut shutdown_rx:
 
     tokio::select! {
         _ = setup_league(config, Arc::clone(&pool), store_metrics, Arc::clone(&asset_index), League::Challenge) => {},
-        _ = setup_league(config, pool,  store_metrics_hc,Arc::clone(&asset_index),League::ChallengeHardcore) => {},
+        _ = setup_league(config, Arc::clone(&pool), store_metrics_hc, Arc::clone(&asset_index), League::ChallengeHardcore) => {},
         _ = async {
             loop {
                 if let Ok(_) | Err(tokio::sync::oneshot::error::TryRecvError::Closed) = shutdown_rx.try_recv() {
@@ -109,6 +106,8 @@ async fn setup_work(config: &Config, pool: Arc<Pool<Postgres>>, mut shutdown_rx:
             }
         } => {},
     };
+
+    Ok(())
 }
 
 async fn setup_league(
