@@ -1,5 +1,4 @@
 mod api;
-mod assets;
 mod config;
 mod metrics;
 mod store;
@@ -12,13 +11,14 @@ use std::sync::{
     Arc,
 };
 use tokio::sync::oneshot::{Receiver, Sender};
+use trade_common::assets::AssetIndex;
 
 use tracing::info;
 use tracing_subscriber::{
     prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry,
 };
 
-use crate::{assets::AssetIndex, metrics::setup_metrics, store::Store};
+use crate::{metrics::setup_metrics, store::Store};
 
 /// TODO
 /// [ ] - a web API that mimics pathofexile.com/trade API

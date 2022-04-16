@@ -1,11 +1,9 @@
 use serde::Serialize;
 use sqlx::{FromRow, Pool, Postgres};
 use std::{fmt::Debug, sync::Arc};
-use trade_common::league::League;
+use trade_common::{assets::AssetIndex, league::League};
 
 use typed_builder::TypedBuilder;
-
-use crate::assets::AssetIndex;
 
 type StashId = String;
 type ItemId = String;

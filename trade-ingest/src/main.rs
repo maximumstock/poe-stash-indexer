@@ -1,4 +1,3 @@
-mod assets;
 mod config;
 mod consumer;
 mod metrics;
@@ -14,14 +13,14 @@ use std::sync::{
     Arc,
 };
 use tokio::sync::oneshot::{Receiver, Sender};
-use trade_common::league::League;
+use trade_common::{assets::AssetIndex, league::League};
 
 use tracing::{error, info};
 use tracing_subscriber::{
     prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry,
 };
 
-use crate::{assets::AssetIndex, metrics::setup_metrics};
+use crate::metrics::setup_metrics;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
