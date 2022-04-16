@@ -1,27 +1,13 @@
-use std::{collections::HashMap, fs::File, io::BufWriter};
+use std::collections::HashMap;
 
-use futures::future::TryFutureExt;
 use reqwest::header::HeaderValue;
 use serde::{Deserialize, Serialize};
-use typed_builder::TypedBuilder;
 
-fn sort_alphabetically<T: Serialize, S: serde::Serializer>(
-    value: &T,
-    serializer: S,
-) -> Result<S::Ok, S::Error> {
-    let value = serde_json::to_value(value).map_err(serde::ser::Error::custom)?;
-    value.serialize(serializer)
-}
-
-#[derive(Debug, Clone, TypedBuilder, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct AssetIndex {
-    #[serde(serialize_with = "sort_alphabetically")]
     long_short_idx: HashMap<String, String>,
-    #[serde(serialize_with = "sort_alphabetically")]
     short_long_idx: HashMap<String, String>,
 }
-
-const ASSET_INDEX_FILE_PATH: &str = "trade-ingest/asset_index.json";
 
 impl AssetIndex {
     pub fn new() -> Self {
@@ -32,7 +18,7 @@ impl AssetIndex {
     }
 
     pub async fn init(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let asset_response = self.reload().or_else(|_| self.fetch()).await?;
+        let asset_response = self.fetch().await?;
 
         for category in asset_response.result {
             for item in category.entries {
@@ -42,21 +28,7 @@ impl AssetIndex {
             }
         }
 
-        self.persist().unwrap();
         Ok(())
-    }
-
-    fn persist(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let file = File::create(ASSET_INDEX_FILE_PATH)?;
-        let writer = BufWriter::new(file);
-        serde_json::to_writer_pretty(writer, &self)?;
-        Ok(())
-    }
-
-    async fn reload(&self) -> Result<AssetResponse, Box<dyn std::error::Error>> {
-        let reader = tokio::fs::read_to_string(ASSET_INDEX_FILE_PATH).await?;
-        let asset_response = serde_json::from_str(&reader)?;
-        Ok(asset_response)
     }
 
     async fn fetch(&self) -> Result<AssetResponse, Box<dyn std::error::Error>> {
@@ -75,17 +47,9 @@ impl AssetIndex {
         Ok(asset_response)
     }
 
-    // pub fn has_item(&self, input: &str) -> bool {
-    //     self.short_long_idx.contains_key(input) || self.long_short_idx.contains_key(input)
-    // }
-
     pub fn get_name(&self, id: &str) -> Option<&String> {
         self.short_long_idx.get(id)
     }
-
-    // pub fn get_id(&self, name: &str) -> Option<&String> {
-    //     self.long_short_idx.get(name)
-    // }
 }
 
 #[derive(Debug, Deserialize)]

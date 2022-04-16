@@ -5,10 +5,9 @@ use lapin::options::BasicAckOptions;
 
 use sqlx::{Pool, Postgres};
 use tracing::info;
-use trade_common::league::League;
+use trade_common::{assets::AssetIndex, league::League};
 
 use crate::{
-    assets::AssetIndex,
     config::Config,
     metrics::store::StoreMetrics,
     source::{retry_setup_consumer, StashRecord},
