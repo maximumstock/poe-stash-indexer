@@ -4,4 +4,3 @@ stash-differ/*.csv
 timescaledb
 secrets
 trade-api/benchmark
-trade-ingest/benchmark
