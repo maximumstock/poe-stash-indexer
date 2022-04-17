@@ -26,7 +26,7 @@ jobs:
             # Need this to make sure we have the latest image
             docker pull maximumstock2/trade-api:latest
             docker pull maximumstock2/trade-ingest:latest
-            docker pull maximumstock2/trade-indexer:latest
+            docker pull maximumstock2/indexer:latest
 
             cd deployment && git pull
             make config
