@@ -10,36 +10,36 @@ let
     overlays = [ (import rustOverlay) ];
   };
 in
-  pkgs.mkShell rec {
-    buildInputs = with pkgs; [
-      llvmPackages.bintools
-      pkg-config
-      gettext
-      age
-      apacheHttpd
-      linuxPackages.perf
-      vegeta
+pkgs.mkShell rec {
+  buildInputs = with pkgs; [
+    llvmPackages.bintools
+    pkg-config
+    gettext
+    age
+    apacheHttpd
+    linuxPackages.perf
+    vegeta
 
-      openssl
-      postgresql
-      # (rust-bin.nightly.latest.default.override {
-      #   extensions = ["rust-src" "clippy"];
-      # })
-      (rust-bin.stable."1.60.0".default.override {
-        extensions = ["rust-src" "clippy"];
-      })
-      sqlx-cli
+    openssl
+    postgresql
+    # (rust-bin.nightly.latest.default.override {
+    #   extensions = ["rust-src" "clippy"];
+    # })
+    (rust-bin.stable."1.60.0".default.override {
+      extensions = [ "rust-src" "clippy" ];
+    })
+    sqlx-cli
 
-      rust-analyzer
-      cargo-edit
-      cargo-feature
-      cargo-udeps
-      cargo-bloat
-      docker-compose
-    ];
+    rust-analyzer
+    cargo-edit
+    cargo-feature
+    cargo-udeps
+    cargo-bloat
+    docker-compose
+  ];
 
-    RUST_BACKTRACE = 1;
+  RUST_BACKTRACE = 1;
 
-    # optional lld setup for faster compilation
-    RUSTFLAGS = "-Clink-arg=-fuse-ld=lld";
-  }
+  # optional lld setup for faster compilation
+  RUSTFLAGS = "-Clink-arg=-fuse-ld=lld";
+}
