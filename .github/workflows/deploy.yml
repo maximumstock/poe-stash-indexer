@@ -23,6 +23,11 @@ jobs:
             set -ex
             echo "Environment: $ENV"
 
+            # Need this to make sure we have the latest image
+            docker pull maximumstock/trade-api:latest
+            docker pull maximumstock/trade-ingest:latest
+            docker pull maximumstock/trade-indexer:latest
+
             cd deployment && git pull
             make config
             docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build --force-rm reverse-proxy prometheus rabbitmq
