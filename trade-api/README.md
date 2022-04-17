@@ -1,24 +1,23 @@
-# trade
+# trade-api
 
-**_Work in Progress_**
-
-Consumes a stream of [Stash Records](../indexer/src/stash_record.rs) from `indexer` and builds a store of all currency item trading offers.
-It also exposes a REST-like API lets you query these offers.
+This service exposes a REST-like API that lets you query these currency and bulk item offers.
 
 ## Endpoints
 
 ### `POST /trade`
 
-Let's you search for offers.
-
-#### Example
+Let's you search for currency & bulk item offers.
 
 The following example queries for ten offers where players sell their `Chaos Orb`'s for `Exalted Orb`'s.
-Currently, this API does _not_ make any guarantees about the recency of the returned offers.
-This issue will be fixed soon.
+This endpoint always returns the N most recent offers that match your query.
+
+Query Parameters:
+
+- `limit` - default: 50, maximum: 200
+- `league` - default: "Archnemesis", enum: ["Archnemesis", "Hardcore Archnemesis"]
 
 ```json
-POST http://trade.localhost:8888/trade?limit=10
+POST http://trade.maximumstock.net/trade?limit=10
 content-type: application/json
 
 {
@@ -141,5 +140,4 @@ Content-Encoding: gzip
     }
   ]
 }
-
 ```
