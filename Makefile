@@ -12,7 +12,7 @@ config:
 encrypt-prod:
 	age --encrypt -i secrets/age.key -o configuration/environments/.env.production.enc configuration/environments/.env.production
 decrypt-prod:
-	age --decrypt -i secrets/age.key -o configuration/environments/.env.production.enc configuration/environments/.env.production
+	age --decrypt -i secrets/age.key -o configuration/environments/.env.production configuration/environments/.env.production.enc
 
 init:
 	$(dc) up -d --remove-orphans
