@@ -7,7 +7,7 @@ case $ENV in
     exec trade-api
     ;;
   *)
-    exec cargo watch -w trade-api/src -x "run --bin trade-api --release"
+    exec cargo watch -w trade-api/src -x "run --bin trade-api"
     ;;
 esac
 
