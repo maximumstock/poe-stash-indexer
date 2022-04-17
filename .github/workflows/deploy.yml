@@ -24,9 +24,9 @@ jobs:
             echo "Environment: $ENV"
 
             # Need this to make sure we have the latest image
-            docker pull maximumstock/trade-api:latest
-            docker pull maximumstock/trade-ingest:latest
-            docker pull maximumstock/trade-indexer:latest
+            docker pull maximumstock2/trade-api:latest
+            docker pull maximumstock2/trade-ingest:latest
+            docker pull maximumstock2/trade-indexer:latest
 
             cd deployment && git pull
             make config
