@@ -25,7 +25,7 @@ jobs:
 
             cd deployment && git pull
             make config
-            docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build --force-rm reverse-proxy prometheus rabbitmq db
+            docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build --force-rm reverse-proxy prometheus rabbitmq
             docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build grafana
             make up-prod
             docker-compose -f docker-compose.yaml -f docker-compose.production.yaml logs --tail=1000 trade-api trade-store indexer
