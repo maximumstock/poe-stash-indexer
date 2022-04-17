@@ -7,11 +7,9 @@ set -o allexport;
 
 case $ENV in
   "production")
-    if [[ ! -f "environments/.env.production" ]]; then
-      echo "$AGE_KEY" > key.txt
-      age --decrypt -i key.txt -o environments/.env.production environments/.env.production.enc
-      rm key.txt
-    fi
+    echo "$AGE_KEY" > key.txt
+    age --decrypt -i key.txt -o environments/.env.production environments/.env.production.enc
+    rm key.txt
     source environments/.env.production;
     ;;
   *)
