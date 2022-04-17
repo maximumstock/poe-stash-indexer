@@ -25,6 +25,7 @@ jobs:
           context: .
           file: ./indexer/Dockerfile
           push: true
+          target: production
           tags: maximumstock2/indexer:latest
 
   build-trade-ingest:
@@ -46,6 +47,7 @@ jobs:
           context: .
           file: ./trade-ingest/Dockerfile
           push: true
+          target: production
           tags: maximumstock2/trade-ingest:latest
 
   build-trade-api:
@@ -67,4 +69,5 @@ jobs:
           context: .
           file: ./trade-api/Dockerfile
           push: true
+          target: production
           tags: maximumstock2/trade-api:latest
