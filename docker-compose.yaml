@@ -9,11 +9,6 @@ services:
     ports:
       - 0.0.0.0:8888:80
 
-  db:
-    image: timescale/timescaledb:2.4.1-pg13
-    env_file:
-      - configuration/environments/.env.development
-
   indexer:
     build:
       context: .
@@ -23,24 +18,41 @@ services:
       - configuration/environments/.env.development
     depends_on:
       - rabbitmq
-      - db
     restart: "always"
     volumes:
       - ".:/app:cached"
 
-  trade:
+  trade-ingest:
     build:
       context: .
-      dockerfile: trade/Dockerfile
+      dockerfile: trade-ingest/Dockerfile
       target: development
     depends_on:
       - rabbitmq
+      - trade-store
     restart: "always"
     env_file:
       - configuration/environments/.env.development
     volumes:
       - ".:/app:cached"
-      - "trade-store:/app/trade/trade-store"
+
+  trade-api:
+    build:
+      context: .
+      dockerfile: trade-api/Dockerfile
+      target: development
+    depends_on:
+      - trade-store
+    restart: "always"
+    env_file:
+      - configuration/environments/.env.development
+    volumes:
+      - ".:/app:cached"
+
+  trade-store:
+    image: timescale/timescaledb:2.4.1-pg13
+    env_file:
+      - configuration/environments/.env.development
 
   rabbitmq:
     image: rabbitmq:3.9-management-alpine

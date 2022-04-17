@@ -1,4 +1,7 @@
 target
-indexer/target
+./**/target
 stash-differ/*.csv
 timescaledb
+secrets
+trade-api/benchmark
+trade-ingest/benchmark

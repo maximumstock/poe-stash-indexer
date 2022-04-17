@@ -10,8 +10,16 @@ services:
       # disable Postgres sink
       DATABASE_URL:
 
-  trade:
-    image: maximumstock2/trade:latest
+  trade-api:
+    image: maximumstock2/trade-api:latest
+    restart: "always"
+    env_file:
+      - configuration/environments/.env.production
+    environment:
+      ENV: "production"
+
+  trade-ingest:
+    image: maximumstock2/trade-ingest:latest
     restart: "always"
     env_file:
       - configuration/environments/.env.production
@@ -21,10 +29,6 @@ services:
   reverse-proxy:
     ports:
       - 0.0.0.0:80:80
-    env_file:
-      - configuration/environments/.env.production
-
-  db:
     env_file:
       - configuration/environments/.env.production
 

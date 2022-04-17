@@ -22,16 +22,13 @@ jobs:
 
             set -ex
             echo "Environment: $ENV"
-            docker pull maximumstock2/indexer:latest
-            docker pull maximumstock2/trade:latest
 
             cd deployment && git pull
             make config
             docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build --force-rm reverse-proxy prometheus rabbitmq db
             docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build grafana
-            docker-compose -f docker-compose.yaml -f docker-compose.production.yaml stop --timeout 60 trade # give it time to save
             make up-prod
-            docker-compose -f docker-compose.yaml -f docker-compose.production.yaml logs --tail=100 trade indexer
+            docker-compose -f docker-compose.yaml -f docker-compose.production.yaml logs --tail=1000 trade-api trade-store indexer
           EOF
       - name: Grafana Annotation
         env:

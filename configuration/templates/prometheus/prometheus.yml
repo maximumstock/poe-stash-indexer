@@ -10,10 +10,14 @@ scrape_configs:
     scrape_interval: 2s
     static_configs:
       - targets: ["$INDEXER_HOST:$METRICS_PORT"]
-  - job_name: trade
+  - job_name: trade-api
     scrape_interval: 2s
     static_configs:
-      - targets: ["$TRADE_HOST:$METRICS_PORT"]
+      - targets: ["$TRADE_API_HOST:$METRICS_PORT"]
+  - job_name: trade-ingest
+    scrape_interval: 2s
+    static_configs:
+      - targets: ["$TRADE_INGEST_HOST:$METRICS_PORT"]
   - job_name: 'node'
     static_configs:
       - targets: ['node-exporter:9100']
