@@ -1,4 +1,5 @@
 use serde::Serialize;
+use sqlx::query_builder::QueryBuilder;
 use sqlx::{FromRow, Pool, Postgres};
 use std::{fmt::Debug, sync::Arc};
 use trade_common::{assets::AssetIndex, league::League};
@@ -19,6 +20,7 @@ pub struct Offer {
     buy: String,
     seller_account: String,
     stock: i32,
+    /// The quantity of [buy] units the seller gets for 1 unit of [sell]
     conversion_rate: f32,
     created_at: chrono::NaiveDateTime,
 }
@@ -36,28 +38,62 @@ impl Store {
     }
 
     #[tracing::instrument(skip(self))]
-    pub async fn fetch_offers(
+    pub async fn query(
         &self,
         league: League,
-        sell: String,
-        buy: String,
-        limit: Option<u32>,
+        mut query: StoreQuery,
     ) -> Result<Vec<Offer>, Box<dyn std::error::Error>> {
-        let buy = self.asset_index.get_name(&buy).unwrap_or(&buy);
-        let sell = self.asset_index.get_name(&sell).unwrap_or(&sell);
-        let limit = limit.unwrap_or(50).min(200);
+        if let Some(ref buy) = query.buy {
+            query.buy = self.asset_index.get_name(buy).cloned().or(query.buy);
+        }
 
-        let query = format!(
-            "SELECT * FROM {} WHERE buy = $1 and sell = $2 ORDER BY created_at DESC LIMIT $3",
+        if let Some(ref sell) = query.sell {
+            query.sell = self.asset_index.get_name(sell).cloned().or(query.sell);
+        }
+
+        let mut builder = QueryBuilder::<Postgres>::new(format!(
+            "SELECT * FROM {} WHERE 1=1 ",
             league.to_ident()
-        );
-        let offers = sqlx::query_as(&query)
-            .bind(buy)
-            .bind(sell)
-            .bind(limit)
+        ));
+
+        if let Some(sell) = query.sell {
+            builder.push("AND sell = ").push_bind(sell);
+        }
+
+        if let Some(buy) = query.buy {
+            builder.push("AND buy = ").push_bind(buy);
+        }
+
+        if let Some(seller_account) = query.seller_account {
+            builder
+                .push("AND seller_account = ")
+                .push_bind(seller_account);
+        }
+
+        if let Some(stash_id) = query.stash_id {
+            builder.push("AND stash_id = ").push_bind(stash_id);
+        }
+
+        builder
+            .push("ORDER BY created_at DESC ")
+            .push("LIMIT ")
+            .push_bind(query.limit.map(|l| l.min(200)).or(Some(50)));
+
+        let offers = builder
+            .build()
+            .try_map(|row| Offer::from_row(&row))
             .fetch_all(&*self.pool)
             .await?;
 
         Ok(offers)
     }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct StoreQuery {
+    pub(crate) sell: Option<String>,
+    pub(crate) buy: Option<String>,
+    pub(crate) seller_account: Option<String>,
+    pub(crate) stash_id: Option<String>,
+    pub(crate) limit: Option<u32>,
 }
