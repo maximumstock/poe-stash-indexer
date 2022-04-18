@@ -20,9 +20,6 @@ use tracing_subscriber::{
 
 use crate::{metrics::setup_metrics, store::Store};
 
-/// TODO
-/// [ ] - a web API that mimics pathofexile.com/trade API
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = config::Config::from_env()?;
