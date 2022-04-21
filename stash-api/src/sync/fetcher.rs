@@ -133,7 +133,7 @@ fn ratelimiter() -> ratelimit::Limiter {
     ratelimit::Builder::new()
         .capacity(1)
         .quantum(1)
-        .interval(std::time::Duration::from_millis(500))
+        .interval(std::time::Duration::from_millis(600))
         .build()
 }
 
