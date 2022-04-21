@@ -2,14 +2,12 @@
 
 # poe-stash-indexer
 
-## Overview
-
 This project focuses on building tooling to gather and analyse data from Path of
 Exile's [Public Stash Tab API](https://www.pathofexile.com/developer/docs/reference#publicstashes) ([Wiki Documentation](https://pathofexile.gamepedia.com/Public_stash_tab_API)) and consists of the following crates:
 
 - [stash-api](stash-api/README.md) - a library for consuming the [Public Stash Tab API](https://www.pathofexile.com/developer/docs/reference#publicstashes) river
 - [indexer](indexer/README.md) - a service that saves API river snapshots to different sinks like PostgreSQL & RabbitMQ
-- [trade-ingest](trade-ingest/README.md) - a service that feeds in data from `indexer` into a PostgreSQL (TimescaleDB) instance
+- [trade-ingest](trade-ingest/README.md) - a service that feeds data from `indexer` & RabbitMQ into a PostgreSQL (TimescaleDB) instance
 - [trade-api](trade-api/README.md) - a service exposes a REST-like API to query player's trading offers from said PostgreSQL instance
 - [stash-differ](stash-differ/README.md) - a work-in-progress cli tool to generate diff events between stash snapshots to create a player trading behaviour dataset
 

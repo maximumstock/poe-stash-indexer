@@ -4,7 +4,7 @@ This service exposes a REST-like API that lets you query the currency and bulk i
 challenge softcore (`Archnemesis`) and hardcore (`Hardcore Archnemesis`) leagues.
 
 You can reach this service running in a test environment under [http://trade.maximumstock.net](http://trade.maximumstock.net/healthcheck).
-It is hosted around Texas, so expect some base latency accessing it outside of the US.
+It is hosted around Texas, so expect some base latency accessing it from outside of the US.
 
 This public stream of offers is delayed by *five* minutes compared to the official [Path of Exile Trading site](https://pathofexile.com/trade).
 So this API is probably not interesting for real-time market observations, but rather suited for scraping projects that prefer a higher-level API
