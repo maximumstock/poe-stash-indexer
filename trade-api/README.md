@@ -1,6 +1,14 @@
 # trade-api
 
-This service exposes a REST-like API that lets you query these currency and bulk item offers.
+This service exposes a REST-like API that lets you query the currency and bulk item offers of
+challenge softcore (`Archnemesis`) and hardcore (`Hardcore Archnemesis`) leagues.
+
+You can reach this service running in a test environment under [http://trade.maximumstock.net](http://trade.maximumstock.net/healthcheck).
+It is hosted around Texas, so expect some base latency accessing it outside of the US.
+
+This public stream of offers is delayed by *five* minutes compared to the official [Path of Exile Trading site](https://pathofexile.com/trade).
+So this API is probably not interesting for real-time market observations, but rather suited for scraping projects that prefer a higher-level API
+than consuming the [Public Stash Tab API stream](https://www.pathofexile.com/developer/docs/reference#publicstashes).
 
 ## Endpoints
 
@@ -8,22 +16,28 @@ This service exposes a REST-like API that lets you query these currency and bulk
 
 Let's you search for currency & bulk item offers.
 
-The following example queries for ten offers where players sell their `Chaos Orb`'s for `Exalted Orb`'s.
+The following example queries for ten offers where players sell their `Chaos Orb`s for `Exalted Orb`s.
 This endpoint always returns the N most recent offers that match your query.
 
-Query Parameters:
+Body Parameters:
 
-- `limit` - default: 50, maximum: 200
-- `league` - default: "Archnemesis", enum: ["Archnemesis", "Hardcore Archnemesis"]
+- `sell` - the item that someone is selling, optional
+- `buy` - the item that the seller wants to receive for `sell`, optional
+- `seller_account` - the account name whose offers you want to search for, optional
+- `stash_id` - the stash id that you want to look at, optional
+- `league` - optional, default: "Archnemesis", enum: ["Archnemesis", "Hardcore Archnemesis"]
+- `limit` - optional, default: 50, maximum: 200
+
+See the below example response for further explanations on these parameters.
 
 ```json
-POST http://trade.maximumstock.net/trade?limit=10
+POST http://trade.maximumstock.net/trade
 content-type: application/json
 
 {
     "sell": "Chaos Orb",
     "buy": "Exalted Orb",
-    "limit": 3
+    "limit": 5
 }
 ```
 
@@ -101,3 +115,7 @@ Content-Encoding: gzip
   ]
 }
 ```
+
+### `GET /healtcheck`
+
+Returns a `200` response if it's up.
