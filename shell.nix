@@ -41,6 +41,4 @@ pkgs.mkShell rec {
 
   RUST_BACKTRACE = 1;
   MOLD_PATH = "${pkgs.mold.out}/bin/mold";
-  LDFLAGS="-fuse-ld=${MOLD_PATH}";
-  RUSTFLAGS = "-Clink-arg=-fuse-ld=${MOLD_PATH} -Clinker=clang";
 }
