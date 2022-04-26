@@ -16,6 +16,14 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
+        
+      - name: Install mold
+        run: |
+          wget https://github.com/rui314/mold/releases/download/v1.2.0/mold-1.2.0-x86_64-linux.tar.gz
+          tar -xf mold-1.2.0-x86_64-linux.tar.gz
+          mv mold-1.2.0-x86_64-linux/bin/mold /bin/mold
+          export MOLD_PATH="/bin/mold"
+          echo "$MOLD_PATH"
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
