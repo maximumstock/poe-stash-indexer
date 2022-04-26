@@ -24,6 +24,7 @@ jobs:
           tar -xf mold-1.2.0-x86_64-linux.tar.gz
           mv mold-1.2.0-x86_64-linux/bin/mold $GITHUB_WORKSPACE/bin/mold
           echo "MOLD_PATH=$GITHUB_WORKSPACE/bin/mold" >> $GITHUB_ENV
+          echo "$MOLD_PATH"
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -37,7 +38,10 @@ jobs:
         uses: Swatinem/rust-cache@ce325b60658c1b38465c06cc965b79baf32c1e72
 
       - name: Compile
-        run: cargo build
+        run: |
+          echo "$GITHUB_ENV"
+          echo "$MOLD_PATH"
+          cargo build
 
       - name: Test
         run: cargo test -- --nocapture --quiet
