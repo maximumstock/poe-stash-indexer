@@ -17,8 +17,12 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
         
+      - name: Setup mold
+        uses: warchant/setup-mold@v1
+        
       - name: Install mold
         run: |
+          rm -rf .cargo
           mkdir -p $GITHUB_WORKSPACE/bin
           wget https://github.com/rui314/mold/releases/download/v1.2.0/mold-1.2.0-x86_64-linux.tar.gz
           tar -xf mold-1.2.0-x86_64-linux.tar.gz
