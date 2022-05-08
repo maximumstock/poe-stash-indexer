@@ -42,4 +42,5 @@ pkgs.mkShell rec {
   RUST_BACKTRACE = 1;
   MOLD_PATH = "${pkgs.mold.out}/bin/mold";
   RUSTFLAGS = "-Clink-arg=-fuse-ld=${MOLD_PATH} -Clinker=clang";
+  LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath buildInputs;
 }
