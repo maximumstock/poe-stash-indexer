@@ -13,8 +13,8 @@ impl FromStr for League {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Archnemesis" => Ok(Self::Challenge),
-            "Hardcore Archnemesis" => Ok(Self::ChallengeHardcore),
+            "Sentinel" => Ok(Self::Challenge),
+            "Hardcore Sentinel" => Ok(Self::ChallengeHardcore),
             _ => Err(format!("Unknown league {}", s)),
         }
     }
@@ -23,8 +23,8 @@ impl FromStr for League {
 impl<'a> League {
     pub fn to_str(&self) -> &'a str {
         match self {
-            League::Challenge => "Archnemesis",
-            League::ChallengeHardcore => "Hardcore Archnemesis",
+            League::Challenge => "Sentinel",
+            League::ChallengeHardcore => "Hardcore Sentinel",
         }
     }
 
@@ -33,11 +33,5 @@ impl<'a> League {
             League::Challenge => "challenge",
             League::ChallengeHardcore => "challenge_hc",
         }
-    }
-}
-
-impl Default for League {
-    fn default() -> Self {
-        Self::Challenge
     }
 }
