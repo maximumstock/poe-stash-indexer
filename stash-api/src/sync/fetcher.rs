@@ -42,6 +42,7 @@ enum FetcherError {
         status: u16,
     },
     Transport,
+    ServiceUnavailable,
     RateLimited(Duration),
     ParseError,
 }
@@ -94,10 +95,18 @@ pub(crate) fn start_fetcher(
                     }
                 }
                 Err(
-                    FetcherError::Transport
-                    | FetcherError::HttpError { .. }
-                    | FetcherError::ParseError,
+                    e @ (FetcherError::HttpError { .. }
+                    | FetcherError::ParseError
+                    | FetcherError::Transport),
                 ) => {
+                    log::error!("fetcher: Encountered error {}", e);
+                    reschedule_task(&scheduler_tx, task);
+                }
+                Err(FetcherError::ServiceUnavailable) => {
+                    log::error!("fetcher: Service Unavailable - Retrying in 60s");
+                    scheduler_tx
+                        .send(SchedulerMessage::RateLimited(Duration::from_secs(60)))
+                        .unwrap();
                     reschedule_task(&scheduler_tx, task);
                 }
                 Err(FetcherError::RateLimited(timer)) => {
@@ -181,6 +190,7 @@ fn fetch_chunk(task: &FetchTask) -> Result<Response, FetcherError> {
                     let wait_time = parse_rate_limit_timer(response.header("x-rate-limit-ip"));
                     FetcherError::RateLimited(wait_time)
                 }
+                503 => FetcherError::ServiceUnavailable,
                 _ => FetcherError::HttpError { status },
             }
         }
