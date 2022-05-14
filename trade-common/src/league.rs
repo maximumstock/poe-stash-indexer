@@ -1,11 +1,17 @@
-use std::str::FromStr;
+use std::{fmt::Debug, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum League {
     Challenge,
     ChallengeHardcore,
+}
+
+impl Debug for League {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_str())
+    }
 }
 
 impl FromStr for League {
