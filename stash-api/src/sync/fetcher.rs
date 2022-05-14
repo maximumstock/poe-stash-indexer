@@ -118,7 +118,6 @@ fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
     match task.retry() {
         Some(t) => {
             log::info!("fetcher: Rescheduling {}", t.change_id,);
-
             scheduler_tx.send(SchedulerMessage::Fetch(t)).unwrap();
         }
         None => {
