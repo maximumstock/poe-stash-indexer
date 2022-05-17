@@ -16,7 +16,7 @@ stash-api = { path = "../stash-api" }
 log = "0.4.17"
 pretty_env_logger = "0.4.0"
 config = "0.13.1"
-signal-hook = "0.3.13"
+signal-hook = "0.3.14"
 amiquip = "0.4.2"
 prometheus_exporter = "0.8.4"
 
