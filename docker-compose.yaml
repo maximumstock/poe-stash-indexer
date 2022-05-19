@@ -71,6 +71,7 @@ services:
       - configuration/environments/.env.development
     volumes:
       - "./configuration/instantiated/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+      - "prometheus-store:/prometheus"
 
   grafana:
     image: grafana/grafana:8.1.2
@@ -83,17 +84,17 @@ services:
       - "./configuration/instantiated/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards"
       - "./configuration/instantiated/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources"
       - "./configuration/instantiated/grafana/custom.ini:/etc/grafana/grafana.ini"
-  
+
   jaeger:
     image: jaegertracing/all-in-one:latest
     restart: "always"
     env_file:
       - configuration/environments/.env.development
-  
+
   node-exporter:
     image: prom/node-exporter
 
 
 volumes:
-  trade-store:
   grafana-store:
+  prometheus-store:
