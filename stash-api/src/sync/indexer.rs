@@ -1,9 +1,9 @@
 use std::time::Duration;
 use std::{sync::mpsc::Receiver, sync::mpsc::Sender};
 
-use crate::sync::{poe_ninja_client::PoeNinjaClient, scheduler::SchedulerMessage};
+use crate::sync::scheduler::SchedulerMessage;
 use crate::{
-    common::{ChangeId, StashTabResponse},
+    common::{poe_ninja_client::PoeNinjaClient, ChangeId, StashTabResponse},
     sync::fetcher::FetchTask,
 };
 
@@ -15,6 +15,7 @@ pub struct Indexer {
     pub(crate) is_stopping: bool,
 }
 
+#[cfg(feature = "sync")]
 impl Indexer {
     pub fn new() -> Self {
         Self::default()

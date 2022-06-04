@@ -29,10 +29,13 @@ use crate::{metrics::setup_metrics, sinks::sink::*};
 use crate::{resumption::StateWrapper, stash_record::map_to_stash_records};
 
 use dotenv::dotenv;
-use stash_api::{common::ChangeId, sync::Indexer, sync::IndexerMessage};
+use stash_api::{common::ChangeId, Indexer, IndexerMessage};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "info");
+    }
     pretty_env_logger::init_timed();
 
     let config = Configuration::from_env()?;

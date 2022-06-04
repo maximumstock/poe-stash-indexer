@@ -12,7 +12,7 @@ impl Configuration {
     pub fn from_env() -> Result<Configuration, std::env::VarError> {
         Ok(Configuration {
             database_url: read_string_from_env("DATABASE_URL"),
-            metrics_port: ensure_int_from_env("METRICS_PORT"),
+            metrics_port: read_int_from_env("METRICS_PORT").unwrap_or(4000),
             rabbitmq: RabbitMqConfig::from_env()?,
             user_config: UserConfiguration::read()
                 .expect("Your configuration file is malformed. Please check."),
@@ -20,6 +20,7 @@ impl Configuration {
     }
 }
 
+#[allow(dead_code)]
 fn ensure_string_from_env(name: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| panic!("Missing environment variable {}", name))
 }
@@ -28,8 +29,13 @@ fn read_string_from_env(name: &str) -> Option<String> {
     std::env::var(name).ok()
 }
 
+#[allow(dead_code)]
 fn ensure_int_from_env(name: &str) -> u32 {
     ensure_string_from_env(name).parse().unwrap()
+}
+
+fn read_int_from_env(name: &str) -> Option<u32> {
+    std::env::var(name).map(|s| s.parse::<u32>().unwrap()).ok()
 }
 
 #[derive(Debug)]
@@ -40,26 +46,27 @@ pub struct RabbitMqConfig {
 
 impl RabbitMqConfig {
     pub fn from_env() -> Result<Option<RabbitMqConfig>, std::env::VarError> {
-        let enabled =
-            std::env::var("RABBITMQ_SINK_ENABLED").expect("Missing RABBITMQ_SINK_ENABLED");
+        if let Ok(enabled) = std::env::var("RABBITMQ_SINK_ENABLED") {
+            Ok(enabled)
+                .map(|s| s.to_lowercase().eq(&"true") || s.eq(&"1"))
+                .map(|enabled| {
+                    if enabled {
+                        let connection_url =
+                            std::env::var("RABBITMQ_URL").expect("Missing RABBITMQ_URL");
+                        let producer_routing_key = std::env::var("RABBITMQ_PRODUCER_ROUTING_KEY")
+                            .expect("Missing RABBITMQ_PRODUCER_ROUTING_KEY");
 
-        Ok(enabled)
-            .map(|s| s.to_lowercase().eq(&"true") || s.eq(&"1"))
-            .map(|enabled| {
-                if enabled {
-                    let connection_url =
-                        std::env::var("RABBITMQ_URL").expect("Missing RABBITMQ_URL");
-                    let producer_routing_key = std::env::var("RABBITMQ_PRODUCER_ROUTING_KEY")
-                        .expect("Missing RABBITMQ_PRODUCER_ROUTING_KEY");
-
-                    Some(RabbitMqConfig {
-                        connection_url,
-                        producer_routing_key,
-                    })
-                } else {
-                    None
-                }
-            })
+                        Some(RabbitMqConfig {
+                            connection_url,
+                            producer_routing_key,
+                        })
+                    } else {
+                        None
+                    }
+                })
+        } else {
+            Ok(None)
+        }
     }
 }
 
