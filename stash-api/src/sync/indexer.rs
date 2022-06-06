@@ -15,7 +15,6 @@ pub struct Indexer {
     pub(crate) is_stopping: bool,
 }
 
-#[cfg(feature = "sync")]
 impl Indexer {
     pub fn new() -> Self {
         Self::default()
@@ -90,16 +89,7 @@ type IndexerResult = Receiver<IndexerMessage>;
 mod test {
     use std::{sync::mpsc::RecvTimeoutError, time::Duration};
 
-    use crate::sync::fetcher::parse_change_id_from_bytes;
-
     use super::{Indexer, IndexerMessage};
-
-    #[test]
-    fn test_parse_change_id_from_bytes() {
-        let input = "{\"next_change_id\": \"abc-def-ghi-jkl-mno\", \"stashes\": []}".as_bytes();
-        let result = parse_change_id_from_bytes(input);
-        assert_eq!(result, Ok("abc-def-ghi-jkl-mno".into()));
-    }
 
     #[test]
     fn test_indexer() {
