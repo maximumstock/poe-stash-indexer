@@ -226,6 +226,8 @@ pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error>
 mod tests {
     use std::time::Duration;
 
+    use crate::sync::fetcher::parse_change_id_from_bytes;
+
     use super::parse_rate_limit_timer;
 
     #[test]
@@ -243,5 +245,12 @@ mod tests {
             parse_rate_limit_timer(Some("_:_:120")),
             Duration::from_secs(120)
         );
+    }
+
+    #[test]
+    fn test_parse_change_id_from_bytes() {
+        let input = "{\"next_change_id\": \"abc-def-ghi-jkl-mno\", \"stashes\": []}".as_bytes();
+        let result = parse_change_id_from_bytes(input);
+        assert_eq!(result, Ok("abc-def-ghi-jkl-mno".into()));
     }
 }
