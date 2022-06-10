@@ -2838,6 +2838,8 @@ dependencies = [
 name = "stash-api"
 version = "0.1.0"
 dependencies = [
+ "bytes",
+ "futures",
  "governor",
  "log",
  "ratelimit",
