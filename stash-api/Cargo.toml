@@ -18,7 +18,9 @@ reqwest = { version = "0.11.10", features = [
 ], optional = true }
 tokio = { version = "1.19.0", features = [], optional = true }
 governor = { version = "0.4.2", optional = true }
+futures = { version = "0.3.21", optional = true }
+bytes = { version = "1.1.0", optional = true }
 
 [features]
 sync = ["dep:ureq", "dep:ratelimit"]
-async = ["dep:tokio", "dep:governor", "dep:reqwest"]
+async = ["dep:tokio", "dep:governor", "dep:reqwest", "dep:futures", "dep:bytes"]
