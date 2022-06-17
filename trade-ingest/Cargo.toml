@@ -20,7 +20,7 @@ opentelemetry = { version = "0.17.0", features = ["rt-tokio"] }
 opentelemetry-jaeger = { version = "0.16.0", features = ["rt-tokio"] }
 tracing-opentelemetry = "0.17.3"
 chrono = { version = "0.4.19", features = ["serde"] }
-sqlx = { version = "0.5.13", features = [
+sqlx = { version = "0.6.0", features = [
     "runtime-tokio-rustls",
     "postgres",
     "migrate",
