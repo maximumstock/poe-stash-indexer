@@ -114,6 +114,7 @@ async fn ingest(
         ))
         .values(offers)
         .to_string();
+
     if let Err(e) = sqlx::query(&query).execute(&**pool).await {
         tracing::error!("{}, {}", &query, e);
     }

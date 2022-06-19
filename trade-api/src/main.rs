@@ -22,8 +22,9 @@ use crate::{metrics::setup_metrics, store::Store};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = config::Config::from_env()?;
+    setup_tracing().expect("Tracing setup failed");
 
+    let config = config::Config::from_env()?;
     std::env::set_var("DATABASE_URL", &config.db_url);
 
     let pool = Arc::new(PgPool::connect(&config.db_url).await?);
@@ -31,17 +32,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     index.init().await?;
     let store = Store::new(index, pool);
 
-    setup_tracing().expect("Tracing setup failed");
-
     let signal_flag = setup_signal_handlers()?;
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     setup_shutdown_handler(signal_flag, shutdown_tx);
-
     setup_work(&config, shutdown_rx, store).await;
-
-    info!("Saving store...");
     teardown().await?;
-    info!("Shutting down");
 
     Ok(())
 }
@@ -85,18 +80,11 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
     });
 }
 
-async fn setup_work(config: &Config, mut shutdown_rx: Receiver<()>, store: Store) {
+async fn setup_work(config: &Config, shutdown_rx: Receiver<()>, store: Store) {
     let (api_metrics,) = setup_metrics(config).expect("failed to setup metrics");
 
     tokio::select! {
-        _ = async {
-            loop {
-                if let Ok(_) | Err(tokio::sync::oneshot::error::TryRecvError::Closed) = shutdown_rx.try_recv() {
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-            }
-        } => {},
+        _ = async { let _ = shutdown_rx.await; } => {},
         _ = api::init(([0, 0, 0, 0], 4001), api_metrics, Arc::new(store)) => {},
     };
 }
