@@ -77,7 +77,7 @@ impl Store {
         builder
             .push("ORDER BY created_at DESC ")
             .push("LIMIT ")
-            .push_bind(query.limit.map(|l| l.min(200)).or(Some(50)));
+            .push_bind(query.limit.map(|l| (l as i32).min(200)).or(Some(50)));
 
         let offers = builder
             .build()
