@@ -48,8 +48,10 @@ jobs:
         with:
           context: .
           file: ./trade-ingest/Dockerfile
-          push: true
           target: production
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: maximumstock2/trade-ingest:latest
 
   build-trade-api:
@@ -70,6 +72,8 @@ jobs:
         with:
           context: .
           file: ./trade-api/Dockerfile
-          push: true
           target: production
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: maximumstock2/trade-api:latest
