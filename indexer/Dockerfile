@@ -8,14 +8,10 @@ WORKDIR /app
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
-FROM planner as production-builder-deps
+FROM planner as production-builder
 WORKDIR /app
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json -p indexer
-
-FROM production-builder-deps as production-builder
-WORKDIR /app
-COPY . .
 RUN cargo build --release --target x86_64-unknown-linux-musl --bin indexer
 RUN strip /app/target/x86_64-unknown-linux-musl/release/indexer
 
