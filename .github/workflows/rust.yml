@@ -16,9 +16,6 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-        
-      - name: Avoid using mold
-        run: rm -rf .cargo
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -29,13 +26,10 @@ jobs:
           components: rustfmt, clippy
 
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@ce325b60658c1b38465c06cc965b79baf32c1e72
+        uses: Swatinem/rust-cache@v1
 
       - name: Compile
-        run: |
-          echo "$GITHUB_ENV"
-          echo "$MOLD_PATH"
-          cargo build
+        run: cargo build
 
       - name: Test
         run: cargo test -- --nocapture --quiet
