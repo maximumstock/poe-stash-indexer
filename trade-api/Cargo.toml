@@ -15,7 +15,7 @@ typed-builder = "0.10.0"
 warp = "0.3.2"
 prometheus_exporter = "0.8.4"
 tracing = "0.1.35"
-tracing-subscriber = { version = "0.3.11", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.14", features = ["env-filter"] }
 opentelemetry = { version = "0.17.0", features = ["rt-tokio"] }
 opentelemetry-jaeger = { version = "0.16.0", features = ["rt-tokio"] }
 tracing-opentelemetry = "0.17.3"
