@@ -1,3 +1,5 @@
+#![allow(clippy::extra_unused_lifetimes)]
+
 use std::time::SystemTime;
 
 use crate::schema::stash_records;
