@@ -1,17 +1,13 @@
 use std::{str::FromStr, sync::Arc};
 
+use axum::{http::StatusCode, response::IntoResponse, Extension, Json};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 use trade_common::league::League;
-use warp::{reply::Json, Filter, Rejection, Reply};
 
 use crate::{
-    api::{
-        middleware::{with_metrics, with_store},
-        QueryEmptyResultError, QueryResponse,
-    },
     metrics::api::ApiMetrics,
-    store::{Store, StoreQuery},
+    store::{Offer, Store, StoreQuery},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,26 +20,13 @@ pub struct RequestBody {
     limit: Option<u32>,
 }
 
-pub(crate) fn search(
-    metrics: impl ApiMetrics + Send + 'static,
-    store: Arc<Store>,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-    warp::post()
-        .and(warp::path("trade"))
-        .and(warp::path::end())
-        .and(warp::body::json())
-        .and(with_store(store))
-        .and(with_metrics(metrics))
-        .and_then(handle_search)
-}
-
-#[tracing::instrument(skip(store, metrics))]
-async fn handle_search(
-    payload: RequestBody,
-    store: Arc<Store>,
-    mut metrics: impl ApiMetrics,
-) -> Result<Json, Rejection> {
-    metrics.inc_search_requests();
+#[tracing::instrument(skip(store))]
+pub(crate) async fn handle_search(
+    Json(payload): Json<RequestBody>,
+    Extension(store): Extension<Arc<Store>>,
+    // Extension(mut metrics): Extension<impl ApiMetrics>,
+) -> Result<Json<QueryResponse>, QueryEmptyResultError> {
+    // metrics.inc_search_requests();
 
     let league = {
         match &payload.league {
@@ -61,10 +44,40 @@ async fn handle_search(
     };
 
     match store.query(league, query).await {
-        Ok(offers) => Ok(warp::reply::json(&QueryResponse::new(offers))),
+        Ok(offers) => Ok(Json(QueryResponse::new(offers))),
         Err(e) => {
             error!("{:?}", e);
-            Err(QueryEmptyResultError::new().into())
+            Err(QueryEmptyResultError::new())
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct QueryEmptyResultError {}
+
+impl QueryEmptyResultError {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl IntoResponse for QueryEmptyResultError {
+    fn into_response(self) -> axum::response::Response {
+        StatusCode::NOT_FOUND.into_response()
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct QueryResponse {
+    count: usize,
+    offers: Vec<Offer>,
+}
+
+impl QueryResponse {
+    fn new(offers: Vec<Offer>) -> Self {
+        Self {
+            count: offers.len(),
+            offers,
         }
     }
 }
