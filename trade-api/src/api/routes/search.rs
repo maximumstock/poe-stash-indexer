@@ -5,10 +5,7 @@ use serde::{Deserialize, Serialize};
 use tracing::error;
 use trade_common::league::League;
 
-use crate::{
-    metrics::api::ApiMetrics,
-    store::{Offer, Store, StoreQuery},
-};
+use crate::store::{Offer, Store, StoreQuery};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestBody {

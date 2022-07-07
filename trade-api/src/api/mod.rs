@@ -17,7 +17,7 @@ use self::routes::search::handle_search;
 
 pub async fn init<T: Into<SocketAddr> + 'static>(
     options: T,
-    metrics: impl ApiMetrics + Send + Sync,
+    _metrics: impl ApiMetrics + Send + Sync,
     store: Arc<Store>,
 ) {
     let app = Router::new()
