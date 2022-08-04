@@ -14,7 +14,7 @@ tokio = { version = "1.20.1", features = ["full"] }
 typed-builder = "0.10.0"
 prometheus_exporter = "0.8.4"
 tracing = "0.1.36"
-tracing-subscriber = { version = "0.3.14", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.15", features = ["env-filter"] }
 opentelemetry = { version = "0.17.0", features = ["rt-tokio"] }
 opentelemetry-jaeger = { version = "0.16.0", features = ["rt-tokio"] }
 tracing-opentelemetry = "0.17.4"
