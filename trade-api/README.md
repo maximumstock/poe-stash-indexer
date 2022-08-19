@@ -1,7 +1,7 @@
 # trade-api
 
 This service exposes a REST-like API that lets you query the currency and bulk item offers of
-challenge softcore (`Archnemesis`) and hardcore (`Hardcore Archnemesis`) leagues.
+the respectively active challenge softcore and hardcore leagues.
 
 You can reach this service running in a test environment under [http://trade.maximumstock.net](http://trade.maximumstock.net/healthcheck).
 It is hosted around Texas, so expect some base latency accessing it from outside of the US.

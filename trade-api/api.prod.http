@@ -30,3 +30,13 @@ content-type: application/json
     "sell": "Chaos Orb",
     "buy": "Exalted Orb"
 }
+
+###
+
+POST http://trade.maximumstock.net/trade?limit=3&league=Hardcore%20Kalandra
+content-type: application/json
+
+{
+    "sell": "Chaos Orb",
+    "buy": "Exalted Orb"
+}
