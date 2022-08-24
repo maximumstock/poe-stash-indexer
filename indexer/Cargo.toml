@@ -18,7 +18,7 @@ pretty_env_logger = "0.4.0"
 config = "0.13.2"
 signal-hook = "0.3.14"
 amiquip = "0.4.2"
-prometheus_exporter = "0.8.4"
+prometheus_exporter = "0.8.5"
 
 [[bin]]
 name = "indexer"
