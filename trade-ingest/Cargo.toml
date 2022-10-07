@@ -15,7 +15,7 @@ signal-hook = "0.3.14"
 tokio = { version = "1.21.2", features = ["full"] }
 prometheus_exporter = "0.8.5"
 tracing = "0.1.37"
-tracing-subscriber = { version = "0.3.15", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 opentelemetry = { version = "0.17.0", features = ["rt-tokio"] }
 opentelemetry-jaeger = { version = "0.16.0", features = ["rt-tokio"] }
 tracing-opentelemetry = "0.17.4"
