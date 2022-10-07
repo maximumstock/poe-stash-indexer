@@ -6,7 +6,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    BoxError, Extension, Router,
+    Extension, Router,
 };
 
 use tower::ServiceBuilder;
@@ -38,7 +38,7 @@ async fn health_handler() -> impl IntoResponse {
     (StatusCode::OK, "Ok")
 }
 
-#[tracing::instrument()]
-async fn error_handler(error: BoxError) -> impl IntoResponse {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
-}
+// #[tracing::instrument()]
+// async fn error_handler(error: BoxError) -> impl IntoResponse {
+//     (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+// }
