@@ -17,26 +17,28 @@ POST http://trade.maximumstock.net/trade
 content-type: application/json
 
 {
-    "sell": "Chaos Orb",
-    "buy": "Exalted Orb"
+    "sell": "Dangerous Large Cluster Jewel of the Drake"
 }
 
 ###
 
-POST http://trade.maximumstock.net/trade?limit=3
+POST http://trade.maximumstock.net/trade
 content-type: application/json
 
 {
     "sell": "Chaos Orb",
-    "buy": "Exalted Orb"
+    "buy": "Exalted Orb",
+    "limit": 3
 }
 
 ###
 
-POST http://trade.maximumstock.net/trade?limit=3&league=Hardcore%20Kalandra
+POST http://trade.maximumstock.net/trade
 content-type: application/json
 
 {
     "sell": "Chaos Orb",
-    "buy": "Exalted Orb"
+    "buy": "Exalted Orb",
+    "limit": 3,
+    "league": "Hardcore Kalandra"
 }

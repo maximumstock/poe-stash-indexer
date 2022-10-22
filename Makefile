@@ -53,4 +53,4 @@ shell-indexer:
 	$(dc) exec indexer bash
 
 shell-db:
-	$(dc) exec db bash
+	$(dc) exec trade-store bash
