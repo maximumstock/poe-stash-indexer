@@ -8,9 +8,9 @@ edition = "2018"
 [dependencies]
 regex = "1.7.0"
 serde = { version = "1.0.145", features = ["derive"] }
-serde_json = "1.0.86"
+serde_json = "1.0.89"
 signal-hook = "0.3.14"
-tokio = { version = "1.21.2", features = ["full"] }
+tokio = { version = "1.22.0", features = ["full"] }
 typed-builder = "0.11.0"
 prometheus_exporter = "0.8.5"
 tracing = "0.1.37"
@@ -25,6 +25,6 @@ sqlx = { version = "0.6.2", features = [
     "chrono",
 ] }
 trade-common = { path = "../trade-common" }
-axum = "0.5.16"
+axum = "0.5.17"
 tower = "0.4.13"
 tower-http = "0.3.4"
