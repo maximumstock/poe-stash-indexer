@@ -12,3 +12,4 @@ timescaledb
 # secret data
 secrets
 configuration/environments/.env.production
+configuration/environments/.env.development
