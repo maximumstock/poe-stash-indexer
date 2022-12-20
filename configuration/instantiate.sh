@@ -8,12 +8,12 @@ set -o allexport;
 echo "$AGE_KEY" > key.txt
 case $ENV in
   "production")
-    age --decrypt -i key.txt -o environments/.env.production environments/.env.production.enc
-    source environments/.env.production;
+    age --decrypt -i key.txt -o environments/production.env environments/production.env.enc
+    source environments/production.env;
     ;;
   *)
-    age --decrypt -i key.txt -o environments/.env.development environments/.env.development.enc
-    source environments/.env.development;
+    age --decrypt -i key.txt -o environments/development.env environments/development.env.enc
+    source environments/development.env;
     ;;
 esac
 rm key.txt

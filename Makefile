@@ -1,7 +1,3 @@
-# UID := $(shell id -u)
-# GID := $(shell id -g)
-
-#docker-compose := env UID=${UID} GID=${GID} docker-compose
 docker-compose := docker-compose
 
 dc := ${docker-compose} -f docker-compose.yaml --env-file configuration/environments/.env.development
@@ -10,13 +6,13 @@ dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production
 config:
 	cd configuration && ./instantiate.sh
 encrypt-dev:
-	age --encrypt -i secrets/age.key -o configuration/environments/.env.development.enc configuration/environments/.env.development
+	age --encrypt -i secrets/age.key -o configuration/environments/development.env.enc configuration/environments/development.env
 decrypt-dev:
-	age --decrypt -i secrets/age.key -o configuration/environments/.env.development configuration/environments/.env.development.enc
+	age --decrypt -i secrets/age.key -o configuration/environments/development.env configuration/environments/development.env.enc
 encrypt-prod:
-	age --encrypt -i secrets/age.key -o configuration/environments/.env.production.enc configuration/environments/.env.production
+	age --encrypt -i secrets/age.key -o configuration/environments/production.env.enc configuration/environments/production.env
 decrypt-prod:
-	age --decrypt -i secrets/age.key -o configuration/environments/.env.production configuration/environments/.env.production.enc
+	age --decrypt -i secrets/age.key -o configuration/environments/production.env configuration/environments/production.env.enc
 
 init:
 	$(dc) up -d --remove-orphans
