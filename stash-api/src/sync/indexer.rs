@@ -85,41 +85,44 @@ pub enum IndexerMessage {
 
 type IndexerResult = Receiver<IndexerMessage>;
 
-#[cfg(test)]
-mod test {
-    use std::{sync::mpsc::RecvTimeoutError, time::Duration};
+// Can't execute this integration test anymore since the public stash tab API requires
+// OAuth usage per default. We'll need to extract a client for the PST API and mock it
+// here for this test.
+// #[cfg(test)]
+// mod test {
+//     use std::{sync::mpsc::RecvTimeoutError, time::Duration};
 
-    use super::{Indexer, IndexerMessage};
+//     use super::{Indexer, IndexerMessage};
 
-    #[test]
-    fn test_indexer() {
-        let mut indexer = Indexer::new();
-        let rx = indexer.start_with_latest();
+//     #[test]
+//     fn test_indexer() {
+//         let mut indexer = Indexer::new();
+//         let rx = indexer.start_with_latest();
 
-        let (mut n_tick, mut n_stop) = (0, 0);
+//         let (mut n_tick, mut n_stop) = (0, 0);
 
-        while let Ok(msg) = rx.recv() {
-            match msg {
-                IndexerMessage::Stop => {
-                    n_stop += 1;
-                    break;
-                }
-                IndexerMessage::Tick { .. } => {
-                    n_tick += 1;
+//         while let Ok(msg) = rx.recv() {
+//             match msg {
+//                 IndexerMessage::Stop => {
+//                     n_stop += 1;
+//                     break;
+//                 }
+//                 IndexerMessage::Tick { .. } => {
+//                     n_tick += 1;
 
-                    if n_tick > 5 {
-                        indexer.stop();
-                    }
-                }
-                IndexerMessage::RateLimited(_) => {}
-            }
-        }
+//                     if n_tick > 5 {
+//                         indexer.stop();
+//                     }
+//                 }
+//                 IndexerMessage::RateLimited(_) => {}
+//             }
+//         }
 
-        assert!(n_tick > 0);
-        assert_eq!(n_stop, 1);
-        assert_eq!(
-            Err(RecvTimeoutError::Disconnected),
-            rx.recv_timeout(Duration::from_secs(10))
-        );
-    }
-}
+//         assert!(n_tick > 0);
+//         assert_eq!(n_stop, 1);
+//         assert_eq!(
+//             Err(RecvTimeoutError::Disconnected),
+//             rx.recv_timeout(Duration::from_secs(10))
+//         );
+//     }
+// }
