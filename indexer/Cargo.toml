@@ -15,7 +15,7 @@ chrono = { version = "0.4.23", features = ["serde"] }
 stash-api = { path = "../stash-api", features = ["sync"] }
 log = "0.4.17"
 pretty_env_logger = "0.4.0"
-config = "0.13.2"
+config = "0.13.3"
 signal-hook = "0.3.14"
 amiquip = "0.4.2"
 prometheus_exporter = "0.8.5"
