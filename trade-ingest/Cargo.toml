@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 futures = "0.3.25"
 lapin = "2.1.1"
-regex = "1.7.0"
+regex = "1.7.1"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.91"
 signal-hook = "0.3.14"
