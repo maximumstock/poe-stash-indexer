@@ -1,0 +1,28 @@
+@startuml architecture overview
+
+' See here for inspiration
+' https://github.com/awslabs/aws-icons-for-plantuml/blob/main/examples/Serverless%20API.puml
+' https://github.com/awslabs/aws-icons-for-plantuml
+
+!include <C4/C4_Container>
+!define AWSPuml https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v14.0/dist
+!include AWSPuml/AWSCommon.puml
+!include AWSPuml/ApplicationIntegration/SimpleQueueService.puml
+!include AWSPuml/Compute/Lambda.puml
+!include AWSPuml/Storage/SimpleStorageService.puml
+
+left to right direction
+
+Lambda(worker, "Task Worker", "")
+System_Boundary(psapi, "PS API")
+SimpleStorageService(s3, "IA Bucket", "")
+SimpleQueueService(taskQueue, "Change ID Task Queue", "")
+
+worker --> taskQueue : 3. register new task
+taskQueue --> worker : 1. on new task
+worker --> s3 : 4. store snapshot chunks
+initial_trigger --> taskQueue
+worker <--> psapi : 2. request change id chunk
+
+@enduml
+
