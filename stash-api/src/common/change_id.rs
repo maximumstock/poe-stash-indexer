@@ -22,7 +22,7 @@ impl std::str::FromStr for ChangeId {
                 inner: s.to_owned(),
             })
         } else {
-            Err(format!("Failed parsing ChangeId {}", s).into())
+            Err(format!("Failed parsing ChangeId {s}").into())
         }
     }
 }

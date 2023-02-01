@@ -2,6 +2,9 @@ use std::{fmt::Debug, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
+const LEAGUE: &str = "Forbidden Sanctum";
+const LEAGUE_HC: &str = "Hardcore Forbidden Sanctum";
+
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum League {
     Challenge,
@@ -19,9 +22,9 @@ impl FromStr for League {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Kalandra" => Ok(Self::Challenge),
-            "Hardcore Kalandra" => Ok(Self::ChallengeHardcore),
-            _ => Err(format!("Unknown league {}", s)),
+            LEAGUE => Ok(Self::Challenge),
+            LEAGUE_HC => Ok(Self::ChallengeHardcore),
+            _ => Err(format!("Unknown league {s}")),
         }
     }
 }
@@ -29,8 +32,8 @@ impl FromStr for League {
 impl<'a> League {
     pub fn to_str(&self) -> &'a str {
         match self {
-            League::Challenge => "Kalandra",
-            League::ChallengeHardcore => "Hardcore Kalandra",
+            League::Challenge => LEAGUE,
+            League::ChallengeHardcore => LEAGUE_HC,
         }
     }
 

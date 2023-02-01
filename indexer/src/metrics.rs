@@ -6,7 +6,7 @@ pub struct Metrics {
 }
 
 pub fn setup_metrics(port: u32) -> Result<Metrics, Box<dyn std::error::Error>> {
-    let binding = format!("0.0.0.0:{}", port).parse()?;
+    let binding = format!("0.0.0.0:{port}").parse()?;
     prometheus_exporter::start(binding)?;
 
     let chunks_processed =

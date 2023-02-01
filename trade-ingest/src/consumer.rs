@@ -81,7 +81,7 @@ async fn ingest(
         .join(",");
 
     let query = scooby::postgres::delete_from(league.to_ident())
-        .where_(format!("stash_id in ({})", stash_ids))
+        .where_(format!("stash_id in ({stash_ids})"))
         .to_string();
 
     sqlx::query(&query)
