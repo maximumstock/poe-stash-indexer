@@ -1,6 +1,7 @@
 target
 ./**/target
-stash-differ/*.csv
 timescaledb
 secrets
-trade-api/benchmark
+crates/stash-differ/*.csv
+crates/trade-api/benchmark
+tmp

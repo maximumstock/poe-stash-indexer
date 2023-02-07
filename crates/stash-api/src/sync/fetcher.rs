@@ -94,6 +94,10 @@ pub(crate) fn start_fetcher(
                         ratelimit.wait_for(4);
                     }
                 }
+                Err(FetcherError::HttpError { status: 403 }) => {
+                    log::error!("fetcher: Received 403 Forbidden - cannot access API. Please check your API credentials");
+                    scheduler_tx.send(SchedulerMessage::Stop).unwrap();
+                }
                 Err(
                     e @ (FetcherError::HttpError { .. }
                     | FetcherError::ParseError

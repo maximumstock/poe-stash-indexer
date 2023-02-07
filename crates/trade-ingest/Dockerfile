@@ -1,7 +1,7 @@
 FROM maximumstock2/base:latest as development
 WORKDIR /app
 COPY . .
-ENTRYPOINT ["trade-ingest/scripts/run.sh"]
+ENTRYPOINT ["crates/trade-ingest/scripts/run.sh"]
 
 # FROM maximumstock2/base:latest as planner
 # WORKDIR /app

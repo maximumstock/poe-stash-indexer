@@ -1,12 +1,12 @@
 [workspace]
 
 members = [
-    "indexer",
-    "stash-api",
-    "stash-differ",
-    "trade-ingest",
-    "trade-api",
-    "trade-common",
+    "crates/indexer",
+    "crates/stash-api",
+    "crates/stash-differ",
+    "crates/trade-ingest",
+    "crates/trade-api",
+    "crates/trade-common",
 ]
 
 [profile.dev]

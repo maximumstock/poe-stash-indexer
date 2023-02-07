@@ -12,20 +12,23 @@ services:
   indexer:
     build:
       context: .
-      dockerfile: indexer/Dockerfile
+      dockerfile: crates/indexer/Dockerfile
       target: development
     env_file:
       - configuration/environments/.env.development
     depends_on:
       - rabbitmq
     restart: "always"
+    environment:
+      CARGO_HOME: "tmp/.cargo"
     volumes:
       - ".:/app:cached"
+      - "~/.cargo:/tmp/.cargo:rw"
 
   trade-ingest:
     build:
       context: .
-      dockerfile: trade-ingest/Dockerfile
+      dockerfile: crates/trade-ingest/Dockerfile
       target: development
     depends_on:
       - rabbitmq
@@ -33,21 +36,27 @@ services:
     restart: "always"
     env_file:
       - configuration/environments/.env.development
+    environment:
+      CARGO_HOME: "tmp/.cargo"
     volumes:
       - ".:/app:cached"
+      - "~/.cargo:/tmp/.cargo:rw"
 
   trade-api:
     build:
       context: .
-      dockerfile: trade-api/Dockerfile
+      dockerfile: crates/trade-api/Dockerfile
       target: development
     depends_on:
       - trade-store
     restart: "always"
     env_file:
       - configuration/environments/.env.development
+    environment:
+      CARGO_HOME: "tmp/.cargo"
     volumes:
       - ".:/app:cached"
+      - "~/.cargo:/tmp/.cargo:rw"
 
   trade-store:
     image: timescale/timescaledb:2.4.1-pg13
