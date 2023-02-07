@@ -26,7 +26,7 @@ pkgs.mkShell rec {
     # (rust-bin.nightly.latest.default.override {
     #   extensions = ["rust-src" "clippy"];
     # })
-    (rust-bin.stable."1.64.0".default.override {
+    (rust-bin.stable."1.67.0".default.override {
       extensions = [ "rust-src" "clippy" ];
     })
     sqlx-cli
