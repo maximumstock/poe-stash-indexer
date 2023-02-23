@@ -1,1 +1,1 @@
-trade-api/benchmark/**/*.html linguist-vendored
+crates/trade-api/benchmark/**/*.html linguist-vendored
