@@ -23,7 +23,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./indexer/Dockerfile
+          file: ./crates/indexer/Dockerfile
           target: production
           push: true
           cache-from: type=gha
@@ -47,7 +47,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./trade-ingest/Dockerfile
+          file: ./crates/trade-ingest/Dockerfile
           target: production
           push: true
           cache-from: type=gha
@@ -71,7 +71,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./trade-api/Dockerfile
+          file: ./crates/trade-api/Dockerfile
           target: production
           push: true
           cache-from: type=gha
