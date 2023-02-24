@@ -7,6 +7,7 @@ use std::{
     time::Duration,
 };
 
+use serde::{Deserialize, Serialize};
 use ureq::Response;
 
 use crate::{common::ChangeId, sync::worker::WorkerTask};
@@ -62,13 +63,28 @@ pub(crate) fn start_fetcher(
     std::thread::spawn(move || {
         let mut ratelimit = ratelimiter();
 
+        let client_id = std::env::var("CLIENT_ID").unwrap();
+        let client_secret = std::env::var("CLIENT_SECRET").unwrap();
+
+        let oauth_response = match get_oauth_token(&client_id, &client_secret) {
+            Ok(oauth) => oauth,
+            Err(e) => {
+                log::error!(
+                    "fetcher: encountered error during oauth token retrieval {}",
+                    e.to_string()
+                );
+                scheduler_tx.send(SchedulerMessage::Stop).unwrap();
+                return;
+            }
+        };
+
         while let Ok(FetcherMessage::Task(task)) = fetcher_rx.recv() {
             ratelimit.wait();
 
             let start = std::time::Instant::now();
             log::debug!("Requesting {}", task.change_id);
 
-            match fetch_chunk(&task).and_then(parse_chunk) {
+            match fetch_chunk(&task, &client_id, &oauth_response).and_then(parse_chunk) {
                 Ok((decoder, change_id_buffer, next_change_id)) => {
                     log::debug!(
                         "fetcher: Took {}ms to read next id: {}",
@@ -98,6 +114,10 @@ pub(crate) fn start_fetcher(
                     log::error!("fetcher: Received 403 Forbidden - cannot access API. Please check your API credentials");
                     scheduler_tx.send(SchedulerMessage::Stop).unwrap();
                 }
+                Err(FetcherError::HttpError { status: 401 }) => {
+                    log::error!("fetcher: Received 401 Unauthorized");
+                    scheduler_tx.send(SchedulerMessage::Stop).unwrap();
+                }
                 Err(
                     e @ (FetcherError::HttpError { .. }
                     | FetcherError::ParseError
@@ -125,6 +145,49 @@ pub(crate) fn start_fetcher(
 
         log::debug!("fetcher: Shutting down");
     })
+}
+
+/// According to https://www.pathofexile.com/developer/docs/authorization
+fn get_oauth_token(
+    client_id: &str,
+    client_secret: &str,
+) -> Result<OAuthResponse, Box<dyn std::error::Error>> {
+    let url = "https://www.pathofexile.com/oauth/token";
+    let payload = serde_urlencoded::to_string(OAuthRequestPayload::new(
+        client_id.into(),
+        client_secret.into(),
+    ))
+    .unwrap();
+    let response = ureq::post(url)
+        .set("Content-Type", "application/x-www-form-urlencoded")
+        .set("User-Agent", user_agent(client_id).as_str())
+        .send(payload.as_bytes())?;
+
+    serde_json::from_str(&response.into_string()?).map_err(|e| e.into())
+}
+
+#[derive(Debug, Deserialize)]
+struct OAuthResponse {
+    access_token: String,
+}
+
+#[derive(Debug, Serialize)]
+struct OAuthRequestPayload {
+    client_id: String,
+    client_secret: String,
+    grant_type: String,
+    scope: String,
+}
+
+impl OAuthRequestPayload {
+    pub fn new(client_id: String, client_secret: String) -> Self {
+        Self {
+            client_id,
+            client_secret,
+            grant_type: "client_credentials".into(),
+            scope: "service:psapi".into(),
+        }
+    }
 }
 
 fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
@@ -174,15 +237,28 @@ fn parse_chunk(
     }
 }
 
-fn fetch_chunk(task: &FetchTask) -> Result<Response, FetcherError> {
+fn user_agent(client_id: &str) -> String {
+    format!("OAuth {client_id}/0.1 (contact: mxmlnstock@gmail.com)")
+}
+
+fn fetch_chunk(
+    task: &FetchTask,
+    client_id: &str,
+    oauth_response: &OAuthResponse,
+) -> Result<Response, FetcherError> {
     let url = format!(
-        "http://www.pathofexile.com/api/public-stash-tabs?id={}",
+        "https://api.pathofexile.com/public-stash-tabs?id={}",
         task.change_id
     );
 
-    let response = ureq::request("GET", &url)
+    let request = ureq::request("GET", &url)
         .set("Accept", "application/json")
-        .call();
+        .set("User-Agent", user_agent(client_id).as_str())
+        .set(
+            "Authorization",
+            format!("Bearer {}", oauth_response.access_token).as_str(),
+        );
+    let response = request.call();
 
     response.map_err(|e| match e {
         ureq::Error::Status(status, ref response) => {
@@ -227,10 +303,10 @@ pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error>
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use std::time::Duration;
 
-    use crate::sync::fetcher::parse_change_id_from_bytes;
+    use crate::sync::fetcher::{get_oauth_token, parse_change_id_from_bytes};
 
     use super::parse_rate_limit_timer;
 
@@ -256,5 +332,17 @@ mod tests {
         let input = "{\"next_change_id\": \"abc-def-ghi-jkl-mno\", \"stashes\": []}".as_bytes();
         let result = parse_change_id_from_bytes(input);
         assert_eq!(result, Ok("abc-def-ghi-jkl-mno".into()));
+    }
+
+    #[test]
+    fn test_authenticate_oauth() {
+        dotenv::from_filename("configuration/environments/.env.development").unwrap();
+        let client_id = std::env::var("CLIENT_ID").unwrap();
+        let client_secret = std::env::var("CLIENT_SECRET").unwrap();
+        let res = get_oauth_token(&client_id, &client_secret);
+        if let Err(ref e) = res {
+            eprintln!("{e}");
+        }
+        assert!(res.is_ok());
     }
 }

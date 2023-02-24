@@ -13,3 +13,4 @@ tmp # shared .cargo deps for local dev builds
 # secret data
 secrets
 configuration/environments/.env.production
+configuration/environments/.env.development

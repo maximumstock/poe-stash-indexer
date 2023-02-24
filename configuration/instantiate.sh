@@ -5,11 +5,13 @@ mkdir -p instantiated
 cp -r templates/* instantiated
 set -o allexport;
 
+echo "$AGE_KEY" > key.txt
+age --decrypt -i key.txt -o environments/.env.development environments/.env.development.enc
+age --decrypt -i key.txt -o environments/.env.production environments/.env.production.enc
+rm key.txt
+
 case $ENV in
   "production")
-    echo "$AGE_KEY" > key.txt
-    age --decrypt -i key.txt -o environments/.env.production environments/.env.production.enc
-    rm key.txt
     source environments/.env.production;
     ;;
   *)

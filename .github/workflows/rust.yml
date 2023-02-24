@@ -32,7 +32,9 @@ jobs:
         run: cargo build
 
       - name: Test
-        run: cargo test -- --nocapture --quiet
+        run: |
+          make decrypt # prepare env files
+          cargo test --all-features -- --nocapture --quiet
 
       - name: Format
         run: cargo fmt --all -- --check
