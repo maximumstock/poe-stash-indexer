@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'ci skip')"
     steps:
+      - name: Dependencies
+        run: sudo apt-get install -y age
+
       - name: Checkout sources
         uses: actions/checkout@v2
 
@@ -32,8 +35,10 @@ jobs:
         run: cargo build
 
       - name: Test
+        env:
+          AGE_KEY: ${{ secrets.AGE_KEY }}
         run: |
-          make decrypt # prepare env files
+          make config # prepare env files
           cargo test --all-features -- --nocapture --quiet
 
       - name: Format
