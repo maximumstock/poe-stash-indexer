@@ -306,7 +306,7 @@ pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error>
 mod test {
     use std::time::Duration;
 
-    use crate::sync::fetcher::{get_oauth_token, parse_change_id_from_bytes};
+    use crate::sync::fetcher::parse_change_id_from_bytes;
 
     use super::parse_rate_limit_timer;
 

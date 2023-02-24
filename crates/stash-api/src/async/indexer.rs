@@ -10,7 +10,7 @@ use crate::common::{poe_ninja_client::PoeNinjaClient, ChangeId, StashTabResponse
 #[derive(Default)]
 pub struct Indexer {
     pub(crate) is_stopping: bool,
-    pub(crate) jobs: Vec<Box<dyn Future<Output = u32>>>,
+    pub(crate) _jobs: Vec<Box<dyn Future<Output = u32>>>,
 }
 
 pub type IndexerResult = Receiver<IndexerMessage>;
@@ -99,7 +99,7 @@ async fn process(
     Ok(())
 }
 
-async fn parse_next_change_id(bytes: &BytesMut) -> Result<ChangeId, Box<dyn std::error::Error>> {
+async fn parse_next_change_id(_bytes: &BytesMut) -> Result<ChangeId, Box<dyn std::error::Error>> {
     Err("derp".into())
 }
 
