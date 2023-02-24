@@ -25,6 +25,3 @@ serde_urlencoded = "0.7.1"
 [features]
 sync = ["dep:ureq", "dep:ratelimit"]
 async = ["dep:tokio", "dep:governor", "dep:reqwest", "dep:futures", "dep:bytes"]
-
-[dev-dependencies]
-dotenv = "0.15.0"

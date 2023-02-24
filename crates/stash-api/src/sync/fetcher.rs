@@ -333,16 +333,4 @@ mod test {
         let result = parse_change_id_from_bytes(input);
         assert_eq!(result, Ok("abc-def-ghi-jkl-mno".into()));
     }
-
-    #[test]
-    fn test_authenticate_oauth() {
-        dotenv::from_filename("configuration/environments/.env.development").unwrap();
-        let client_id = std::env::var("CLIENT_ID").unwrap();
-        let client_secret = std::env::var("CLIENT_SECRET").unwrap();
-        let res = get_oauth_token(&client_id, &client_secret);
-        if let Err(ref e) = res {
-            eprintln!("{e}");
-        }
-        assert!(res.is_ok());
-    }
 }
