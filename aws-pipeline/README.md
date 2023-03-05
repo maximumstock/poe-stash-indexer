@@ -28,9 +28,11 @@ Because if we dont keep requesting change ids as fast as possible, we are fallin
 - [ ] Terraform setup + GitHub Actions Pipeline to orchestrate infrastructure
 - [ ] minimal Rust-based Lambda with local build & deploy setup
   - [ ] PS API Client with OAuth credentials
+  - [ ] cache access token as a static mut on Lambda instance (https://www.sebastianhesse.de/2018/12/16/caching-in-aws-lambda/)
   - [ ] partial deserialization / look-ahead on next change id
   - [ ] s3 integration
   - [ ] sqs integration
+  - [ ] some monitoring (https://docs.aws.amazon.com/lambda/latest/operatorguide/monitoring-concepts.html)
 
 ## Architecture
 

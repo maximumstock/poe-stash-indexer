@@ -1,8 +1,6 @@
 use std::{
     error::Error,
     io::{BufReader, Read},
-    str::FromStr,
-    string::FromUtf8Error,
     sync::mpsc::{Receiver, Sender},
     time::Duration,
 };
@@ -225,8 +223,7 @@ fn parse_chunk(
     match decoder.read_exact(&mut next_id_buffer) {
         Ok(_) => {
             let next_id = parse_change_id_from_bytes(&next_id_buffer)
-                .map_err(|_| FetcherError::ParseError)
-                .and_then(|s| ChangeId::from_str(&s).map_err(|_| FetcherError::ParseError))?;
+                .map_err(|_| FetcherError::ParseError)?;
             Ok((decoder, next_id_buffer, next_id))
         }
         Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => {
@@ -296,10 +293,10 @@ pub fn parse_rate_limit_timer(input: Option<&str>) -> Duration {
 }
 
 #[cfg(test)]
-mod test {
-    use std::time::Duration;
+mod tests {
+    use std::{str::FromStr, time::Duration};
 
-    use crate::sync::fetcher::parse_change_id_from_bytes;
+    use crate::{common::ChangeId, sync::fetcher::parse_change_id_from_bytes};
 
     use super::parse_rate_limit_timer;
 
@@ -323,7 +320,7 @@ mod test {
     #[test]
     fn test_parse_change_id_from_bytes() {
         let input = "{\"next_change_id\": \"abc-def-ghi-jkl-mno\", \"stashes\": []}".as_bytes();
-        let result = parse_change_id_from_bytes(input);
-        assert_eq!(result, Ok("abc-def-ghi-jkl-mno".into()));
+        let result = parse_change_id_from_bytes(input).unwrap();
+        assert_eq!(result, ChangeId::from_str("abc-def-ghi-jkl-mno").unwrap());
     }
 }
