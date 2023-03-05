@@ -2,15 +2,16 @@ use std::{collections::VecDeque, sync::Arc, time::Duration};
 
 use bytes::BytesMut;
 use futures::channel::mpsc::Sender;
-use futures::Future;
+// use futures::Future;
 use futures::{channel::mpsc::Receiver, lock::Mutex};
 
+use crate::common::parse_change_id_from_bytes;
 use crate::common::{poe_ninja_client::PoeNinjaClient, ChangeId, StashTabResponse};
 
 #[derive(Default)]
 pub struct Indexer {
     pub(crate) is_stopping: bool,
-    pub(crate) _jobs: Vec<Box<dyn Future<Output = u32>>>,
+    // pub(crate) jobs: Vec<Box<dyn Future<Output = u32>>>,
 }
 
 pub type IndexerResult = Receiver<IndexerMessage>;
@@ -78,7 +79,7 @@ async fn process(
             bytes.extend_from_slice(&chunk);
 
             if bytes.len() > 120 {
-                let next_change_id = parse_next_change_id(&bytes).await.unwrap();
+                let next_change_id = parse_change_id_from_bytes(&bytes).unwrap();
                 jobs.lock().await.push_back(next_change_id);
                 schedule_job(jobs.clone(), tx.clone());
             }

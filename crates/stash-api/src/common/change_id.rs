@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChangeId {
@@ -31,6 +31,16 @@ impl From<ChangeId> for String {
     fn from(change_id: ChangeId) -> Self {
         change_id.inner
     }
+}
+
+pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<ChangeId, Box<dyn std::error::Error>> {
+    ChangeId::from_str(&String::from_utf8(
+        bytes
+            .split(|b| (*b as char).eq(&'"'))
+            .nth(3)
+            .unwrap()
+            .to_vec(),
+    )?)
 }
 
 #[cfg(test)]

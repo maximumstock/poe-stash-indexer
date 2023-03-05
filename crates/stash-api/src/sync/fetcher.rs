@@ -10,7 +10,10 @@ use std::{
 use serde::{Deserialize, Serialize};
 use ureq::Response;
 
-use crate::{common::ChangeId, sync::worker::WorkerTask};
+use crate::{
+    common::{parse_change_id_from_bytes, ChangeId},
+    sync::worker::WorkerTask,
+};
 
 use super::scheduler::SchedulerMessage;
 
@@ -290,16 +293,6 @@ pub fn parse_rate_limit_timer(input: Option<&str>) -> Duration {
         .unwrap_or(DEFAULT_RATE_LIMIT_TIMER);
 
     Duration::from_secs(seconds)
-}
-
-pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error> {
-    String::from_utf8(
-        bytes
-            .split(|b| (*b as char).eq(&'"'))
-            .nth(3)
-            .unwrap()
-            .to_vec(),
-    )
 }
 
 #[cfg(test)]
