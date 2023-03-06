@@ -5,11 +5,14 @@ use std::{
     time::Duration,
 };
 
-use serde::{Deserialize, Serialize};
 use ureq::Response;
 
 use crate::{
-    common::{parse_change_id_from_bytes, ChangeId},
+    common::{
+        parse_change_id_from_bytes,
+        pst_api::{user_agent, OAuthRequestPayload, OAuthResponse},
+        ChangeId,
+    },
     sync::worker::WorkerTask,
 };
 
@@ -167,30 +170,6 @@ fn get_oauth_token(
     serde_json::from_str(&response.into_string()?).map_err(|e| e.into())
 }
 
-#[derive(Debug, Deserialize)]
-struct OAuthResponse {
-    access_token: String,
-}
-
-#[derive(Debug, Serialize)]
-struct OAuthRequestPayload {
-    client_id: String,
-    client_secret: String,
-    grant_type: String,
-    scope: String,
-}
-
-impl OAuthRequestPayload {
-    pub fn new(client_id: String, client_secret: String) -> Self {
-        Self {
-            client_id,
-            client_secret,
-            grant_type: "client_credentials".into(),
-            scope: "service:psapi".into(),
-        }
-    }
-}
-
 fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
     match task.retry() {
         Some(t) => {
@@ -235,10 +214,6 @@ fn parse_chunk(
             Err(FetcherError::ParseError)
         }
     }
-}
-
-fn user_agent(client_id: &str) -> String {
-    format!("OAuth {client_id}/0.1 (contact: mxmlnstock@gmail.com)")
 }
 
 fn fetch_chunk(
@@ -294,9 +269,7 @@ pub fn parse_rate_limit_timer(input: Option<&str>) -> Duration {
 
 #[cfg(test)]
 mod tests {
-    use std::{str::FromStr, time::Duration};
-
-    use crate::{common::ChangeId, sync::fetcher::parse_change_id_from_bytes};
+    use std::time::Duration;
 
     use super::parse_rate_limit_timer;
 
@@ -315,12 +288,5 @@ mod tests {
             parse_rate_limit_timer(Some("_:_:120")),
             Duration::from_secs(120)
         );
-    }
-
-    #[test]
-    fn test_parse_change_id_from_bytes() {
-        let input = "{\"next_change_id\": \"abc-def-ghi-jkl-mno\", \"stashes\": []}".as_bytes();
-        let result = parse_change_id_from_bytes(input).unwrap();
-        assert_eq!(result, ChangeId::from_str("abc-def-ghi-jkl-mno").unwrap());
     }
 }

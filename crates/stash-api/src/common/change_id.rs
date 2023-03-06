@@ -65,4 +65,14 @@ mod test {
             super::ChangeId::from_str("850662A31-863318628-825558626-931433265-890834941").is_err(),
         );
     }
+
+    #[test]
+    fn test_parse_change_id_from_bytes() {
+        let input = "{\"next_change_id\": \"850662131-863318628-825558626-931433265-890834941\", \"stashes\": []}".as_bytes();
+        let result = parse_change_id_from_bytes(input).unwrap();
+        assert_eq!(
+            result,
+            ChangeId::from_str("850662131-863318628-825558626-931433265-890834941").unwrap()
+        );
+    }
 }
