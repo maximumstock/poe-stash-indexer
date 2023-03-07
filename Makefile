@@ -44,6 +44,9 @@ logs:
 tidy:
 	cargo fmt --all -- --check && cargo clippy -- -D warnings
 
+test:
+	cargo test --all-features -- --nocapture
+
 # Indexer targets
 indexer-migrate: init
 	$(dc) exec indexer bash -c "diesel setup"
