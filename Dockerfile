@@ -1,4 +1,4 @@
-FROM clux/muslrust:1.60.0 as base
+FROM clux/muslrust:1.67.0 as base
 USER root
 RUN apt-get update && apt-get upgrade -y
 RUN apt-get install libpq-dev libssl-dev pkg-config clang wget -y
