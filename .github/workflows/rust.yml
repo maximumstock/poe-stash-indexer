@@ -35,12 +35,7 @@ jobs:
         run: cargo build
 
       - name: Test
-        env:
-          AGE_KEY: ${{ secrets.AGE_KEY }}
-        run: |
-          export AGE_KEY="$AGE_KEY"
-          make config # prepare env files
-          cargo test --all-features -- --nocapture --quiet
+        run: cargo test --all-features -- --nocapture --quiet
 
       - name: Format
         run: cargo fmt --all -- --check
