@@ -2,8 +2,8 @@ use std::{fmt::Debug, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
-const LEAGUE: &str = "Forbidden Sanctum";
-const LEAGUE_HC: &str = "Hardcore Forbidden Sanctum";
+const LEAGUE: &str = "Sanctum";
+const LEAGUE_HC: &str = "Hardcore Sanctum";
 
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum League {

@@ -40,5 +40,5 @@ content-type: application/json
     "sell": "Chaos Orb",
     "buy": "Exalted Orb",
     "limit": 3,
-    "league": "Hardcore Kalandra"
+    "league": "Sanctum"
 }
