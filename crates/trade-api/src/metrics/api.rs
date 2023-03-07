@@ -1,6 +1,6 @@
 use prometheus_exporter::prometheus::core::{AtomicU64, GenericCounter};
 
-pub trait ApiMetrics: Clone + std::fmt::Debug {
+pub trait ApiMetrics: Send + Sync + Clone + 'static + std::fmt::Debug {
     fn inc_search_requests(&mut self);
 }
 

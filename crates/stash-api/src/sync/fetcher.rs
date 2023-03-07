@@ -61,7 +61,7 @@ pub(crate) fn start_fetcher(
     scheduler_tx: Sender<SchedulerMessage>,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
-        let mut ratelimit = ratelimiter();
+        let ratelimit = ratelimiter();
 
         let client_id = std::env::var("CLIENT_ID").unwrap();
         let client_secret = std::env::var("CLIENT_SECRET").unwrap();
@@ -107,7 +107,7 @@ pub(crate) fn start_fetcher(
                         .unwrap();
 
                     if next_change_id.eq(&task.change_id) {
-                        ratelimit.wait_for(4);
+                        std::thread::sleep(std::time::Duration::from_secs(4));
                     }
                 }
                 Err(FetcherError::HttpError { status: 403 }) => {
@@ -202,14 +202,10 @@ fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
     }
 }
 
-fn ratelimiter() -> ratelimit::Limiter {
+fn ratelimiter() -> ratelimit::Ratelimiter {
     // Break down rate-limit into quantum of 1, so we never do any bursts,
     // like we would with for example 2 requests per second.
-    ratelimit::Builder::new()
-        .capacity(1)
-        .quantum(1)
-        .interval(std::time::Duration::from_millis(600))
-        .build()
+    ratelimit::Ratelimiter::new(1, 1, 1)
 }
 
 fn parse_chunk(

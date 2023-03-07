@@ -5,7 +5,10 @@ use serde::{Deserialize, Serialize};
 use tracing::error;
 use trade_common::league::League;
 
-use crate::store::{Offer, Store, StoreQuery};
+use crate::{
+    metrics::api::ApiMetrics,
+    store::{Offer, Store, StoreQuery},
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestBody {
@@ -17,13 +20,13 @@ pub struct RequestBody {
     limit: Option<u32>,
 }
 
-#[tracing::instrument(skip(store))]
-pub(crate) async fn handle_search(
-    Json(payload): Json<RequestBody>,
+#[tracing::instrument(skip(store, metrics))]
+pub(crate) async fn handle_search<M: ApiMetrics>(
     Extension(store): Extension<Arc<Store>>,
-    // Extension(mut metrics): Extension<impl ApiMetrics>,
+    Extension(mut metrics): Extension<M>,
+    Json(payload): Json<RequestBody>,
 ) -> Result<Json<QueryResponse>, QueryEmptyResultError> {
-    // metrics.inc_search_requests();
+    metrics.inc_search_requests();
 
     let league = {
         match &payload.league {

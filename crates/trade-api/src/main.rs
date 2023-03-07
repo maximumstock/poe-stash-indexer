@@ -5,6 +5,7 @@ mod store;
 
 use config::Config;
 
+use opentelemetry::sdk::export::trace::stdout::new_pipeline;
 use sqlx::PgPool;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -48,10 +49,7 @@ async fn teardown() -> Result<(), Box<dyn std::error::Error>> {
 
 fn setup_tracing() -> Result<(), opentelemetry::trace::TraceError> {
     info!("Setup tracing...");
-    let tracer = opentelemetry_jaeger::new_pipeline()
-        .with_service_name("trade")
-        .with_auto_split_batch(true)
-        .install_batch(opentelemetry::runtime::Tokio)?;
+    let tracer = new_pipeline().install_simple();
 
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
 
@@ -81,7 +79,7 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
 }
 
 async fn setup_work(config: &Config, shutdown_rx: Receiver<()>, store: Store) {
-    let (api_metrics,) = setup_metrics(config).expect("failed to setup metrics");
+    let api_metrics = setup_metrics(config).unwrap();
 
     tokio::select! {
         _ = async { let _ = shutdown_rx.await; } => {},

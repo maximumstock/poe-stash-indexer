@@ -15,30 +15,26 @@ use crate::{metrics::api::ApiMetrics, store::Store};
 
 use self::routes::search::handle_search;
 
-pub async fn init<T: Into<SocketAddr> + 'static>(
+pub async fn init<T: Into<SocketAddr> + 'static, M: ApiMetrics>(
     options: T,
-    _metrics: impl ApiMetrics + Send + Sync,
+    metrics: M,
     store: Arc<Store>,
 ) {
     let app = Router::new()
         .route("/healthcheck", get(health_handler))
-        .route("/trade", post(handle_search))
+        .route("/trade", post(handle_search::<M>))
         .layer(
-            ServiceBuilder::new().layer(Extension(store)), // .layer(Extension(metrics)),
+            ServiceBuilder::new()
+                .layer(Extension(store))
+                .layer(Extension(metrics)),
         );
 
-    axum::Server::bind(&options.into())
+    let _ = axum::Server::bind(&options.into())
         .serve(app.into_make_service())
-        .await
-        .unwrap();
+        .await;
 }
 
 #[tracing::instrument()]
 async fn health_handler() -> impl IntoResponse {
     (StatusCode::OK, "Ok")
 }
-
-// #[tracing::instrument()]
-// async fn error_handler(error: BoxError) -> impl IntoResponse {
-//     (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
-// }
