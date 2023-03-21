@@ -19,44 +19,37 @@ services:
     depends_on:
       - rabbitmq
     restart: "always"
-    environment:
-      CARGO_HOME: "tmp/.cargo"
     volumes:
       - ".:/app:cached"
-      - "~/.cargo:/tmp/.cargo:rw"
 
   trade-ingest:
     build:
       context: .
       dockerfile: crates/trade-ingest/Dockerfile
       target: development
+    platform: linux/x86_64
     depends_on:
       - rabbitmq
       - trade-store
     restart: "always"
     env_file:
       - configuration/environments/.env.development
-    environment:
-      CARGO_HOME: "tmp/.cargo"
     volumes:
       - ".:/app:cached"
-      - "~/.cargo:/tmp/.cargo:rw"
 
   trade-api:
     build:
       context: .
       dockerfile: crates/trade-api/Dockerfile
       target: development
+    platform: linux/x86_64
     depends_on:
       - trade-store
     restart: "always"
     env_file:
       - configuration/environments/.env.development
-    environment:
-      CARGO_HOME: "tmp/.cargo"
     volumes:
       - ".:/app:cached"
-      - "~/.cargo:/tmp/.cargo:rw"
 
   trade-store:
     image: timescale/timescaledb:2.4.1-pg13

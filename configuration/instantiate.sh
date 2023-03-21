@@ -3,13 +3,15 @@
 set -e
 mkdir -p instantiated
 cp -r templates/* instantiated
+
+if [ ! -z ${AGE_KEY+x} ]; then
+  echo "$AGE_KEY" > key.txt
+  age --decrypt -i key.txt -o environments/.env.development environments/.env.development.enc
+  age --decrypt -i key.txt -o environments/.env.production environments/.env.production.enc
+  rm key.txt
+fi
+
 set -o allexport;
-
-echo "$AGE_KEY" > key.txt
-age --decrypt -i key.txt -o environments/.env.development environments/.env.development.enc
-age --decrypt -i key.txt -o environments/.env.production environments/.env.production.enc
-rm key.txt
-
 case $ENV in
   "production")
     source environments/.env.production;

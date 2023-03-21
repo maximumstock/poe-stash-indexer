@@ -10,11 +10,11 @@ dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production
 config:
 	cd configuration && ./instantiate.sh
 encrypt:
-	age --encrypt -i secrets/age.key -o configuration/environments/.env.production.enc configuration/environments/.env.production
 	age --encrypt -i secrets/age.key -o configuration/environments/.env.development.enc configuration/environments/.env.development
+	age --encrypt -i secrets/age.key -o configuration/environments/.env.production.enc configuration/environments/.env.production
 decrypt:
-	age --decrypt -i secrets/age.key -o configuration/environments/.env.production configuration/environments/.env.production.enc
 	age --decrypt -i secrets/age.key -o configuration/environments/.env.development configuration/environments/.env.development.enc
+	age --decrypt -i secrets/age.key -o configuration/environments/.env.production configuration/environments/.env.production.enc
 
 init:
 	$(dc) up -d --remove-orphans
@@ -25,21 +25,22 @@ up: init
 up-prod: init-prod
 
 build:
+	export DOCKER_BUILDKIT=0
 	$(dc) build --force-rm $(CONTAINERS)
 build-prod:
 	$(dc-prod) build --force-rm $(CONTAINERS)
 
 down:
-	$(dc-prod) down --remove-orphans
+	$(dc) down --remove-orphans
 
 restart:
-	$(dc-prod) restart $(CONTAINERS)
+	$(dc) restart $(CONTAINERS)
 
 stop:
-	$(dc-prod) stop $(CONTAINERS)
+	$(dc) stop $(CONTAINERS)
 
 logs:
-	${dc-prod} logs -f -t --tail=20
+	${dc} logs -f -t --tail=20
 
 tidy:
 	cargo fmt --all -- --check && cargo clippy -- -D warnings

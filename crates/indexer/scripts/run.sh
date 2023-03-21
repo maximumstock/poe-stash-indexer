@@ -13,7 +13,7 @@ case $ENV in
     exec indexer
     ;;
   *)
-    exec cargo watch -w crates/indexer/src -x "run --bin indexer"
+    exec cargo watch -w crates -x "run --bin indexer"
     ;;
 esac
 
