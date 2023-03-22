@@ -545,19 +545,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "clocksource"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b90cc4cec392a6d97223f008b5da7a3c2c71aa6d5ffdf0e3e14d8b2432738387"
-dependencies = [
- "lazy_static",
- "libc",
- "mach",
- "time 0.3.20",
- "winapi 0.3.9",
-]
-
-[[package]]
 name = "concurrent-queue"
 version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1508,12 +1495,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "201de327520df007757c1f0adce6e827fe8562fbc28bfd9c15571c66ca1f5f79"
 
 [[package]]
-name = "libm"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "348108ab3fba42ec82ff6e9564fc4ca0247bdccdc68dd8af9764bbc79c3c8ffb"
-
-[[package]]
 name = "linked-hash-map"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1753,7 +1734,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "578ede34cf02f8924ab9447f50c28075b4d3e5b269972345e7e0372b38c6cdcd"
 dependencies = [
  "autocfg",
- "libm",
 ]
 
 [[package]]
@@ -2244,27 +2224,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d34f1408f55294453790c48b2f1ebbb1c5b4b7563eb1f418bcfcfdbb06ebb4e7"
 dependencies = [
  "getrandom",
-]
-
-[[package]]
-name = "rand_distr"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32cb0b9bc82b0a0876c2dd994a7e7a2683d3e7390ca40e6886785ef0c7e3ee31"
-dependencies = [
- "num-traits",
- "rand",
-]
-
-[[package]]
-name = "ratelimit"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e9c124ab68f28501873b8c5ecfa0de688e37cbe4f1b5440ed1971135e7c84e8"
-dependencies = [
- "clocksource",
- "rand",
- "rand_distr",
 ]
 
 [[package]]
@@ -2842,7 +2801,6 @@ dependencies = [
  "futures",
  "governor",
  "log",
- "ratelimit",
  "reqwest",
  "serde",
  "serde_json",

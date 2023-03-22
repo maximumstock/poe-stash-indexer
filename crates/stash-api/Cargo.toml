@@ -11,7 +11,6 @@ serde = { version = "1.0.158", features = ["derive"] }
 serde_json = "1.0.94"
 log = "0.4.17"
 ureq = { version = "2.6.2", optional = true }
-ratelimit = { version = "0.5.1", optional = true }
 reqwest = { version = "0.11.15", features = [
     "json",
     "async-compression",
@@ -23,5 +22,5 @@ bytes = { version = "1.4.0", optional = true }
 serde_urlencoded = "0.7.1"
 
 [features]
-sync = ["dep:ureq", "dep:ratelimit"]
+sync = ["dep:ureq", "dep:governor"]
 async = ["dep:tokio", "dep:governor", "dep:reqwest", "dep:futures", "dep:bytes"]

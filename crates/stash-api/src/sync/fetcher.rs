@@ -1,6 +1,7 @@
 use std::{
     error::Error,
     io::{BufReader, Read},
+    num::NonZeroU32,
     str::FromStr,
     string::FromUtf8Error,
     sync::mpsc::{Receiver, Sender},
@@ -62,7 +63,6 @@ pub(crate) fn start_fetcher(
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
         let ratelimit = ratelimiter();
-
         let client_id = std::env::var("CLIENT_ID").unwrap();
         let client_secret = std::env::var("CLIENT_SECRET").unwrap();
 
@@ -79,7 +79,7 @@ pub(crate) fn start_fetcher(
         };
 
         while let Ok(FetcherMessage::Task(task)) = fetcher_rx.recv() {
-            ratelimit.wait();
+            while ratelimit.check().is_err() {}
 
             let start = std::time::Instant::now();
             log::debug!("Requesting {}", task.change_id);
@@ -193,7 +193,8 @@ impl OAuthRequestPayload {
 fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
     match task.retry() {
         Some(t) => {
-            log::info!("fetcher: Rescheduling {}", t.change_id,);
+            log::info!("fetcher: Rescheduling {} in 1s", t.change_id);
+            std::thread::sleep(Duration::from_secs(1));
             scheduler_tx.send(SchedulerMessage::Fetch(t)).unwrap();
         }
         None => {
@@ -202,10 +203,15 @@ fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
     }
 }
 
-fn ratelimiter() -> ratelimit::Ratelimiter {
-    // Break down rate-limit into quantum of 1, so we never do any bursts,
-    // like we would with for example 2 requests per second.
-    ratelimit::Ratelimiter::new(1, 1, 1)
+fn ratelimiter() -> governor::RateLimiter<
+    governor::state::NotKeyed,
+    governor::state::InMemoryState,
+    governor::clock::QuantaClock,
+    governor::middleware::NoOpMiddleware<governor::clock::QuantaInstant>,
+> {
+    governor::RateLimiter::direct(governor::Quota::per_second(
+        NonZeroU32::new(1).ok_or(1).unwrap(),
+    ))
 }
 
 fn parse_chunk(
