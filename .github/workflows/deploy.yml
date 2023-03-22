@@ -44,6 +44,6 @@ jobs:
             -H "Authorization: Bearer $GRAFANA_TOKEN" \
             --data @- << EOF
             {
-              "text": "Deployed backend services",
+              "text": "Deployed backend services $GITHUB_SHA ($GITHUB_REF) - Job $GITHUB_JOB",
               "tags": [ "deployment" ]
             }EOF
