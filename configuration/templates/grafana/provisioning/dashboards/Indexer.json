@@ -109,12 +109,11 @@
       },
       "targets": [
         {
-          "datasource": "Prometheus",
           "exemplar": true,
-          "expr": "(rate(stashes_processed[10s]) == 0) + 1",
+          "expr": "rate_limited{}",
+          "hide": false,
           "interval": "",
           "legendFormat": "",
-          "queryType": "randomWalk",
           "refId": "A"
         }
       ],
