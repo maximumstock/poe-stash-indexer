@@ -5,7 +5,7 @@ mod store;
 
 use config::Config;
 
-use opentelemetry::sdk::export::trace::stdout::new_pipeline;
+use opentelemetry_jaeger::new_agent_pipeline;
 use sqlx::PgPool;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -49,7 +49,10 @@ async fn teardown() -> Result<(), Box<dyn std::error::Error>> {
 
 fn setup_tracing() -> Result<(), opentelemetry::trace::TraceError> {
     info!("Setup tracing...");
-    let tracer = new_pipeline().install_simple();
+    let tracer = new_agent_pipeline()
+        .with_auto_split_batch(true)
+        .with_service_name("trade-api")
+        .install_simple()?;
 
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
 
