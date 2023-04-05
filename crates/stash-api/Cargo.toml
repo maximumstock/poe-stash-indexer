@@ -22,5 +22,5 @@ bytes = { version = "1.4.0", optional = true }
 serde_urlencoded = "0.7.1"
 
 [features]
-sync = ["dep:ureq", "dep:governor"]
+sync = ["dep:ureq"]
 async = ["dep:tokio", "dep:governor", "dep:reqwest", "dep:futures", "dep:bytes"]

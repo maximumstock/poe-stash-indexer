@@ -1,7 +1,6 @@
 use std::{
     error::Error,
     io::{BufReader, Read},
-    num::NonZeroU32,
     str::FromStr,
     string::FromUtf8Error,
     sync::mpsc::{Receiver, Sender},
@@ -62,7 +61,6 @@ pub(crate) fn start_fetcher(
     scheduler_tx: Sender<SchedulerMessage>,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
-        let ratelimit = ratelimiter();
         let client_id = std::env::var("CLIENT_ID").unwrap();
         let client_secret = std::env::var("CLIENT_SECRET").unwrap();
 
@@ -79,7 +77,7 @@ pub(crate) fn start_fetcher(
         };
 
         while let Ok(FetcherMessage::Task(task)) = fetcher_rx.recv() {
-            while ratelimit.check().is_err() {}
+            std::thread::sleep(Duration::from_millis(500));
 
             let start = std::time::Instant::now();
             log::debug!("Requesting {}", task.change_id);
@@ -201,17 +199,6 @@ fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
             scheduler_tx.send(SchedulerMessage::Stop).unwrap();
         }
     }
-}
-
-fn ratelimiter() -> governor::RateLimiter<
-    governor::state::NotKeyed,
-    governor::state::InMemoryState,
-    governor::clock::QuantaClock,
-    governor::middleware::NoOpMiddleware<governor::clock::QuantaInstant>,
-> {
-    governor::RateLimiter::direct(governor::Quota::per_second(
-        NonZeroU32::new(1).ok_or(1).unwrap(),
-    ))
 }
 
 fn parse_chunk(
