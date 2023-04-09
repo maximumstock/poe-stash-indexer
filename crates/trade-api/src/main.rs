@@ -4,8 +4,6 @@ mod metrics;
 mod store;
 
 use config::Config;
-
-use opentelemetry_jaeger::new_agent_pipeline;
 use sqlx::PgPool;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -37,28 +35,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     setup_shutdown_handler(signal_flag, shutdown_tx);
     setup_work(&config, shutdown_rx, store).await;
-    teardown().await?;
+    teardown_telemetry().await?;
 
     Ok(())
 }
 
-async fn teardown() -> Result<(), Box<dyn std::error::Error>> {
+async fn teardown_telemetry() -> Result<(), Box<dyn std::error::Error>> {
     opentelemetry::global::shutdown_tracer_provider();
     Ok(())
 }
 
 fn setup_tracing() -> Result<(), opentelemetry::trace::TraceError> {
-    info!("Setup tracing...");
-    let tracer = new_agent_pipeline()
-        .with_auto_split_batch(true)
-        .with_service_name("trade-api")
-        .install_simple()?;
-
-    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+    let tracer = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .install_batch(opentelemetry::runtime::Tokio)
+        .expect("Error initialising OTLP pipeline");
 
     Registry::default()
         .with(EnvFilter::from_default_env())
-        .with(telemetry)
+        .with(tracing_opentelemetry::layer().with_tracer(tracer))
         .with(tracing_subscriber::fmt::layer())
         .init();
 
