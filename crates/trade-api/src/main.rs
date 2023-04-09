@@ -10,18 +10,18 @@ use std::sync::{
     Arc,
 };
 use tokio::sync::oneshot::{Receiver, Sender};
-use trade_common::assets::AssetIndex;
+use trade_common::{
+    assets::AssetIndex,
+    telemetry::{setup_telemetry, teardown_telemetry},
+};
 
 use tracing::info;
-use tracing_subscriber::{
-    prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry,
-};
 
 use crate::{metrics::setup_metrics, store::Store};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    setup_tracing().expect("Tracing setup failed");
+    setup_telemetry("trade-api").expect("Telemtry setup failed");
 
     let config = config::Config::from_env()?;
     std::env::set_var("DATABASE_URL", &config.db_url);
@@ -35,27 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     setup_shutdown_handler(signal_flag, shutdown_tx);
     setup_work(&config, shutdown_rx, store).await;
-    teardown_telemetry().await?;
-
-    Ok(())
-}
-
-async fn teardown_telemetry() -> Result<(), Box<dyn std::error::Error>> {
-    opentelemetry::global::shutdown_tracer_provider();
-    Ok(())
-}
-
-fn setup_tracing() -> Result<(), opentelemetry::trace::TraceError> {
-    let tracer = opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .install_batch(opentelemetry::runtime::Tokio)
-        .expect("Error initialising OTLP pipeline");
-
-    Registry::default()
-        .with(EnvFilter::from_default_env())
-        .with(tracing_opentelemetry::layer().with_tracer(tracer))
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    teardown_telemetry();
 
     Ok(())
 }

@@ -1,6 +1,6 @@
 mod routes;
 
-use std::{net::SocketAddr, sync::Arc};
+use std::{fmt::Debug, net::SocketAddr, sync::Arc};
 
 use axum::{
     http::StatusCode,
@@ -10,16 +10,17 @@ use axum::{
 };
 
 use tower::ServiceBuilder;
+use tracing::info;
 
 use crate::{metrics::api::ApiMetrics, store::Store};
 
 use self::routes::search::handle_search;
 
-pub async fn init<T: Into<SocketAddr> + 'static, M: ApiMetrics>(
-    options: T,
-    metrics: M,
-    store: Arc<Store>,
-) {
+pub async fn init<T, M>(options: T, metrics: M, store: Arc<Store>)
+where
+    T: Into<SocketAddr> + 'static + Debug,
+    M: ApiMetrics,
+{
     let app = Router::new()
         .route("/healthcheck", get(health_handler))
         .route("/trade", post(handle_search::<M>))
@@ -28,6 +29,8 @@ pub async fn init<T: Into<SocketAddr> + 'static, M: ApiMetrics>(
                 .layer(Extension(store))
                 .layer(Extension(metrics)),
         );
+
+    info!("Starting API: {options:?}");
 
     let _ = axum::Server::bind(&options.into())
         .serve(app.into_make_service())

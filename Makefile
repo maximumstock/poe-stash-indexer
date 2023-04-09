@@ -7,6 +7,9 @@ docker-compose := docker-compose
 dc := ${docker-compose} -f docker-compose.yaml --env-file configuration/environments/.env.development
 dc-prod := ${docker-compose} -f docker-compose.yaml -f docker-compose.production.yaml --env-file configuration/environments/.env.production
 
+# Sets up all configuration file templates in `configuration/templates` by copying them to
+# `configuration/instantiated` and populating all environment variable references with values
+# from the respective `configuration/environments/.env.{development,production}` spec.
 config:
 	cd configuration && ./instantiate.sh
 encrypt:

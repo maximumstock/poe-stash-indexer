@@ -69,7 +69,7 @@ pub(crate) fn start_fetcher(
             Err(e) => {
                 log::error!(
                     "fetcher: encountered error during oauth token retrieval {}",
-                    e.to_string()
+                    e.to_string(),
                 );
                 scheduler_tx.send(SchedulerMessage::Stop).unwrap();
                 return;
