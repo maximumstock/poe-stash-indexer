@@ -7,27 +7,26 @@ mod store;
 
 use config::Config;
 use metrics::store::StoreMetrics;
-use opentelemetry_jaeger::new_agent_pipeline;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
 use tokio::sync::oneshot::{Receiver, Sender};
-use trade_common::{assets::AssetIndex, league::League};
+use trade_common::{
+    assets::AssetIndex,
+    league::League,
+    telemetry::{setup_telemetry, teardown_telemetry},
+};
 
 use tracing::{error, info};
-use tracing_subscriber::{
-    prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry,
-};
 
 use crate::metrics::setup_metrics;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = config::Config::from_env()?;
-
-    setup_tracing().expect("Tracing setup failed");
+    setup_telemetry("trade-ingest").expect("Telemtry setup failed");
     let signal_flag = setup_signal_handlers()?;
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     setup_shutdown_handler(signal_flag, shutdown_tx);
@@ -35,26 +34,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_work(&config, shutdown_rx).await?;
 
     info!("Tearing down...");
-    opentelemetry::global::shutdown_tracer_provider();
+    teardown_telemetry();
     info!("Shutting down");
-
-    Ok(())
-}
-
-fn setup_tracing() -> Result<(), opentelemetry::trace::TraceError> {
-    info!("Setup tracing...");
-    let tracer = new_agent_pipeline()
-        .with_service_name("trade")
-        .with_auto_split_batch(true)
-        .install_simple()?;
-
-    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-
-    Registry::default()
-        .with(EnvFilter::from_default_env())
-        .with(telemetry)
-        .with(tracing_subscriber::fmt::layer())
-        .init();
 
     Ok(())
 }

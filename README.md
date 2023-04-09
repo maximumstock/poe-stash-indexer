@@ -28,7 +28,7 @@ Our [`docker-compose.yaml`](./docker-compose.yaml) describes an examplatory (non
 - setup of the `indexer` service to start fetching and feed the data stream into a RabbitMQ instance
 - setup of the `trade-ingest` & `trade-api` services to consume above stream and expose it via its REST-like API, respectively.
 - a PostgreSQL instance
-- a Grafana & Prometheus setup to investigate metrics of the `indexer`, `trade-ingest`, `trade-api` and RabbitMQ services
+- a [OTLP setup](https://github.com/open-telemetry/opentelemetry-rust) (integrating with New Relic) to investigate metrics of the `indexer`, `trade-ingest`, `trade-api` and RabbitMQ services
 - exposes a reverse proxy setup via nginx to easily access all services
 
 You may execute `make up` to start everything up and `make logs` to watch all logs.
@@ -37,6 +37,4 @@ Check out `Makefile` for more command aliases.
 Here is a list of services in this local development setup and and their credentials (`username`:`password`):
 
 - [Trade API](http://trade.localhost:8888) (public)
-- [Prometheus](http://prometheus.localhost:8888) (Basic Auth: `poe:poe`)
 - [RabbitMQ Control Panel](http://rabbitmq.localhost:8888) (Basic Auth: `poe:poe`)
-- [Grafana](http://grafana.localhost:8888) (`poe:poe`)
