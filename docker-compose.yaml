@@ -69,36 +69,6 @@ services:
     volumes:
       - "./configuration/instantiated/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf"
 
-  # prometheus:
-  #   image: prom/prometheus:latest
-  #   restart: "always"
-  #   env_file:
-  #     - configuration/environments/.env.development
-  #   volumes:
-  #     - "./configuration/instantiated/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
-  #     - "prometheus-store:/prometheus"
-
-  # grafana:
-  #   image: grafana/grafana:8.1.2
-  #   restart: "always"
-  #   env_file:
-  #     - configuration/environments/.env.development
-  #   user: "root"
-  #   volumes:
-  #     - "grafana-store:/var/lib/grafana"
-  #     - "./configuration/instantiated/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards"
-  #     - "./configuration/instantiated/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources"
-  #     - "./configuration/instantiated/grafana/custom.ini:/etc/grafana/grafana.ini"
-
-  # jaeger:
-  #   image: jaegertracing/all-in-one:latest
-  #   restart: "always"
-  #   env_file:
-  #     - configuration/environments/.env.development
-
-  # node-exporter:
-  #   image: prom/node-exporter
-
   otel-collector:
     image: otel/opentelemetry-collector
     command: [--config=/etc/otel-collector-config.yaml]
@@ -106,13 +76,7 @@ services:
       - ./configuration/instantiated/otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml
     ports:
       - 1888:1888 # pprof extension
-      # - 8888:8888 # Prometheus metrics exposed by the collector
-      # - 8889:8889 # Prometheus exporter metrics
       - 13133:13133 # health_check extension
       - 4317:4317 # OTLP gRPC receiver
       - 4318:4318 # OTLP http receiver
       - 55679:55679 # zpages extension
-
-volumes:
-  grafana-store:
-  prometheus-store:

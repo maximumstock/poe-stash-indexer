@@ -30,20 +30,7 @@ jobs:
 
             cd deployment && git pull
             make config
-            docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build --force-rm reverse-proxy prometheus rabbitmq
-            docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build grafana
+            docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build --force-rm reverse-proxy rabbitmq
             make up-prod
             docker-compose -f docker-compose.yaml -f docker-compose.production.yaml logs --tail=1000 trade-api trade-store indexer
           EOF
-      - name: Grafana Annotation
-        env:
-          GRAFANA_TOKEN: ${{ secrets.GRAFANA_TOKEN }}
-        run: |
-          curl -XPOST http://grafana.maximumstock.net/api/annotations \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $GRAFANA_TOKEN" \
-            --data @- << EOF
-            {
-              "text": "Deployed backend services $GITHUB_SHA ($GITHUB_REF) - Job $GITHUB_JOB",
-              "tags": [ "deployment" ]
-            }EOF

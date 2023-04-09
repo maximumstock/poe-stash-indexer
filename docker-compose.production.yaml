@@ -35,11 +35,3 @@ services:
   rabbitmq:
     env_file:
       - configuration/environments/.env.production
-
-  prometheus:
-    env_file:
-      - configuration/environments/.env.production
-
-  grafana:
-    env_file:
-      - configuration/environments/.env.production
