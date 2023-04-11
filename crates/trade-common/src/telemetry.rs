@@ -14,10 +14,13 @@ pub fn setup_telemetry(service_name: &str) -> Result<(), opentelemetry::trace::T
                 .tonic()
                 .with_endpoint("http://otel-collector:4317"),
         )
-        .with_trace_config(config().with_resource(Resource::new(vec![KeyValue::new(
-            "service.name".to_string(),
-            service_name.to_string(),
-        )])))
+        .with_trace_config(config().with_resource(Resource::new(vec![
+            KeyValue::new("service.name".to_string(), service_name.to_string()),
+            KeyValue::new(
+                "deployment.environment",
+                std::env::var("ENV").unwrap_or("development".into()),
+            ),
+        ])))
         .install_batch(opentelemetry::runtime::Tokio)
         .expect("Error initialising OTLP pipeline");
 
