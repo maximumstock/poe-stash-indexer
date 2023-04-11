@@ -18,7 +18,18 @@ jobs:
         run: sudo apt-get install -y age protobuf-compiler
 
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      - name: Set up Rust cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: poe-stash-indexer-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -27,9 +38,6 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
-
-      - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v2
 
       - name: Compile
         run: cargo build
