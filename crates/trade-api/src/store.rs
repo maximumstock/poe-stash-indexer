@@ -1,7 +1,7 @@
 use serde::Serialize;
 use sqlx::query_builder::QueryBuilder;
 use sqlx::{FromRow, Pool, Postgres};
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 use trade_common::{assets::AssetIndex, league::League};
 
 use typed_builder::TypedBuilder;
@@ -29,11 +29,11 @@ pub struct Offer {
 pub struct Store {
     #[builder(default)]
     asset_index: AssetIndex,
-    pool: Arc<Pool<Postgres>>,
+    pool: Pool<Postgres>,
 }
 
 impl Store {
-    pub fn new(asset_index: AssetIndex, pool: Arc<Pool<Postgres>>) -> Self {
+    pub fn new(asset_index: AssetIndex, pool: Pool<Postgres>) -> Self {
         Self::builder().asset_index(asset_index).pool(pool).build()
     }
 
@@ -82,7 +82,7 @@ impl Store {
         let offers = builder
             .build()
             .try_map(|row| Offer::from_row(&row))
-            .fetch_all(&*self.pool)
+            .fetch_all(&self.pool)
             .await?;
 
         Ok(offers)

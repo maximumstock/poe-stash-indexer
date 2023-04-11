@@ -26,10 +26,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = config::Config::from_env()?;
     std::env::set_var("DATABASE_URL", &config.db_url);
 
-    let pool = Arc::new(PgPool::connect(&config.db_url).await?);
+    let pool = PgPool::connect(&config.db_url).await?;
     let mut index = AssetIndex::new();
     index.init().await?;
-    let store = Store::new(index, pool);
+    let store = Arc::new(Store::new(index, pool));
 
     let signal_flag = setup_signal_handlers()?;
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
@@ -56,12 +56,12 @@ fn setup_shutdown_handler(signal_flag: Arc<AtomicBool>, shutdown_tx: Sender<()>)
     });
 }
 
-async fn setup_work(config: &Config, shutdown_rx: Receiver<()>, store: Store) {
+async fn setup_work(config: &Config, shutdown_rx: Receiver<()>, store: Arc<Store>) {
     let api_metrics = setup_metrics(config).unwrap();
 
     tokio::select! {
         _ = async { let _ = shutdown_rx.await; } => {},
-        _ = api::init(([0, 0, 0, 0], 4001), api_metrics, Arc::new(store)) => {},
+        _ = api::init(([0, 0, 0, 0], 4001), api_metrics, store) => {},
     };
 }
 
