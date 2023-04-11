@@ -28,7 +28,6 @@ up: init
 up-prod: init-prod
 
 build:
-	export DOCKER_BUILDKIT=0
 	$(dc) build --force-rm $(CONTAINERS)
 build-prod:
 	$(dc-prod) build --force-rm $(CONTAINERS)

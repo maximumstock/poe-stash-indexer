@@ -1,3 +1,4 @@
+# Development Build
 FROM rust:bullseye as development
 # Install & integrate mold for faster dev link times
 # Add apt.llvm.org repository and install clang
@@ -17,17 +18,18 @@ WORKDIR /app
 COPY . .
 ENTRYPOINT ["bash", "crates/trade-api/scripts/run.sh"]
 
-# FROM maximumstock2/base:latest as planner
-# WORKDIR /app
-# COPY . .
-# RUN cargo chef prepare --recipe-path recipe.json
+# CI/Production Build
+FROM maximumstock2/base:latest as planner
+WORKDIR /app
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
-# FROM planner as production-builder-deps
-# WORKDIR /app
-# COPY --from=planner /app/recipe.json recipe.json
-# RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json --package trade-api
+FROM planner as production-builder-deps
+WORKDIR /app
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json --package trade-api
 
-FROM maximumstock2/base:latest as production-builder
+FROM production-builder-deps as production-builder
 WORKDIR /app
 COPY . .
 RUN cargo build --release --target x86_64-unknown-linux-musl --bin trade-api
