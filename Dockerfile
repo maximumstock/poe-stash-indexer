@@ -4,7 +4,7 @@ RUN apt-get update && apt-get upgrade -y
 RUN apt-get install libpq-dev libssl-dev pkg-config clang wget -y
 # RUN cargo install diesel_cli --no-default-features --features postgres
 RUN cargo install cargo-watch
-#RUN cargo install cargo-chef
+RUN cargo install cargo-chef
 
 # Install mold
 RUN wget https://github.com/rui314/mold/releases/download/v1.11.0/mold-1.11.0-x86_64-linux.tar.gz
