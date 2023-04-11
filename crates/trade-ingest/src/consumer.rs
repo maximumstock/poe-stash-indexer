@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
+use chrono::NaiveDateTime;
 use futures::StreamExt;
 use lapin::options::BasicAckOptions;
 
-use sqlx::{Pool, Postgres};
-use tracing::info;
+use sqlx::{Execute, Pool, Postgres, QueryBuilder};
+use tracing::{info, trace};
 use trade_common::{assets::AssetIndex, league::League};
 
 use crate::{
@@ -58,9 +59,7 @@ async fn consume(
         .filter(|s| s.league.eq(league.to_str()))
         .collect::<Vec<_>>();
 
-    if !ingestable_stashes.is_empty() {
-        ingest(metrics, pool, league, asset_index, ingestable_stashes).await?;
-    }
+    ingest(metrics, pool, league, asset_index, ingestable_stashes).await?;
 
     Ok(())
 }
@@ -73,36 +72,40 @@ async fn ingest(
     asset_index: &Arc<AssetIndex>,
     stash_records: Vec<StashRecord>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let n_invalidated_stashes = stash_records.len();
+    let n_invalidated_stashes = stash_records.len() as u64;
+
     let stash_ids = stash_records
         .iter()
         .map(|s| format!("'{}'", s.stash_id))
         .collect::<Vec<_>>()
         .join(",");
 
-    let query = scooby::postgres::delete_from(league.to_ident())
-        .where_(format!("stash_id in ({stash_ids})"))
-        .to_string();
+    sqlx::query(&format!(
+        "DELETE FROM {} WHERE stash_id in ($1)",
+        league.to_ident()
+    ))
+    .bind(&stash_ids)
+    .execute(&**pool)
+    .await?;
 
-    sqlx::query(&query)
-        .bind(league.to_ident())
-        .bind(&stash_ids)
-        .execute(&**pool)
-        .await?;
+    trace!(n_invalidated_stashes = stash_records.len());
 
-    let offers = stash_records
+    let stash_offers = stash_records
         .into_iter()
         .flat_map(Vec::<Offer>::from)
-        .map(|o| map_offer(o, asset_index))
-        .collect::<Vec<VectorizedOffer>>();
+        .collect::<Vec<_>>();
 
-    if offers.is_empty() {
+    let n_ingested_offers = stash_offers.len() as u64;
+    trace!(n_ingested_offers);
+
+    if stash_offers.is_empty() {
         return Ok(());
     }
 
-    let n_ingested_offers = offers.len();
-    let query = scooby::postgres::insert_into(league.to_ident())
-        .columns((
+    let mut query_builder = QueryBuilder::<Postgres>::new(format!(
+        "INSERT INTO {} ({}) ",
+        league.to_ident(),
+        [
             "item_id",
             "stash_id",
             "seller_account",
@@ -110,13 +113,28 @@ async fn ingest(
             "sell",
             "buy",
             "conversion_rate",
-            "created_at",
-        ))
-        .values(offers)
-        .to_string();
+            "created_at"
+        ]
+        .join(", ")
+    ));
 
-    if let Err(e) = sqlx::query(&query).execute(&**pool).await {
-        tracing::error!("{}, {}", &query, e);
+    query_builder.push_values(stash_offers.iter(), |mut query, o| {
+        query.push_bind(&o.item_id);
+        query.push_bind(&o.stash_id);
+        query.push_bind(&o.seller_account);
+        query.push_bind(o.stock as i64);
+        query.push_bind(asset_index.get_name(&o.sell).unwrap_or(&o.sell).clone());
+        query.push_bind(asset_index.get_name(&o.buy).unwrap_or(&o.buy).clone());
+        query.push_bind(o.conversion_rate);
+        query.push_bind(NaiveDateTime::from_timestamp_millis(o.created_at as i64));
+    });
+
+    let ingest_query = query_builder.build();
+    let ingest_query_str = ingest_query.sql().to_string();
+
+    if let Err(e) = ingest_query.execute(&**pool).await {
+        tracing::error!("{}, {}", &ingest_query_str, e);
+        return Err(e.into());
     }
 
     info!(
@@ -124,37 +142,7 @@ async fn ingest(
         n_invalidated_stashes, n_ingested_offers
     );
 
-    metrics.inc_offers_ingested(n_ingested_offers as u64);
+    metrics.inc_offers_ingested(n_ingested_offers);
+
     Ok(())
-}
-
-type VectorizedOffer = (
-    String,
-    String,
-    String,
-    String,
-    String,
-    String,
-    String,
-    String,
-);
-
-fn map_offer(offer: Offer, asset_index: &Arc<AssetIndex>) -> VectorizedOffer {
-    let sell = asset_index.get_name(&offer.sell).unwrap_or(&offer.sell);
-    let buy = asset_index.get_name(&offer.buy).unwrap_or(&offer.buy);
-
-    (
-        format!("'{}'", offer.item_id),
-        format!("'{}'", offer.stash_id),
-        format!("'{}'", offer.seller_account),
-        offer.stock.to_string(),
-        format!("'{}'", escape(sell.clone())),
-        format!("'{}'", escape(buy.clone())),
-        format!("{}", offer.conversion_rate),
-        format!("to_timestamp({})", offer.created_at),
-    )
-}
-
-fn escape(s: String) -> String {
-    s.replace('\'', "''")
 }

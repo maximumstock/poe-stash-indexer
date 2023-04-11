@@ -2641,12 +2641,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "scooby"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "868e01623658f0c794bfe97af6929632018d7fdf0d2418a404cb8e857c949ec5"
-
-[[package]]
 name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3494,7 +3488,6 @@ dependencies = [
  "lapin",
  "prometheus_exporter",
  "regex",
- "scooby",
  "serde",
  "serde_json",
  "signal-hook",
