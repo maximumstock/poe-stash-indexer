@@ -34,7 +34,7 @@ jobs:
           target: production
           push: true
           cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
           tags: maximumstock2/indexer:latest
       - name: Move cache
         run: |
@@ -69,7 +69,7 @@ jobs:
           target: production
           push: true
           cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
           tags: maximumstock2/trade-ingest:latest
       - name: Move cache
         run: |
@@ -104,7 +104,7 @@ jobs:
           target: production
           push: true
           cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
           tags: maximumstock2/trade-api:latest
       - name: Move cache
         run: |
