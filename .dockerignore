@@ -1,7 +1,10 @@
 target
-./**/target
+./*/target
+aws-pipeline
+!target/x86_64-unknown-linux-musl/release/indexer
+!target/x86_64-unknown-linux-musl/release/trade-ingest
+!target/x86_64-unknown-linux-musl/release/trade-api
 timescaledb
 secrets
 crates/stash-differ/*.csv
 crates/trade-api/benchmark
-tmp

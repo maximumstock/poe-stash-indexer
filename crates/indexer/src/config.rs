@@ -14,8 +14,7 @@ impl Configuration {
             database_url: read_string_from_env("DATABASE_URL"),
             metrics_port: read_int_from_env("METRICS_PORT").unwrap_or(4000),
             rabbitmq: RabbitMqConfig::from_env()?,
-            user_config: UserConfiguration::read()
-                .expect("Your configuration file is malformed. Please check."),
+            user_config: UserConfiguration::default(),
         })
     }
 }
@@ -72,10 +71,7 @@ impl RabbitMqConfig {
 
 pub mod user_config {
 
-    use config::{Config, ConfigError, File};
     use serde::Deserialize;
-
-    const CONFIG_FILE_PATH: &str = "crates/indexer/config/config.toml";
 
     #[derive(Debug, Deserialize, Clone)]
     pub struct UserConfiguration {
@@ -95,13 +91,6 @@ pub mod user_config {
     }
 
     impl UserConfiguration {
-        pub fn read() -> Result<Self, ConfigError> {
-            Config::builder()
-                .add_source(File::with_name(CONFIG_FILE_PATH))
-                .build()?
-                .try_deserialize()
-        }
-
         #[allow(dead_code)]
         pub fn builder() -> UserConfigurationBuilder {
             UserConfigurationBuilder::new()
@@ -115,7 +104,7 @@ pub mod user_config {
                     item_categories: None,
                     leagues: None,
                 },
-                restart_mode: RestartMode::Resume,
+                restart_mode: RestartMode::Fresh,
             }
         }
     }
@@ -167,15 +156,15 @@ pub mod user_config {
         #[test]
         fn test_configuration_builder_with_restart_mode() {
             let configuration = UserConfigurationBuilder::new()
-                .with_restart_mode(RestartMode::Fresh)
+                .with_restart_mode(RestartMode::Resume)
                 .build();
-            assert_eq!(configuration.restart_mode, RestartMode::Fresh);
+            assert_eq!(configuration.restart_mode, RestartMode::Resume);
         }
 
         #[test]
-        fn test_default_restart_mode_is_resume() {
+        fn test_default_restart_mode_is_fresh() {
             let configuration = UserConfigurationBuilder::new().build();
-            assert_eq!(configuration.restart_mode, RestartMode::Resume);
+            assert_eq!(configuration.restart_mode, RestartMode::Fresh);
         }
     }
 }
