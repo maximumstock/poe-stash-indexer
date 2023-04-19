@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use crate::common::parse::parse_change_id_from_bytes;
+use crate::common::{parse::parse_change_id_from_bytes, poe_api::parse_rate_limit_timer};
 use ureq::Response;
 
 use crate::{
@@ -17,8 +17,6 @@ use crate::{
 };
 
 use super::scheduler::SchedulerMessage;
-
-const DEFAULT_RATE_LIMIT_TIMER: u64 = 60;
 
 pub(crate) enum FetcherMessage {
     Task(FetchTask),
@@ -221,20 +219,6 @@ fn fetch_chunk(
         }
         ureq::Error::Transport(_) => FetcherError::Transport,
     })
-}
-
-pub fn parse_rate_limit_timer(input: Option<&str>) -> Duration {
-    let seconds = input
-        .and_then(|v| v.split(':').last())
-        .map(|s| {
-            if s.ne("60") {
-                log::warn!("Expected x-rate-limit-ip to be 60 seconds");
-            }
-            s.parse().unwrap_or(DEFAULT_RATE_LIMIT_TIMER)
-        })
-        .unwrap_or(DEFAULT_RATE_LIMIT_TIMER);
-
-    Duration::from_secs(seconds)
 }
 
 #[cfg(test)]

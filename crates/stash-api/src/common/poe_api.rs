@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use serde::{Deserialize, Serialize};
 
 pub fn user_agent(client_id: &str) -> String {
@@ -70,4 +72,20 @@ pub async fn get_oauth_token(
         .await?;
 
     serde_json::from_slice(&response.bytes().await?).map_err(|e| e.into())
+}
+
+const DEFAULT_RATE_LIMIT_TIMER: u64 = 60;
+
+pub fn parse_rate_limit_timer(input: Option<&str>) -> Duration {
+    let seconds = input
+        .and_then(|v| v.split(':').last())
+        .map(|s| {
+            if s.ne("60") {
+                log::warn!("Expected x-rate-limit-ip to be 60 seconds");
+            }
+            s.parse().unwrap_or(DEFAULT_RATE_LIMIT_TIMER)
+        })
+        .unwrap_or(DEFAULT_RATE_LIMIT_TIMER);
+
+    Duration::from_secs(seconds)
 }
