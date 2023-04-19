@@ -1414,6 +1414,7 @@ dependencies = [
  "config",
  "diesel",
  "dotenv",
+ "futures",
  "log",
  "pretty_env_logger",
  "prometheus_exporter",
@@ -1421,6 +1422,7 @@ dependencies = [
  "serde_json",
  "signal-hook",
  "stash-api",
+ "tokio",
 ]
 
 [[package]]
@@ -2977,6 +2979,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
+ "trade-common",
  "ureq",
 ]
 

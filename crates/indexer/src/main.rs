@@ -19,23 +19,34 @@ use std::{
     },
 };
 
+use crate::metrics::setup_metrics;
 use crate::{
     config::{user_config::RestartMode, Configuration},
     resumption::State,
     sinks::postgres::Postgres,
 };
 use crate::{filter::filter_stash_record, sinks::rabbitmq::RabbitMq};
-use crate::{metrics::setup_metrics, sinks::sink::*};
 use crate::{resumption::StateWrapper, stash_record::map_to_stash_records};
+use futures::StreamExt;
 
 use dotenv::dotenv;
-use stash_api::{common::ChangeId, Indexer, IndexerMessage};
+use sinks::sink::Sink;
+use stash_api::{
+    common::{poe_ninja_client::PoeNinjaClient, ChangeId},
+    r#async::indexer::{Config, Indexer, IndexerMessage},
+};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }
+
+    let client_id = std::env::var("CLIENT_ID").expect("CLIENT_ID");
+    let client_secret = std::env::var("CLIENT_SECRET").expect("CLIENT_SECRET");
+    let indexer_config = Config::new(client_id, client_secret);
+
     pretty_env_logger::init_timed();
 
     let config = Configuration::from_env()?;
@@ -47,20 +58,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut resumption = StateWrapper::load_from_file(&"./indexer_state.json");
     let mut indexer = Indexer::new();
-    let rx = match (&config.user_config.restart_mode, &resumption.inner) {
-        (RestartMode::Fresh, _) => indexer.start_with_latest(),
-        (RestartMode::Resume, Some(next)) => {
-            indexer.start_with_id(ChangeId::from_str(&next.next_change_id).unwrap())
+    let mut rx = match (&config.user_config.restart_mode, &resumption.inner) {
+        (RestartMode::Fresh, _) => {
+            let latest_change_id = PoeNinjaClient::fetch_latest_change_id_async().await?;
+            indexer.start_at_change_id(indexer_config, latest_change_id)
         }
+        (RestartMode::Resume, Some(next)) => indexer.start_at_change_id(
+            indexer_config,
+            ChangeId::from_str(&next.next_change_id).unwrap(),
+        ),
         (RestartMode::Resume, None) => {
             log::info!("No previous data found, falling back to RestartMode::Fresh");
-            indexer.start_with_latest()
+            let latest_change_id = PoeNinjaClient::fetch_latest_change_id_async().await?;
+            indexer.start_at_change_id(indexer_config, latest_change_id)
         }
-    };
+    }
+    .await;
 
     let mut next_chunk_id = resumption.chunk_counter();
 
-    while let Ok(msg) = rx.recv() {
+    while let Some(msg) = rx.next().await {
         if signal_flag.load(Ordering::Relaxed) && !indexer.is_stopping() {
             log::info!("Shutdown signal detected. Shutting down gracefully.");
             indexer.stop();
@@ -74,23 +91,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             IndexerMessage::Tick {
                 change_id,
-                payload,
+                response,
                 created_at,
+                ..
             } => {
                 log::info!(
                     "Processing {} ({} stashes)",
                     change_id,
-                    payload.stashes.len()
+                    response.stashes.len()
                 );
 
                 metrics
                     .stashes_processed
-                    .inc_by(payload.stashes.len().try_into().unwrap());
+                    .inc_by(response.stashes.len().try_into().unwrap());
                 metrics.chunks_processed.inc();
 
-                let next_change_id = payload.next_change_id.clone();
+                let next_change_id = response.next_change_id.clone();
                 let stashes =
-                    map_to_stash_records(change_id.clone(), created_at, payload, next_chunk_id)
+                    map_to_stash_records(change_id.clone(), created_at, response, next_chunk_id)
                         .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
                             filter::FilterResult::Block { reason } => {
                                 log::debug!("Filter: Blocked stash, reason: {}", reason);

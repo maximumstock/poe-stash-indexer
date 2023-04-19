@@ -8,7 +8,7 @@ struct PoeNinjaGetStats {
 }
 
 #[derive(Debug)]
-pub(crate) struct PoeNinjaClient;
+pub struct PoeNinjaClient;
 
 impl PoeNinjaClient {
     #[cfg(feature = "sync")]
@@ -42,15 +42,10 @@ mod test {
         assert!(latest_change_id.unwrap().inner.len() > 50);
     }
 
-    #[test]
+    #[tokio::test]
     #[cfg(feature = "async")]
-    fn test_fetch_latest_change_id_async() {
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        let latest_change_id =
-            runtime.block_on(super::PoeNinjaClient::fetch_latest_change_id_async());
+    async fn test_fetch_latest_change_id_async() {
+        let latest_change_id = super::PoeNinjaClient::fetch_latest_change_id_async().await;
         assert!(latest_change_id.is_ok());
         assert!(latest_change_id.unwrap().inner.len() > 50);
     }
