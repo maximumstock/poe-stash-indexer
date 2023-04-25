@@ -29,6 +29,7 @@ pkgs.mkShell rec {
     (rust-bin.stable."1.67.0".default.override {
       extensions = [ "rust-src" "clippy" ];
     })
+    protobuf
     sqlx-cli
 
     rust-analyzer
