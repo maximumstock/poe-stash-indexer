@@ -3,10 +3,11 @@ use std::{
     time::Duration,
 };
 
+use crate::sync::indexer::IndexerMessage;
+
 use super::{
     fetcher::{start_fetcher, FetchTask, FetcherMessage},
     worker::{start_worker, WorkerMessage, WorkerTask},
-    IndexerMessage,
 };
 
 pub(crate) enum SchedulerMessage {

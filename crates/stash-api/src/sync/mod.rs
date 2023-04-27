@@ -1,6 +1,4 @@
 mod fetcher;
-mod indexer;
+pub mod indexer;
 mod scheduler;
 mod worker;
-
-pub use indexer::{Indexer, IndexerMessage};

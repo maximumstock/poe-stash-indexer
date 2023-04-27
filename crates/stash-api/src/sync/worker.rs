@@ -3,9 +3,12 @@ use std::{
     sync::mpsc::{Receiver, Sender},
 };
 
-use crate::common::{ChangeId, StashTabResponse};
+use crate::{
+    common::{ChangeId, StashTabResponse},
+    sync::indexer::IndexerMessage,
+};
 
-use super::{scheduler::SchedulerMessage, IndexerMessage};
+use super::scheduler::SchedulerMessage;
 
 pub(crate) enum WorkerMessage {
     Task(WorkerTask),

@@ -1,20 +1,22 @@
 use std::{
     error::Error,
     io::{BufReader, Read},
-    str::FromStr,
-    string::FromUtf8Error,
     sync::mpsc::{Receiver, Sender},
     time::Duration,
 };
 
-use serde::{Deserialize, Serialize};
+use crate::common::{parse::parse_change_id_from_bytes, poe_api::parse_rate_limit_timer};
 use ureq::Response;
 
-use crate::{common::ChangeId, sync::worker::WorkerTask};
+use crate::{
+    common::{
+        poe_api::{get_oauth_token_sync, user_agent, OAuthResponse},
+        ChangeId,
+    },
+    sync::worker::WorkerTask,
+};
 
 use super::scheduler::SchedulerMessage;
-
-const DEFAULT_RATE_LIMIT_TIMER: u64 = 60;
 
 pub(crate) enum FetcherMessage {
     Task(FetchTask),
@@ -64,7 +66,7 @@ pub(crate) fn start_fetcher(
         let client_id = std::env::var("CLIENT_ID").unwrap();
         let client_secret = std::env::var("CLIENT_SECRET").unwrap();
 
-        let oauth_response = match get_oauth_token(&client_id, &client_secret) {
+        let oauth_response = match get_oauth_token_sync(&client_id, &client_secret) {
             Ok(oauth) => oauth,
             Err(e) => {
                 log::error!(
@@ -145,49 +147,6 @@ pub(crate) fn start_fetcher(
     })
 }
 
-/// According to https://www.pathofexile.com/developer/docs/authorization
-fn get_oauth_token(
-    client_id: &str,
-    client_secret: &str,
-) -> Result<OAuthResponse, Box<dyn std::error::Error>> {
-    let url = "https://www.pathofexile.com/oauth/token";
-    let payload = serde_urlencoded::to_string(OAuthRequestPayload::new(
-        client_id.into(),
-        client_secret.into(),
-    ))
-    .unwrap();
-    let response = ureq::post(url)
-        .set("Content-Type", "application/x-www-form-urlencoded")
-        .set("User-Agent", user_agent(client_id).as_str())
-        .send(payload.as_bytes())?;
-
-    serde_json::from_str(&response.into_string()?).map_err(|e| e.into())
-}
-
-#[derive(Debug, Deserialize)]
-struct OAuthResponse {
-    access_token: String,
-}
-
-#[derive(Debug, Serialize)]
-struct OAuthRequestPayload {
-    client_id: String,
-    client_secret: String,
-    grant_type: String,
-    scope: String,
-}
-
-impl OAuthRequestPayload {
-    pub fn new(client_id: String, client_secret: String) -> Self {
-        Self {
-            client_id,
-            client_secret,
-            grant_type: "client_credentials".into(),
-            scope: "service:psapi".into(),
-        }
-    }
-}
-
 fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
     match task.retry() {
         Some(t) => {
@@ -211,8 +170,7 @@ fn parse_chunk(
     match decoder.read_exact(&mut next_id_buffer) {
         Ok(_) => {
             let next_id = parse_change_id_from_bytes(&next_id_buffer)
-                .map_err(|_| FetcherError::ParseError)
-                .and_then(|s| ChangeId::from_str(&s).map_err(|_| FetcherError::ParseError))?;
+                .map_err(|_| FetcherError::ParseError)?;
             Ok((decoder, next_id_buffer, next_id))
         }
         Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => {
@@ -224,10 +182,6 @@ fn parse_chunk(
             Err(FetcherError::ParseError)
         }
     }
-}
-
-fn user_agent(client_id: &str) -> String {
-    format!("OAuth {client_id}/0.1 (contact: mxmlnstock@gmail.com)")
 }
 
 fn fetch_chunk(
@@ -245,7 +199,7 @@ fn fetch_chunk(
         .set("User-Agent", user_agent(client_id).as_str())
         .set(
             "Authorization",
-            format!("Bearer {}", oauth_response.access_token).as_str(),
+            format!("Bearer {}", &oauth_response.access_token).as_str(),
         );
     let response = request.call();
 
@@ -267,35 +221,9 @@ fn fetch_chunk(
     })
 }
 
-pub fn parse_rate_limit_timer(input: Option<&str>) -> Duration {
-    let seconds = input
-        .and_then(|v| v.split(':').last())
-        .map(|s| {
-            if s.ne("60") {
-                log::warn!("Expected x-rate-limit-ip to be 60 seconds");
-            }
-            s.parse().unwrap_or(DEFAULT_RATE_LIMIT_TIMER)
-        })
-        .unwrap_or(DEFAULT_RATE_LIMIT_TIMER);
-
-    Duration::from_secs(seconds)
-}
-
-pub fn parse_change_id_from_bytes(bytes: &[u8]) -> Result<String, FromUtf8Error> {
-    String::from_utf8(
-        bytes
-            .split(|b| (*b as char).eq(&'"'))
-            .nth(3)
-            .unwrap()
-            .to_vec(),
-    )
-}
-
 #[cfg(test)]
 mod test {
     use std::time::Duration;
-
-    use crate::sync::fetcher::parse_change_id_from_bytes;
 
     use super::parse_rate_limit_timer;
 
@@ -314,12 +242,5 @@ mod test {
             parse_rate_limit_timer(Some("_:_:120")),
             Duration::from_secs(120)
         );
-    }
-
-    #[test]
-    fn test_parse_change_id_from_bytes() {
-        let input = "{\"next_change_id\": \"abc-def-ghi-jkl-mno\", \"stashes\": []}".as_bytes();
-        let result = parse_change_id_from_bytes(input);
-        assert_eq!(result, Ok("abc-def-ghi-jkl-mno".into()));
     }
 }
