@@ -21,10 +21,10 @@ use crate::{metrics::setup_metrics, store::Store};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    setup_telemetry("trade-api").expect("Telemtry setup failed");
-
     let config = config::Config::from_env()?;
-    std::env::set_var("DATABASE_URL", &config.db_url);
+    info!("{:?}", config);
+
+    setup_telemetry("trade-api").expect("Telemtry setup");
 
     let pool = PgPool::connect(&config.db_url).await?;
     let mut index = AssetIndex::new();
