@@ -6,9 +6,9 @@ pub struct Metrics {
     pub rate_limited: GenericCounter<AtomicU64>,
 }
 
-pub fn setup_metrics(_port: u32) -> Result<Metrics, Box<dyn std::error::Error>> {
-    // let binding = format!("0.0.0.0:{port}").parse()?;
-    // prometheus_exporter::start(binding)?;
+pub fn setup_metrics(port: u32) -> Result<Metrics, Box<dyn std::error::Error>> {
+    let binding = format!("0.0.0.0:{port}").parse()?;
+    prometheus_exporter::start(binding)?;
 
     let chunks_processed =
         prometheus_exporter::prometheus::register_int_counter!("chunks_processed", "help")?;

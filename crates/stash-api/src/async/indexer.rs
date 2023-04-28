@@ -3,7 +3,7 @@ use std::{collections::VecDeque, sync::Arc, time::Duration};
 use bytes::BytesMut;
 use futures::channel::mpsc::Sender;
 use futures::{channel::mpsc::Receiver, lock::Mutex};
-use log::{error, info};
+use log::{error, info, debug};
 use tokio::sync::RwLock;
 
 use crate::common::parse::parse_change_id_from_bytes;
@@ -55,7 +55,7 @@ impl Indexer {
         mut config: Config,
         change_id: ChangeId,
     ) -> IndexerResult {
-        log::info!("Resuming at change id: {}", change_id);
+        log::info!("Starting at change id: {}", change_id);
 
         let credentials = get_oauth_token(&config.client_id, &config.client_secret)
             .await
@@ -98,7 +98,7 @@ async fn process(
             &change_id
         );
 
-        info!("Requesting {}", url);
+        debug!("Requesting {}", url);
 
         // TODO: static client somewhere
         let client = reqwest::ClientBuilder::new().build()?;
@@ -146,11 +146,20 @@ async fn process(
 
         // TODO: handle errors by rescheduling based on error
         let response = serde_json::from_slice::<StashTabResponse>(&bytes)?;
-        info!(
+        debug!(
             "Read response {} with {} stashes",
             response.next_change_id,
             response.stashes.len()
         );
+
+        // reschedule if payload is empty
+        if response.stashes.is_empty() {
+            info!("Empty response, rescheduling {change_id}");
+            tokio::time::sleep(Duration::from_secs(2)).await;
+            schedule_job(jobs, tx, change_id, config);
+            return Ok(());
+        }
+
         tx.try_send(IndexerMessage::Tick {
             response,
             previous_change_id: change_id.clone(),

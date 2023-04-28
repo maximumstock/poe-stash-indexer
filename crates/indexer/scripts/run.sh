@@ -8,12 +8,5 @@ if [[ -v $DATABASE_URL ]]; then
     --config-file crates/indexer/diesel.toml
 fi
 
-case $ENV in
-  "production")
-    exec indexer
-    ;;
-  *)
-    exec cargo watch -w crates -x "run --bin indexer"
-    ;;
-esac
+exec cargo watch -w crates -x "run --bin indexer"
 

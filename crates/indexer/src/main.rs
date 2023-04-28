@@ -43,8 +43,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::env::set_var("RUST_LOG", "info");
     }
 
-    let client_id = std::env::var("CLIENT_ID").expect("CLIENT_ID");
-    let client_secret = std::env::var("CLIENT_SECRET").expect("CLIENT_SECRET");
+    let client_id = std::env::var("CLIENT_ID").expect("CLIENT_ID environment variable");
+    let client_secret = std::env::var("CLIENT_SECRET").expect("CLIENT_SECRET environment variable");
     let indexer_config = Config::new(client_id, client_secret);
 
     pretty_env_logger::init_timed();
