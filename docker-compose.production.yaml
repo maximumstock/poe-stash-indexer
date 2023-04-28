@@ -35,3 +35,7 @@ services:
   rabbitmq:
     env_file:
       - configuration/environments/.env.production
+
+  trade-store:
+    env_file:
+      - configuration/environments/.env.production
