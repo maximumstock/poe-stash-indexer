@@ -49,7 +49,7 @@ impl From<StashRecord> for Vec<Offer> {
                         created_at: std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
                             .expect("Failed to create timestamp")
-                            .as_secs(),
+                            .as_millis(),
                     })
                 } else {
                     None
