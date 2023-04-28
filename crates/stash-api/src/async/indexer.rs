@@ -10,7 +10,7 @@ use crate::common::parse::parse_change_id_from_bytes;
 use crate::common::poe_api::{get_oauth_token, user_agent, OAuthResponse};
 use crate::common::{ChangeId, StashTabResponse};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Indexer {
     pub(crate) is_stopping: bool,
 }
@@ -50,6 +50,7 @@ impl Indexer {
     }
 
     /// Start the indexer with a given change_id
+    #[tracing::instrument()]
     pub async fn start_at_change_id(
         &self,
         mut config: Config,
@@ -83,6 +84,7 @@ fn schedule_job(
     });
 }
 
+#[tracing::instrument(skip(jobs, tx))]
 async fn process(
     jobs: Arc<Mutex<VecDeque<ChangeId>>>,
     mut tx: Sender<IndexerMessage>,
@@ -97,7 +99,7 @@ async fn process(
             "https://api.pathofexile.com/public-stash-tabs?id={}",
             &change_id
         );
-
+        tracing::trace!(change_id = ?change_id, url = ?url);
         debug!("Requesting {}", url);
 
         // TODO: static client somewhere
@@ -126,6 +128,7 @@ async fn process(
         let mut response = match response {
             Err(e) => {
                 error!("Error response: {:?}", e);
+                tracing::trace!(fetch_error = ?e);
                 // TODO: API boundary, respond with custom error
                 return Ok(());
             }
@@ -139,6 +142,7 @@ async fn process(
 
             if bytes.len() > 120 && !prefetch_done {
                 let next_change_id = parse_change_id_from_bytes(&bytes).unwrap();
+                tracing::trace!(next_change_id = ?next_change_id);
                 prefetch_done = true;
                 schedule_job(jobs.clone(), tx.clone(), next_change_id, config.clone());
             }
@@ -151,6 +155,7 @@ async fn process(
             response.next_change_id,
             response.stashes.len()
         );
+        tracing::trace!(number_stashes = ?response.stashes.len());
 
         // reschedule if payload is empty
         if response.stashes.is_empty() {

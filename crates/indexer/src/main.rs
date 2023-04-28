@@ -35,6 +35,7 @@ use stash_api::{
     common::{poe_ninja_client::PoeNinjaClient, ChangeId},
     r#async::indexer::{Config, Indexer, IndexerMessage},
 };
+use trade_common::telemetry::setup_telemetry;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -42,6 +43,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }
+
+    setup_telemetry("indexer").expect("Telemetry setup");
 
     let client_id = std::env::var("CLIENT_ID").expect("CLIENT_ID environment variable");
     let client_secret = std::env::var("CLIENT_SECRET").expect("CLIENT_SECRET environment variable");

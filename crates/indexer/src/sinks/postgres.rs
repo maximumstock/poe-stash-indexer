@@ -20,6 +20,7 @@ impl Postgres {
 }
 
 impl Sink for Postgres {
+    #[tracing::instrument(skip(self, records))]
     fn handle(&self, records: &[StashRecord]) -> Result<usize, Box<dyn std::error::Error>> {
         diesel::insert_into(stash_records)
             .values(records)
@@ -30,12 +31,14 @@ impl Sink for Postgres {
 }
 
 impl SinkResume for Postgres {
+    #[tracing::instrument(skip(self))]
     fn get_next_chunk_id(&self) -> QueryResult<Option<i64>> {
         stash_records
             .select(max(chunk_id))
             .first::<Option<i64>>(&self.conn)
     }
 
+    #[tracing::instrument(skip(self))]
     fn get_next_change_id(&self) -> QueryResult<String> {
         let latest_created_at = stash_records
             .select(max(created_at))

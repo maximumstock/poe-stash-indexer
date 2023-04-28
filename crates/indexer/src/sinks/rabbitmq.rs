@@ -14,6 +14,7 @@ pub struct RabbitMq<'a> {
 }
 
 impl<'a> RabbitMq<'a> {
+    #[tracing::instrument]
     pub fn connect(config: &'a RabbitMqConfig) -> Result<Self, amiquip::Error> {
         let mut connection = Connection::insecure_open(config.connection_url.as_str())?;
         let channel = connection.open_channel(None)?;
@@ -27,6 +28,7 @@ impl<'a> RabbitMq<'a> {
 }
 
 impl<'a> Sink for RabbitMq<'a> {
+    #[tracing::instrument(skip(self, payload))]
     fn handle(
         &self,
         payload: &[crate::stash_record::StashRecord],
