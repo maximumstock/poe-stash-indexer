@@ -20,7 +20,7 @@ impl Postgres {
 }
 
 impl Sink for Postgres {
-    #[tracing::instrument(skip(self, records))]
+    #[tracing::instrument(skip(self, records), name = "handle-postgres")]
     fn handle(&self, records: &[StashRecord]) -> Result<usize, Box<dyn std::error::Error>> {
         diesel::insert_into(stash_records)
             .values(records)

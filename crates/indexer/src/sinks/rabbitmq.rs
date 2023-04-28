@@ -28,7 +28,7 @@ impl<'a> RabbitMq<'a> {
 }
 
 impl<'a> Sink for RabbitMq<'a> {
-    #[tracing::instrument(skip(self, payload))]
+    #[tracing::instrument(skip(self, payload), name = "handle-rabbitmq")]
     fn handle(
         &self,
         payload: &[crate::stash_record::StashRecord],
