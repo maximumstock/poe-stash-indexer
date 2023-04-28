@@ -50,8 +50,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client_secret = std::env::var("CLIENT_SECRET").expect("CLIENT_SECRET environment variable");
     let indexer_config = Config::new(client_id, client_secret);
 
-    pretty_env_logger::init_timed();
-
     let config = Configuration::from_env()?;
     tracing::info!("Chosen configuration: {:#?}", config);
 
