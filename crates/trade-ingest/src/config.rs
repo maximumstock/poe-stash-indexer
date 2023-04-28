@@ -10,7 +10,7 @@ impl Config {
         Ok(Self {
             metrics_port: int_from_env("METRICS_PORT")?,
             amqp_addr: str_from_env("AMQP_ADDR")?,
-            db_url: str_from_env("TRADE_API_DATABASE_URL")?
+            db_url: str_from_env("TRADE_API_DATABASE_URL")?,
         })
     }
 }

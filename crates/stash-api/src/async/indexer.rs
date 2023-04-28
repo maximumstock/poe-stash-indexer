@@ -3,7 +3,7 @@ use std::{collections::VecDeque, sync::Arc, time::Duration};
 use bytes::BytesMut;
 use futures::channel::mpsc::Sender;
 use futures::{channel::mpsc::Receiver, lock::Mutex};
-use log::{error, info, debug};
+use log::{debug, error, info};
 use tokio::sync::RwLock;
 
 use crate::common::parse::parse_change_id_from_bytes;
