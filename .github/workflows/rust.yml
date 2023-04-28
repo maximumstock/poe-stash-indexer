@@ -86,6 +86,11 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set short git commit SHA
+        id: vars
+        run: |
+          shortSha=$(git rev-parse --short ${{ github.sha }})
+          echo "::set-output name=short_sha::$shortSha"
       - name: Build indexer
         uses: docker/build-push-action@v4
         with:
@@ -93,7 +98,9 @@ jobs:
           file: ./crates/indexer/Dockerfile
           target: production
           push: true
-          tags: maximumstock2/indexer:latest
+          tags: |
+            maximumstock2/indexer:latest
+            maximumstock2/indexer:${{ steps.vars.outputs.short_sha }}
       - name: Build trade-ingest
         uses: docker/build-push-action@v4
         with:
@@ -101,7 +108,9 @@ jobs:
           file: ./crates/trade-ingest/Dockerfile
           target: production
           push: true
-          tags: maximumstock2/trade-ingest:latest
+          tags: |
+            maximumstock2/trade-ingest:latest
+            maximumstock2/trade-ingest:${{ steps.vars.outputs.short_sha }}
       - name: Build trade-api
         uses: docker/build-push-action@v4
         with:
@@ -109,7 +118,9 @@ jobs:
           file: ./crates/trade-api/Dockerfile
           target: production
           push: true
-          tags: maximumstock2/trade-api:latest
+          tags: |
+            maximumstock2/trade-api:latest
+            maximumstock2/trade-api:${{ steps.vars.outputs.short_sha }}
 
   deploy:
     runs-on: ubuntu-latest
