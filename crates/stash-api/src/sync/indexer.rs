@@ -22,7 +22,7 @@ impl Indexer {
 
     pub fn stop(&mut self) {
         self.is_stopping = true;
-        log::info!("Stopping indexer");
+        tracing::info!("Stopping indexer");
         self.scheduler_tx
             .as_ref()
             .expect("indexer: Missing ref to scheduler_rx")
@@ -36,7 +36,7 @@ impl Indexer {
 
     /// Start the indexer with a given change_id
     pub fn start_with_id(&mut self, change_id: ChangeId) -> IndexerResult {
-        log::info!("Resuming at change id: {}", change_id);
+        tracing::info!("Resuming at change id: {}", change_id);
         self.start(change_id)
     }
 
@@ -44,7 +44,7 @@ impl Indexer {
     pub fn start_with_latest(&mut self) -> IndexerResult {
         let latest_change_id = PoeNinjaClient::fetch_latest_change_id()
             .expect("Fetching lastest change_id from poe.ninja failed");
-        log::info!("Fetched latest change id: {}", latest_change_id);
+        tracing::info!("Fetched latest change id: {}", latest_change_id);
         self.start(latest_change_id)
     }
 

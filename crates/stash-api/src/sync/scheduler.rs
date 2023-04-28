@@ -71,7 +71,7 @@ pub(crate) fn start_scheduler() -> (Receiver<IndexerMessage>, Sender<SchedulerMe
             .send(IndexerMessage::Stop)
             .expect("scheduler: Failed to send IndexerMessage::Stop");
 
-        log::debug!("Shut down scheduler");
+        tracing::debug!("Shut down scheduler");
     });
 
     ret

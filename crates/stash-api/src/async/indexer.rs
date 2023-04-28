@@ -3,8 +3,8 @@ use std::{collections::VecDeque, sync::Arc, time::Duration};
 use bytes::BytesMut;
 use futures::channel::mpsc::Sender;
 use futures::{channel::mpsc::Receiver, lock::Mutex};
-use log::{debug, error, info};
 use tokio::sync::RwLock;
+use tracing::{debug, error, info};
 
 use crate::common::parse::parse_change_id_from_bytes;
 use crate::common::poe_api::{get_oauth_token, user_agent, OAuthResponse};
@@ -42,7 +42,7 @@ impl Indexer {
 
     pub fn stop(&mut self) {
         self.is_stopping = true;
-        log::info!("Stopping indexer");
+        info!("Stopping indexer");
     }
 
     pub fn is_stopping(&self) -> bool {
@@ -55,7 +55,7 @@ impl Indexer {
         mut config: Config,
         change_id: ChangeId,
     ) -> IndexerResult {
-        log::info!("Starting at change id: {}", change_id);
+        info!("Starting at change id: {}", change_id);
 
         let credentials = get_oauth_token(&config.client_id, &config.client_secret)
             .await

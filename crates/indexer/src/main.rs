@@ -50,7 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init_timed();
 
     let config = Configuration::from_env()?;
-    log::info!("Chosen configuration: {:#?}", config);
+    tracing::info!("Chosen configuration: {:#?}", config);
 
     let signal_flag = setup_signal_handlers()?;
     let metrics = setup_metrics(config.metrics_port)?;
@@ -68,7 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ChangeId::from_str(&next.next_change_id).unwrap(),
         ),
         (RestartMode::Resume, None) => {
-            log::info!("No previous data found, falling back to RestartMode::Fresh");
+            tracing::info!("No previous data found, falling back to RestartMode::Fresh");
             let latest_change_id = PoeNinjaClient::fetch_latest_change_id_async().await?;
             indexer.start_at_change_id(indexer_config, latest_change_id)
         }
@@ -79,14 +79,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     while let Some(msg) = rx.next().await {
         if signal_flag.load(Ordering::Relaxed) && !indexer.is_stopping() {
-            log::info!("Shutdown signal detected. Shutting down gracefully.");
+            tracing::info!("Shutdown signal detected. Shutting down gracefully.");
             indexer.stop();
         }
 
         match msg {
             IndexerMessage::Stop => break,
             IndexerMessage::RateLimited(timer) => {
-                log::info!("Rate limited for {} seconds...waiting", timer.as_secs());
+                tracing::info!("Rate limited for {} seconds...waiting", timer.as_secs());
                 metrics.rate_limited.inc();
             }
             IndexerMessage::Tick {
@@ -95,7 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 created_at,
                 ..
             } => {
-                log::info!(
+                tracing::info!(
                     "Processing {} ({} stashes)",
                     change_id,
                     response.stashes.len()
@@ -111,7 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     map_to_stash_records(change_id.clone(), created_at, response, next_chunk_id)
                         .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
                             filter::FilterResult::Block { reason } => {
-                                log::debug!("Filter: Blocked stash, reason: {}", reason);
+                                tracing::debug!("Filter: Blocked stash, reason: {}", reason);
                                 None
                             }
                             filter::FilterResult::Pass => Some(stash),
@@ -121,7 +121,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             } => {
                                 let n_removed = n_total - n_retained;
                                 if n_removed > 0 {
-                                    log::debug!(
+                                    tracing::debug!(
                                         "Filter: Removed {} \t Retained {} \t Total {}",
                                         n_removed,
                                         n_retained,
@@ -151,7 +151,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if resumption.save().is_ok() {
-        log::info!("Saved resumption state");
+        tracing::info!("Saved resumption state");
     }
 
     if indexer.is_stopping() {
@@ -176,13 +176,13 @@ fn setup_sinks<'a>(
     if let Some(conf) = &config.rabbitmq {
         let mq_sink = RabbitMq::connect(conf)?;
         sinks.push(Box::new(mq_sink));
-        log::info!("Configured RabbitMQ fanout sink");
+        tracing::info!("Configured RabbitMQ fanout sink");
     }
 
     if let Some(url) = &config.database_url {
         if !url.is_empty() {
             sinks.push(Box::new(Postgres::connect(url)));
-            log::info!("Configured PostgreSQL sink");
+            tracing::info!("Configured PostgreSQL sink");
         }
     }
 

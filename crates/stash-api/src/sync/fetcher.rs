@@ -69,7 +69,7 @@ pub(crate) fn start_fetcher(
         let oauth_response = match get_oauth_token_sync(&client_id, &client_secret) {
             Ok(oauth) => oauth,
             Err(e) => {
-                log::error!(
+                tracing::error!(
                     "fetcher: encountered error during oauth token retrieval {}",
                     e.to_string(),
                 );
@@ -82,11 +82,11 @@ pub(crate) fn start_fetcher(
             std::thread::sleep(Duration::from_millis(500));
 
             let start = std::time::Instant::now();
-            log::debug!("Requesting {}", task.change_id);
+            tracing::debug!("Requesting {}", task.change_id);
 
             match fetch_chunk(&task, &client_id, &oauth_response).and_then(parse_chunk) {
                 Ok((decoder, change_id_buffer, next_change_id)) => {
-                    log::debug!(
+                    tracing::debug!(
                         "fetcher: Took {}ms to read next id: {}",
                         start.elapsed().as_millis(),
                         next_change_id
@@ -111,11 +111,11 @@ pub(crate) fn start_fetcher(
                     }
                 }
                 Err(FetcherError::HttpError { status: 403 }) => {
-                    log::error!("fetcher: Received 403 Forbidden - cannot access API. Please check your API credentials");
+                    tracing::error!("fetcher: Received 403 Forbidden - cannot access API. Please check your API credentials");
                     scheduler_tx.send(SchedulerMessage::Stop).unwrap();
                 }
                 Err(FetcherError::HttpError { status: 401 }) => {
-                    log::error!("fetcher: Received 401 Unauthorized");
+                    tracing::error!("fetcher: Received 401 Unauthorized");
                     scheduler_tx.send(SchedulerMessage::Stop).unwrap();
                 }
                 Err(
@@ -123,18 +123,18 @@ pub(crate) fn start_fetcher(
                     | FetcherError::ParseError
                     | FetcherError::Transport),
                 ) => {
-                    log::error!("fetcher: Encountered error {}", e);
+                    tracing::error!("fetcher: Encountered error {}", e);
                     reschedule_task(&scheduler_tx, task);
                 }
                 Err(FetcherError::ServiceUnavailable) => {
-                    log::error!("fetcher: Service Unavailable - Retrying in 60s");
+                    tracing::error!("fetcher: Service Unavailable - Retrying in 60s");
                     scheduler_tx
                         .send(SchedulerMessage::RateLimited(Duration::from_secs(60)))
                         .unwrap();
                     reschedule_task(&scheduler_tx, task);
                 }
                 Err(FetcherError::RateLimited(timer)) => {
-                    log::info!("fetcher: Rate limit reached");
+                    tracing::info!("fetcher: Rate limit reached");
                     scheduler_tx
                         .send(SchedulerMessage::RateLimited(timer))
                         .unwrap();
@@ -143,14 +143,14 @@ pub(crate) fn start_fetcher(
             }
         }
 
-        log::debug!("fetcher: Shutting down");
+        tracing::debug!("fetcher: Shutting down");
     })
 }
 
 fn reschedule_task(scheduler_tx: &Sender<SchedulerMessage>, task: FetchTask) {
     match task.retry() {
         Some(t) => {
-            log::info!("fetcher: Rescheduling {} in 1s", t.change_id);
+            tracing::info!("fetcher: Rescheduling {} in 1s", t.change_id);
             std::thread::sleep(Duration::from_secs(1));
             scheduler_tx.send(SchedulerMessage::Fetch(t)).unwrap();
         }
@@ -174,11 +174,11 @@ fn parse_chunk(
             Ok((decoder, next_id_buffer, next_id))
         }
         Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => {
-            log::error!("fetcher: UnexpectedEof: {:?}", next_id_buffer);
+            tracing::error!("fetcher: UnexpectedEof: {:?}", next_id_buffer);
             Err(FetcherError::ParseError)
         }
         Err(err) => {
-            log::error!("fetcher: gzip decoding failed: {}", err);
+            tracing::error!("fetcher: gzip decoding failed: {}", err);
             Err(FetcherError::ParseError)
         }
     }
@@ -205,8 +205,8 @@ fn fetch_chunk(
 
     response.map_err(|e| match e {
         ureq::Error::Status(status, ref response) => {
-            log::error!("fetcher: HTTP error {}", status);
-            log::error!("fetcher: HTTP response: {:?}", response);
+            tracing::error!("fetcher: HTTP error {}", status);
+            tracing::error!("fetcher: HTTP response: {:?}", response);
 
             match status {
                 429 => {

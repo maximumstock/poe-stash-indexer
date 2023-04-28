@@ -81,7 +81,7 @@ pub fn parse_rate_limit_timer(input: Option<&str>) -> Duration {
         .and_then(|v| v.split(':').last())
         .map(|s| {
             if s.ne("60") {
-                log::warn!("Expected x-rate-limit-ip to be 60 seconds");
+                tracing::warn!("Expected x-rate-limit-ip to be 60 seconds");
             }
             s.parse().unwrap_or(DEFAULT_RATE_LIMIT_TIMER)
         })

@@ -26,21 +26,21 @@ while let Ok(msg) = rx.recv() {
         // fetched chunks are done processing.
         IndexerMessage::Stop => break,
         IndexerMessage::RateLimited(timer) => {
-            log::info!("Rate limited for {} seconds...waiting", timer.as_secs());
+            tracing::info!("Rate limited for {} seconds...waiting", timer.as_secs());
         }
         IndexerMessage::Tick {
             change_id,
             payload,
             created_at,
         } => {
-            log::info!(
+            tracing::info!(
                 "Processing {} ({} stashes)",
                 change_id,
                 payload.stashes.len()
             );
 
             let next_change_id = payload.next_change_id.clone();
-            log::info!("The next change id: {}", next_change_id);
+            tracing::info!("The next change id: {}", next_change_id);
         }
     }
 }
