@@ -46,8 +46,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_telemetry("indexer").expect("Telemetry setup");
 
-    let client_id = std::env::var("CLIENT_ID").expect("CLIENT_ID environment variable");
-    let client_secret = std::env::var("CLIENT_SECRET").expect("CLIENT_SECRET environment variable");
+    let client_id = std::env::var("POE_CLIENT_ID").expect("CLIENT_ID environment variable");
+    let client_secret =
+        std::env::var("POE_CLIENT_SECRET").expect("CLIENT_SECRET environment variable");
     let indexer_config = Config::new(client_id, client_secret);
 
     let config = Configuration::from_env()?;

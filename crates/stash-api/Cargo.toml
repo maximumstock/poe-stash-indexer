@@ -21,6 +21,7 @@ bytes = { version = "1.4.0", optional = true }
 serde_urlencoded = "0.7.1"
 trade-common = { path = "../trade-common" }
 tracing = "0.1.38"
+dotenv = "0.15.0"
 
 
 [features]

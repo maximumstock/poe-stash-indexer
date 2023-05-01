@@ -2978,6 +2978,7 @@ name = "stash-api"
 version = "0.1.0"
 dependencies = [
  "bytes",
+ "dotenv",
  "futures",
  "governor",
  "reqwest",
