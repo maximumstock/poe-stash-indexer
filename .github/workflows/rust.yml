@@ -70,6 +70,19 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: poe-stash-indexer-docker
+      # Custom caching of maximumstock2/base:latest, so we don't pull it all the time
+      - name: Restore Docker image cache if it exists
+        id: cache-docker-image
+        uses: actions/cache@v3
+        with:
+          path: gh_ci/cache/docker/maximumstock-base-latest
+          key: cache-docker-maximumstock-base-latest
+      - name: Update Docker image cache if cache miss
+        if: steps.cache-docker-image.outputs.cache-hit != 'true'
+        run: docker pull maximumstock2/base:latest && mkdir -p gh_ci/cache/docker && docker image save maximumstock2/base:latest --output ./gh_ci/cache/docker/maximumstock-base-latest.tar
+      - name: Use Docker image cache if cache hit
+        if: steps.cache-docker-image.outputs.cache-hit == 'true'
+        run: docker image load --input ./gh_ci/cache/docker/maximumstock-base-latest.tar
       - name: Build
         run: |
           docker pull maximumstock2/base:latest
