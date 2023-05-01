@@ -52,6 +52,17 @@ jobs:
       - name: Lint
         run: cargo clippy --all-features --all-targets -- -D warnings
 
+      # Workaround for overriding existing cache
+      - name: clear
+        if: ${{ steps.cache-restore.outputs.cache-hit }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh extension install actions/gh-actions-cache
+          gh actions-cache delete poe-stash-indexer-ci --confirm
+        continue-on-error: true
+
       - name: Always save cache
         uses: actions/cache/save@v3
         if: always()
@@ -107,6 +118,16 @@ jobs:
             && strip target/x86_64-unknown-linux-musl/release/trade-ingest \
             && strip target/x86_64-unknown-linux-musl/release/trade-api \
             "
+      # Workaround for overriding existing cache
+      - name: clear
+        if: ${{ steps.restore-cache.outputs.cache-hit }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh extension install actions/gh-actions-cache
+          gh actions-cache delete ${{ steps.restore-cache.outputs.cache-primary-key }} --confirm
+        continue-on-error: true
       - name: Always save cache
         uses: actions/cache/save@v3
         if: always()
