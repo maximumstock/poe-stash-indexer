@@ -64,17 +64,16 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-            # TODO: also cache downloads & registry to shave off a few more seconds
-            # ~/.cargo/bin/
-            # ~/.cargo/registry/index/
-            # ~/.cargo/registry/cache/
-            # ~/.cargo/git/db/
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
             target/
           key: poe-stash-indexer-docker
       - name: Build
         run: |
           docker pull maximumstock2/base:latest
-          docker run -v $PWD:/volume --rm -t maximumstock2/base:latest bash -c "\
+          docker run -v $PWD:/volume -v ~/.cargo:/volume/.cargo -e CARGO_HOME="/volume/.cargo" --rm -t maximumstock2/base:latest bash -c "\
             cd /volume \
             && cargo build --release --all-features --bin indexer --bin trade-api --bin trade-ingest \
             && strip target/x86_64-unknown-linux-musl/release/indexer \
