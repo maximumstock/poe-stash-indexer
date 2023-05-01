@@ -44,6 +44,9 @@ jobs:
         run: cargo build
 
       - name: Test
+        env:
+          POE_CLIENT_ID: ${{ secrets.POE_CLIENT_ID }}
+          POE_CLIENT_SECRET: ${{ secrets.POE_CLIENT_SECRET }}
         run: cargo test --all-features -- --nocapture --quiet
 
       - name: Format
