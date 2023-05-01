@@ -40,6 +40,12 @@ jobs:
           override: true
           components: rustfmt, clippy
 
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Lint
+        run: cargo clippy --all-features --all-targets -- -D warnings
+
       - name: Compile
         run: cargo build
 
@@ -48,12 +54,6 @@ jobs:
           POE_CLIENT_ID: ${{ secrets.POE_CLIENT_ID }}
           POE_CLIENT_SECRET: ${{ secrets.POE_CLIENT_SECRET }}
         run: cargo test --all-features -- --nocapture --quiet
-
-      - name: Format
-        run: cargo fmt --all -- --check
-
-      - name: Lint
-        run: cargo clippy --all-features --all-targets -- -D warnings
 
       # Workaround for overriding existing cache
       - name: Clear Rust CI step cache

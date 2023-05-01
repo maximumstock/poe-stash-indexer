@@ -15,7 +15,7 @@ fn extract_credentials_from_env() -> (String, String) {
 }
 
 #[tokio::test]
-async fn test_GGG_oauth_async() {
+async fn test_pst_api_oauth_async() {
     let (client_id, client_secret) = extract_credentials_from_env();
     get_oauth_token(&client_id, &client_secret)
         .await
@@ -23,7 +23,7 @@ async fn test_GGG_oauth_async() {
 }
 
 #[test]
-fn test_GGG_oauth() {
+fn test_pst_api_oauth() {
     let (client_id, client_secret) = extract_credentials_from_env();
     get_oauth_token_sync(&client_id, &client_secret).expect("fetching OAuth token");
 }
