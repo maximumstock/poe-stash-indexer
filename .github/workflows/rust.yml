@@ -54,7 +54,7 @@ jobs:
 
       # Workaround for overriding existing cache
       - name: clear
-        if: ${{ steps.cache-restore.outputs.cache-hit }}
+        if: ${{ steps.restore-cache.outputs.cache-hit }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
