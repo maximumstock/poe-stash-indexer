@@ -89,7 +89,7 @@ jobs:
         id: cache-docker-image
         uses: actions/cache@v3
         with:
-          path: gh_ci/cache/docker/maximumstock-base-latest
+          path: gh_ci/cache/docker/maximumstock-base-latest.tar
           key: cache-docker-maximumstock-base-latest
       - name: Update Docker image cache if cache miss
         if: steps.cache-docker-image.outputs.cache-hit != 'true'
