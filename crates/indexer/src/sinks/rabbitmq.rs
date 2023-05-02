@@ -1,21 +1,22 @@
 use amiquip::{Channel, Connection, Publish};
+use async_trait::async_trait;
 
-use crate::config::RabbitMqConfig;
+use crate::{config::RabbitMqConfig, stash_record::StashRecord};
 
 use super::sink::Sink;
 
 const EXCHANGE: &str = "amq.fanout";
 
-pub struct RabbitMq<'a> {
+pub struct RabbitMqSink {
     #[allow(dead_code)]
     connection: Connection,
     channel: Channel,
-    config: &'a RabbitMqConfig,
+    config: RabbitMqConfig,
 }
 
-impl<'a> RabbitMq<'a> {
+impl RabbitMqSink {
     #[tracing::instrument]
-    pub fn connect(config: &'a RabbitMqConfig) -> Result<Self, amiquip::Error> {
+    pub fn connect(config: RabbitMqConfig) -> Result<Self, amiquip::Error> {
         let mut connection = Connection::insecure_open(config.connection_url.as_str())?;
         let channel = connection.open_channel(None)?;
 
@@ -27,12 +28,10 @@ impl<'a> RabbitMq<'a> {
     }
 }
 
-impl<'a> Sink for RabbitMq<'a> {
+#[async_trait]
+impl Sink for RabbitMqSink {
     #[tracing::instrument(skip(self, payload), name = "handle-rabbitmq")]
-    fn handle(
-        &self,
-        payload: &[crate::stash_record::StashRecord],
-    ) -> Result<usize, Box<dyn std::error::Error>> {
+    async fn handle(&self, payload: &[StashRecord]) -> Result<usize, Box<dyn std::error::Error>> {
         let serialized = serde_json::to_string(payload)?;
 
         self.channel

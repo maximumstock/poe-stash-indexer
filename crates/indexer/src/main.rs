@@ -23,9 +23,9 @@ use crate::metrics::setup_metrics;
 use crate::{
     config::{user_config::RestartMode, Configuration},
     resumption::State,
-    sinks::postgres::Postgres,
+    sinks::postgres::PostgresSink,
 };
-use crate::{filter::filter_stash_record, sinks::rabbitmq::RabbitMq};
+use crate::{filter::filter_stash_record, sinks::rabbitmq::RabbitMqSink};
 use crate::{resumption::StateWrapper, stash_record::map_to_stash_records};
 use futures::StreamExt;
 
@@ -56,7 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let signal_flag = setup_signal_handlers()?;
     let metrics = setup_metrics(config.metrics_port)?;
-    let sinks = setup_sinks(&config)?;
+    let sinks = setup_sinks(&config).await?;
 
     let mut resumption = StateWrapper::load_from_file(&"./indexer_state.json");
     let mut indexer = Indexer::new();
@@ -138,7 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if !stashes.is_empty() {
                     next_chunk_id += 1;
                     for sink in &sinks {
-                        sink.handle(&stashes)?;
+                        sink.handle(&stashes).await?;
                     }
                 }
 
@@ -152,8 +152,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    if resumption.save().is_ok() {
-        tracing::info!("Saved resumption state");
+    match resumption.save() {
+        Ok(_) => tracing::info!("Saved resumption state"),
+        Err(_) => tracing::error!("Saving resumption state failed"),
     }
 
     if indexer.is_stopping() {
@@ -170,20 +171,20 @@ fn setup_signal_handlers() -> Result<Arc<AtomicBool>, Box<dyn std::error::Error>
     Ok(signal_flag)
 }
 
-fn setup_sinks<'a>(
+async fn setup_sinks<'a>(
     config: &'a Configuration,
 ) -> Result<Vec<Box<dyn Sink + 'a>>, Box<dyn std::error::Error>> {
     let mut sinks: Vec<Box<dyn Sink>> = vec![];
 
     if let Some(conf) = &config.rabbitmq {
-        let mq_sink = RabbitMq::connect(conf)?;
+        let mq_sink = RabbitMqSink::connect(conf.clone())?;
         sinks.push(Box::new(mq_sink));
         tracing::info!("Configured RabbitMQ fanout sink");
     }
 
     if let Some(url) = &config.database_url {
         if !url.is_empty() {
-            sinks.push(Box::new(Postgres::connect(url)));
+            sinks.push(Box::new(PostgresSink::connect(url).await));
             tracing::info!("Configured PostgreSQL sink");
         }
     }
