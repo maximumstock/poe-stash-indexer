@@ -4,7 +4,7 @@ use bytes::BytesMut;
 use futures::channel::mpsc::Sender;
 use futures::{channel::mpsc::Receiver, lock::Mutex};
 use tokio::sync::RwLock;
-use tracing::{debug, error, info};
+use tracing::{debug, error, error_span, info};
 
 use crate::common::parse::parse_change_id_from_bytes;
 use crate::common::poe_api::{get_oauth_token, user_agent, OAuthResponse};
@@ -127,12 +127,14 @@ async fn process(
 
         let mut response = match response {
             Err(e) => {
-                error!("Error response: {:?}", e);
-                tracing::trace!(fetch_error = ?e);
-                // TODO: API boundary, respond with custom error
+                error_span!("handle_fetch_error").in_scope(|| {
+                    error!("Error response: {:?}", e);
+                    tracing::trace!(fetch_error = ?e);
+                    schedule_job(jobs, tx, change_id, config);
+                });
                 return Ok(());
             }
-            Ok(a) => a,
+            Ok(data) => data,
         };
 
         let mut bytes = BytesMut::new();
