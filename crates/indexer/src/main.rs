@@ -177,7 +177,7 @@ async fn setup_sinks<'a>(
     let mut sinks: Vec<Box<dyn Sink>> = vec![];
 
     if let Some(conf) = &config.rabbitmq {
-        let mq_sink = RabbitMqSink::connect(conf.clone())?;
+        let mq_sink = RabbitMqSink::connect(conf.clone()).await?;
         sinks.push(Box::new(mq_sink));
         tracing::info!("Configured RabbitMQ fanout sink");
     }

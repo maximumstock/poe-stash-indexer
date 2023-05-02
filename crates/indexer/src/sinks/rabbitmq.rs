@@ -1,5 +1,5 @@
-use amiquip::{Channel, Connection, Publish};
 use async_trait::async_trait;
+use lapin::{options::BasicPublishOptions, BasicProperties, Channel, Connection};
 
 use crate::{config::RabbitMqConfig, stash_record::StashRecord};
 
@@ -16,9 +16,14 @@ pub struct RabbitMqSink {
 
 impl RabbitMqSink {
     #[tracing::instrument]
-    pub fn connect(config: RabbitMqConfig) -> Result<Self, amiquip::Error> {
-        let mut connection = Connection::insecure_open(config.connection_url.as_str())?;
-        let channel = connection.open_channel(None)?;
+    pub async fn connect(config: RabbitMqConfig) -> Result<Self, lapin::Error> {
+        let connection = lapin::Connection::connect(
+            &config.connection_url,
+            lapin::ConnectionProperties::default(),
+        )
+        .await?;
+
+        let channel = connection.create_channel().await?;
 
         Ok(Self {
             connection,
@@ -37,11 +42,12 @@ impl Sink for RabbitMqSink {
         self.channel
             .basic_publish(
                 EXCHANGE,
-                Publish::new(
-                    serialized.as_bytes(),
-                    self.config.producer_routing_key.as_str(),
-                ),
+                &self.config.producer_routing_key,
+                BasicPublishOptions::default(),
+                serialized.as_bytes(),
+                BasicProperties::default(),
             )
+            .await
             .map(|_| payload.len())
             .map_err(|e| e.into())
     }
