@@ -138,7 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if !stashes.is_empty() {
                     next_chunk_id += 1;
                     for sink in &sinks {
-                        sink.handle(&stashes)?;
+                        sink.handle(&stashes).await?;
                     }
                 }
 
@@ -152,8 +152,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    if resumption.save().is_ok() {
-        tracing::info!("Saved resumption state");
+    match resumption.save() {
+        Ok(_) => tracing::info!("Saved resumption state"),
+        Err(_) => tracing::error!("Saving resumption state failed"),
     }
 
     if indexer.is_stopping() {
