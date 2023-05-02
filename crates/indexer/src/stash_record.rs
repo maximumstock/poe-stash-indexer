@@ -8,7 +8,7 @@ use serde::Serialize;
 use stash_api::{common::ChangeId, common::StashTabResponse};
 
 #[derive(Serialize, Insertable, Queryable)]
-#[table_name = "stash_records"]
+#[diesel(table_name = stash_records)]
 pub struct StashRecord {
     pub created_at: NaiveDateTime,
     pub change_id: String,

@@ -37,7 +37,7 @@ fn read_int_from_env(name: &str) -> Option<u32> {
     std::env::var(name).map(|s| s.parse::<u32>().unwrap()).ok()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RabbitMqConfig {
     pub connection_url: String,
     pub producer_routing_key: String,
