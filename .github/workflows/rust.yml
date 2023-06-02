@@ -9,6 +9,9 @@ env:
   # Because matklad said so https://matklad.github.io/2021/09/04/fast-rust-builds.html
   CARGO_INCREMENTAL: 0
 
+permissions:
+  actions: write # allow dependabot PRs to manipulate CI cache
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -40,12 +43,6 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Format
-        run: cargo fmt --all -- --check
-
-      - name: Lint
-        run: cargo clippy --all-features --all-targets -- -D warnings --no-deps
-
       - name: Compile
         run: cargo build
 
@@ -54,6 +51,12 @@ jobs:
           POE_CLIENT_ID: ${{ secrets.POE_CLIENT_ID }}
           POE_CLIENT_SECRET: ${{ secrets.POE_CLIENT_SECRET }}
         run: cargo test --all-features -- --nocapture --quiet
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Lint
+        run: cargo clippy --all-features --all-targets -- -D warnings --no-deps
 
       # Workaround for overriding existing cache
       - name: Clear Rust CI step cache
