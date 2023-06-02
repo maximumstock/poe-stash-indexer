@@ -5,6 +5,7 @@ use std::{fmt::Debug, net::SocketAddr, sync::Arc};
 use axum::{
     http::StatusCode,
     response::IntoResponse,
+    response::Response,
     routing::{get, post},
     Extension, Router,
 };
@@ -38,6 +39,6 @@ where
 }
 
 #[tracing::instrument()]
-async fn health_handler() -> impl IntoResponse {
-    (StatusCode::OK, "Ok")
+async fn health_handler() -> Response {
+    (StatusCode::OK, "Ok").into_response()
 }
