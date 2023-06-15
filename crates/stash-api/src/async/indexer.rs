@@ -2,7 +2,8 @@ use std::{collections::VecDeque, sync::Arc, time::Duration};
 
 use bytes::BytesMut;
 use futures::channel::mpsc::Sender;
-use futures::{channel::mpsc::Receiver, lock::Mutex};
+use futures::lock::Mutex;
+use futures::Stream;
 use tokio::sync::RwLock;
 use tracing::{debug, error, error_span, info};
 
@@ -32,8 +33,6 @@ impl Config {
     }
 }
 
-pub type IndexerResult = Receiver<IndexerMessage>;
-
 #[cfg(feature = "async")]
 impl Indexer {
     pub fn new() -> Self {
@@ -50,12 +49,15 @@ impl Indexer {
     }
 
     /// Start the indexer with a given change_id
-    #[tracing::instrument()]
     pub async fn start_at_change_id(
         &self,
         mut config: Config,
         change_id: ChangeId,
-    ) -> IndexerResult {
+    ) -> impl Stream<Item = IndexerMessage> {
+        // Workaround to not have to use [tracing::instrument]
+        let span = tracing::span!(tracing::Level::INFO, "start_at_change_id");
+        let _enter = span.enter();
+
         info!("Starting at change id: {}", change_id);
 
         let credentials = get_oauth_token(&config.client_id, &config.client_secret)
