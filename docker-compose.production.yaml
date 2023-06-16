@@ -1,6 +1,7 @@
 version: "3"
 services:
   indexer:
+    privileged: true # to enable log forwarding
     image: maximumstock2/indexer:latest
     restart: "always"
     env_file:
@@ -11,6 +12,7 @@ services:
       DATABASE_URL:
 
   trade-api:
+    privileged: true # to enable log forwarding
     image: maximumstock2/trade-api:latest
     restart: "always"
     env_file:
@@ -19,6 +21,7 @@ services:
       ENV: "production"
 
   trade-ingest:
+    privileged: true # to enable log forwarding
     image: maximumstock2/trade-ingest:latest
     restart: "always"
     env_file:
@@ -27,15 +30,18 @@ services:
       ENV: "production"
 
   reverse-proxy:
+    privileged: true # to enable log forwarding
     ports:
       - 0.0.0.0:80:80
     env_file:
       - configuration/environments/.env.production
 
   rabbitmq:
+    privileged: true # to enable log forwarding
     env_file:
       - configuration/environments/.env.production
 
   trade-store:
+    privileged: true # to enable log forwarding
     env_file:
       - configuration/environments/.env.production
