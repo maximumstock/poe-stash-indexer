@@ -5,7 +5,7 @@ use futures::channel::mpsc::Sender;
 use futures::lock::Mutex;
 use futures::Stream;
 use tokio::sync::RwLock;
-use tracing::{debug, error, error_span, info};
+use tracing::{debug, error, error_span, info, trace_span};
 
 use crate::common::parse::parse_change_id_from_bytes;
 use crate::common::poe_api::{get_oauth_token, user_agent, OAuthResponse};
@@ -55,8 +55,7 @@ impl Indexer {
         change_id: ChangeId,
     ) -> impl Stream<Item = IndexerMessage> {
         // Workaround to not have to use [tracing::instrument]
-        let span = tracing::span!(tracing::Level::INFO, "start_at_change_id");
-        let _enter = span.enter();
+        trace_span!("start_at_change_id", change_id = change_id.inner.as_str());
 
         info!("Starting at change id: {}", change_id);
 
