@@ -1,4 +1,3 @@
-use futures::StreamExt;
 use stash_api::{
     common::{
         poe_api::{get_oauth_token, get_oauth_token_sync},
@@ -40,7 +39,7 @@ async fn test_stream_pst_api() {
     let mut rx = indexer.start_at_change_id(config, change_id).await;
 
     let mut counter = 0;
-    while (rx.next().await).is_some() {
+    while (rx.recv().await).is_some() {
         counter += 1;
         if counter == 2 {
             break;

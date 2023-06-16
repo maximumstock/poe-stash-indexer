@@ -1,10 +1,10 @@
 use std::{collections::VecDeque, sync::Arc, time::Duration};
 
 use bytes::BytesMut;
-use futures::channel::mpsc::{Receiver, Sender};
 use futures::lock::Mutex;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
-use tracing::{debug, error, error_span, info, trace_span};
+use tracing::{debug, error, error_span, info, trace, trace_span};
 
 use crate::common::parse::parse_change_id_from_bytes;
 use crate::common::poe_api::{get_oauth_token, user_agent, OAuthResponse};
@@ -64,7 +64,7 @@ impl Indexer {
         config.credentials = Some(credentials);
 
         let jobs = Arc::new(Mutex::new(VecDeque::new()));
-        let (tx, rx) = futures::channel::mpsc::channel(42);
+        let (tx, rx) = channel(42);
 
         schedule_job(jobs, tx, change_id, Arc::new(RwLock::new(config)));
         rx
@@ -79,14 +79,14 @@ fn schedule_job(
 ) {
     tokio::spawn(async move {
         jobs.lock().await.push_back(next_change_id);
-        process(jobs, tx, config).await
+        process(jobs, tx.clone(), config).await
     });
 }
 
 #[tracing::instrument(skip(jobs, tx))]
 async fn process(
     jobs: Arc<Mutex<VecDeque<ChangeId>>>,
-    mut tx: Sender<IndexerMessage>,
+    tx: Sender<IndexerMessage>,
     config: Arc<RwLock<Config>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // TODO: check if stopping
@@ -98,7 +98,7 @@ async fn process(
             "https://api.pathofexile.com/public-stash-tabs?id={}",
             &change_id
         );
-        tracing::trace!(change_id = ?change_id, url = ?url);
+        trace!(change_id = ?change_id, url = ?url);
         debug!("Requesting {}", url);
 
         // TODO: static client somewhere
@@ -126,9 +126,10 @@ async fn process(
 
         let mut response = match response {
             Err(e) => {
+                error!("Error when fetching change_id {}: {:?}", change_id, e);
                 error_span!("handle_fetch_error").in_scope(|| {
                     error!("Error response: {:?}", e);
-                    tracing::trace!(fetch_error = ?e);
+                    error!(fetch_error = ?e);
                     schedule_job(jobs, tx, change_id, config);
                 });
                 return Ok(());

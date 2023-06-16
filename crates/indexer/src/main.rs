@@ -27,7 +27,6 @@ use crate::{
 };
 use crate::{filter::filter_stash_record, sinks::rabbitmq::RabbitMqSink};
 use crate::{resumption::StateWrapper, stash_record::map_to_stash_records};
-use futures::StreamExt;
 
 use dotenv::dotenv;
 use sinks::sink::Sink;
@@ -79,7 +78,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut next_chunk_id = resumption.chunk_counter();
 
-    while let Some(msg) = rx.next().await {
+    while let Some(msg) = rx.recv().await {
         if signal_flag.load(Ordering::Relaxed) && !indexer.is_stopping() {
             tracing::info!("Shutdown signal detected. Shutting down gracefully.");
             indexer.stop();
