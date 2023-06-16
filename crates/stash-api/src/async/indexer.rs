@@ -1,9 +1,8 @@
 use std::{collections::VecDeque, sync::Arc, time::Duration};
 
 use bytes::BytesMut;
-use futures::channel::mpsc::Sender;
+use futures::channel::mpsc::{Receiver, Sender};
 use futures::lock::Mutex;
-use futures::Stream;
 use tokio::sync::RwLock;
 use tracing::{debug, error, error_span, info, trace_span};
 
@@ -53,7 +52,7 @@ impl Indexer {
         &self,
         mut config: Config,
         change_id: ChangeId,
-    ) -> impl Stream<Item = IndexerMessage> {
+    ) -> Receiver<IndexerMessage> {
         // Workaround to not have to use [tracing::instrument]
         trace_span!("start_at_change_id", change_id = change_id.inner.as_str());
 
