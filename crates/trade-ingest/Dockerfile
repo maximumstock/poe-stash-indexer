@@ -4,7 +4,7 @@ FROM rust:bullseye as development
 # Add apt.llvm.org repository and install clang
 RUN apt-get update
 RUN apt-get install -y protobuf-compiler
-RUN CARGO_NET_GIT_FETCH_WITH_CLI=true CARGO_UNSTABLE_SPARSE_REGISTRY=true cargo install cargo-watch
+RUN cargo install cargo-watch
 WORKDIR /app
 COPY . .
 ENTRYPOINT ["bash", "crates/trade-ingest/scripts/run.sh"]

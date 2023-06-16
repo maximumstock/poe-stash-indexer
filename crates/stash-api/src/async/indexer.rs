@@ -62,7 +62,6 @@ impl Indexer {
         let credentials = get_oauth_token(&config.client_id, &config.client_secret)
             .await
             .expect("Fetch OAuth credentials");
-        info!("Fetched OAuth credentials");
         config.credentials = Some(credentials);
 
         let jobs = Arc::new(Mutex::new(VecDeque::new()));
