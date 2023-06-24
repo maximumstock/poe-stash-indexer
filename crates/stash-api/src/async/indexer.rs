@@ -5,6 +5,7 @@ use reqwest::StatusCode;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
 use tracing::{debug, error, error_span, info, trace_span};
+use trade_common::telemetry::generate_http_client;
 
 use crate::common::parse::parse_change_id_from_bytes;
 use crate::common::poe_api::{get_oauth_token, user_agent, OAuthResponse};
@@ -81,7 +82,7 @@ async fn process(
     debug!("Requesting {}", url);
 
     // TODO: static client somewhere
-    let client = reqwest::ClientBuilder::new().build()?;
+    let client = generate_http_client();
     let response = client
         .get(url)
         .header("Accept", "application/json")

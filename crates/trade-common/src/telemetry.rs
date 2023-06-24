@@ -3,6 +3,8 @@ use opentelemetry::{
     KeyValue,
 };
 use opentelemetry_otlp::WithExportConfig;
+use reqwest_middleware::ClientBuilder;
+use reqwest_tracing::TracingMiddleware;
 use tracing::info;
 use tracing_subscriber::{prelude::*, EnvFilter, Registry};
 
@@ -37,4 +39,13 @@ pub fn setup_telemetry(service_name: &str) -> Result<(), opentelemetry::trace::T
 
 pub fn teardown_telemetry() {
     opentelemetry::global::shutdown_tracer_provider();
+}
+
+pub fn generate_http_client() -> reqwest_middleware::ClientWithMiddleware {
+    let reqwest_client = reqwest::Client::builder().build().unwrap();
+
+    ClientBuilder::new(reqwest_client)
+        // Insert the tracing middleware
+        .with(TracingMiddleware::default())
+        .build()
 }

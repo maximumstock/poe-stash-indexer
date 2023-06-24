@@ -56,6 +56,8 @@ pub async fn get_oauth_token(
     client_id: &str,
     client_secret: &str,
 ) -> Result<OAuthResponse, Box<dyn std::error::Error>> {
+    use trade_common::telemetry::generate_http_client;
+
     let url = "https://www.pathofexile.com/oauth/token";
     let payload = serde_urlencoded::to_string(OAuthRequestPayload::new(
         client_id.into(),
@@ -63,7 +65,7 @@ pub async fn get_oauth_token(
     ))
     .unwrap();
 
-    let response = reqwest::Client::new()
+    let response = generate_http_client()
         .post(url)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .header("User-Agent", user_agent(client_id).as_str())
