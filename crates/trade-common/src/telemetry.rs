@@ -4,7 +4,7 @@ use opentelemetry::{
 };
 use opentelemetry_otlp::WithExportConfig;
 use reqwest_middleware::ClientBuilder;
-use reqwest_tracing::TracingMiddleware;
+use reqwest_tracing::{SpanBackendWithUrl, TracingMiddleware};
 use tracing::info;
 use tracing_subscriber::{prelude::*, EnvFilter, Registry};
 
@@ -45,7 +45,6 @@ pub fn generate_http_client() -> reqwest_middleware::ClientWithMiddleware {
     let reqwest_client = reqwest::Client::builder().build().unwrap();
 
     ClientBuilder::new(reqwest_client)
-        // Insert the tracing middleware
-        .with(TracingMiddleware::default())
+        .with(TracingMiddleware::<SpanBackendWithUrl>::new())
         .build()
 }
