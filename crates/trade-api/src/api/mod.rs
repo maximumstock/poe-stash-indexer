@@ -11,7 +11,11 @@ use axum::{
 };
 
 use tower::ServiceBuilder;
-use tracing::info;
+use tower_http::{
+    trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
+    LatencyUnit,
+};
+use tracing::{info, Level};
 
 use crate::{metrics::api::ApiMetrics, store::Store};
 
@@ -25,6 +29,7 @@ where
     let app = Router::new()
         .route("/healthcheck", get(health_handler))
         .route("/trade", post(handle_search::<M>))
+        .layer(trace_layer())
         .layer(
             ServiceBuilder::new()
                 .layer(Extension(store))
@@ -36,6 +41,19 @@ where
     let _ = axum::Server::bind(&options.into())
         .serve(app.into_make_service())
         .await;
+}
+
+fn trace_layer(
+) -> TraceLayer<tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>>
+{
+    TraceLayer::new_for_http()
+        .make_span_with(DefaultMakeSpan::new().include_headers(true))
+        .on_response(
+            DefaultOnResponse::new()
+                .level(Level::INFO)
+                .include_headers(true)
+                .latency_unit(LatencyUnit::Micros),
+        )
 }
 
 #[tracing::instrument()]
