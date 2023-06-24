@@ -10,11 +10,6 @@ use crate::common::parse::parse_change_id_from_bytes;
 use crate::common::poe_api::{get_oauth_token, user_agent, OAuthResponse};
 use crate::common::{ChangeId, StashTabResponse};
 
-#[derive(Default, Debug)]
-pub struct Indexer {
-    pub(crate) is_stopping: bool,
-}
-
 #[derive(Debug)]
 pub struct Config {
     pub client_id: String,
@@ -32,19 +27,13 @@ impl Config {
     }
 }
 
+#[derive(Default, Debug)]
+pub struct Indexer;
+
 #[cfg(feature = "async")]
 impl Indexer {
     pub fn new() -> Self {
-        Self { is_stopping: false }
-    }
-
-    pub fn stop(&mut self) {
-        self.is_stopping = true;
-        info!("Stopping indexer");
-    }
-
-    pub fn is_stopping(&self) -> bool {
-        self.is_stopping
+        Self {}
     }
 
     /// Start the indexer with a given change_id
@@ -80,7 +69,10 @@ async fn process(
     tx: Sender<IndexerMessage>,
     config: Arc<RwLock<Config>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // TODO: check if stopping
+    // check if stopping
+    if tx.is_closed() {
+        return Ok(());
+    }
 
     let url = format!(
         "https://api.pathofexile.com/public-stash-tabs?id={}",

@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sinks = setup_sinks(&config).await?;
 
     let mut resumption = StateWrapper::load_from_file(&"./indexer_state.json");
-    let mut indexer = Indexer::new();
+    let indexer = Indexer::new();
     let mut rx = match (&config.user_config.restart_mode, &resumption.inner) {
         (RestartMode::Fresh, _) => {
             let latest_change_id = PoeNinjaClient::fetch_latest_change_id_async().await?;
@@ -79,9 +79,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut next_chunk_id = resumption.chunk_counter();
 
     while let Some(msg) = rx.recv().await {
-        if signal_flag.load(Ordering::Relaxed) && !indexer.is_stopping() {
+        if signal_flag.load(Ordering::Relaxed) {
             tracing::info!("Shutdown signal detected. Shutting down gracefully.");
-            indexer.stop();
+            break;
         }
 
         match msg {
@@ -156,11 +156,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(_) => tracing::error!("Saving resumption state failed"),
     }
 
-    if indexer.is_stopping() {
-        Ok(())
-    } else {
-        std::process::exit(-1);
-    }
+    Ok(())
 }
 
 fn setup_signal_handlers() -> Result<Arc<AtomicBool>, Box<dyn std::error::Error>> {

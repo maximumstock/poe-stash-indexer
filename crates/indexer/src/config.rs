@@ -45,7 +45,11 @@ pub struct RabbitMqConfig {
 
 impl RabbitMqConfig {
     pub fn from_env() -> Result<Option<RabbitMqConfig>, std::env::VarError> {
-        if std::env::var("RABBITMQ_SINK_ENABLED").is_ok() {
+        if let Ok(string) = std::env::var("RABBITMQ_SINK_ENABLED") {
+            if string.to_lowercase().eq("false") || string.eq("0") {
+                return Ok(None);
+            }
+
             let connection_url =
                 std::env::var("RABBITMQ_URL").expect("RABBITMQ_URL environment variable");
             let producer_routing_key = std::env::var("RABBITMQ_PRODUCER_ROUTING_KEY")
