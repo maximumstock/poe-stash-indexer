@@ -10,7 +10,7 @@ futures = "0.3.27"
 lapin = "2.1.1"
 regex = "1.8.3"
 serde = { version = "1.0.160", features = ["derive"] }
-serde_json = "1.0.96"
+serde_json = "1.0.100"
 signal-hook = "0.3.15"
 tokio = { version = "1.26.0", features = ["full"] }
 prometheus_exporter = "0.8.5"
