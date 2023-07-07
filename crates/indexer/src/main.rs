@@ -32,23 +32,19 @@ use dotenv::dotenv;
 use sinks::sink::Sink;
 use stash_api::{
     common::{poe_ninja_client::PoeNinjaClient, ChangeId},
-    r#async::indexer::{Config, Indexer, IndexerMessage},
+    r#async::indexer::{Indexer, IndexerMessage},
 };
 use trade_common::telemetry::setup_telemetry;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
+
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }
 
     setup_telemetry("indexer").expect("Telemetry setup");
-
-    let client_id = std::env::var("POE_CLIENT_ID").expect("POE_CLIENT_ID environment variable");
-    let client_secret =
-        std::env::var("POE_CLIENT_SECRET").expect("POE_CLIENT_SECRET environment variable");
-    let indexer_config = Config::new(client_id, client_secret);
 
     let config = Configuration::from_env()?;
     tracing::info!("Chosen configuration: {:#?}", config);
@@ -56,22 +52,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signal_flag = setup_signal_handlers()?;
     let metrics = setup_metrics(config.metrics_port)?;
     let sinks = setup_sinks(&config).await?;
+    let client_id = config.client_id.clone();
+    let client_secret = config.client_secret.clone();
 
     let mut resumption = StateWrapper::load_from_file(&"./indexer_state.json");
     let indexer = Indexer::new();
     let mut rx = match (&config.user_config.restart_mode, &resumption.inner) {
         (RestartMode::Fresh, _) => {
             let latest_change_id = PoeNinjaClient::fetch_latest_change_id_async().await?;
-            indexer.start_at_change_id(indexer_config, latest_change_id)
+            indexer.start_at_change_id(client_id, client_secret, latest_change_id)
         }
         (RestartMode::Resume, Some(next)) => indexer.start_at_change_id(
-            indexer_config,
+            client_id,
+            client_secret,
             ChangeId::from_str(&next.next_change_id).unwrap(),
         ),
         (RestartMode::Resume, None) => {
             tracing::info!("No previous data found, falling back to RestartMode::Fresh");
             let latest_change_id = PoeNinjaClient::fetch_latest_change_id_async().await?;
-            indexer.start_at_change_id(indexer_config, latest_change_id)
+            indexer.start_at_change_id(client_id, client_secret, latest_change_id)
         }
     }
     .await;

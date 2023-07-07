@@ -11,25 +11,12 @@ use crate::common::parse::parse_change_id_from_bytes;
 use crate::common::poe_api::{get_oauth_token, user_agent, OAuthResponse};
 use crate::common::{ChangeId, StashTabResponse};
 
-#[derive(Debug)]
-pub struct Config {
-    pub client_id: String,
-    pub client_secret: String,
-    pub credentials: Option<OAuthResponse>,
-}
-
-impl Config {
-    pub fn new(client_id: String, client_secret: String) -> Self {
-        Self {
-            client_id,
-            client_secret,
-            credentials: None,
-        }
-    }
-}
-
 #[derive(Default, Debug)]
-pub struct Indexer;
+pub struct Indexer {
+    pub(crate) is_stopping: bool,
+}
+
+pub type IndexerResult = Receiver<IndexerMessage>;
 
 #[cfg(feature = "async")]
 impl Indexer {
@@ -40,7 +27,8 @@ impl Indexer {
     /// Start the indexer with a given change_id
     pub async fn start_at_change_id(
         &self,
-        mut config: Config,
+        client_id: String,
+        client_secret: String,
         change_id: ChangeId,
     ) -> Receiver<IndexerMessage> {
         // Workaround to not have to use [tracing::instrument]
@@ -48,27 +36,47 @@ impl Indexer {
 
         info!("Starting at change id: {}", change_id);
 
-        let credentials = get_oauth_token(&config.client_id, &config.client_secret)
+        let credentials = get_oauth_token(&client_id, &client_secret)
             .await
             .expect("Fetch OAuth credentials");
-        config.credentials = Some(credentials);
+        info!("Fetched OAuth credentials");
+        let credentials = Some(credentials);
 
         let (tx, rx) = channel(42);
 
-        schedule_job(tx, change_id, Arc::new(RwLock::new(config)));
+        schedule_job(
+            jobs,
+            tx,
+            change_id,
+            client_id,
+            client_secret,
+            Arc::new(RwLock::new(credentials)),
+        );
         rx
     }
 }
 
-fn schedule_job(tx: Sender<IndexerMessage>, next_change_id: ChangeId, config: Arc<RwLock<Config>>) {
-    tokio::spawn(async move { process(next_change_id, tx, config).await });
+fn schedule_job(
+    jobs: Arc<Mutex<VecDeque<ChangeId>>>,
+    tx: Sender<IndexerMessage>,
+    next_change_id: ChangeId,
+    client_id: String,
+    client_secret: String,
+    config: Arc<RwLock<Option<OAuthResponse>>>,
+) {
+    tokio::spawn(async move {
+        jobs.lock().await.push_back(next_change_id);
+        process(jobs, tx, client_id, client_secret, config).await
+    });
 }
 
 #[tracing::instrument(skip(tx))]
 async fn process(
-    change_id: ChangeId,
-    tx: Sender<IndexerMessage>,
-    config: Arc<RwLock<Config>>,
+    jobs: Arc<Mutex<VecDeque<ChangeId>>>,
+    mut tx: Sender<IndexerMessage>,
+    client_id: String,
+    client_secret: String,
+    config: Arc<RwLock<Option<OAuthResponse>>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // check if stopping
     if tx.is_closed() {
@@ -81,37 +89,84 @@ async fn process(
     );
     debug!("Requesting {}", url);
 
-    // TODO: static client somewhere
-    let client = generate_http_client();
-    let response = client
-        .get(url)
-        .header("Accept", "application/json")
-        .header("User-Agent", user_agent(&config.read().await.client_id))
-        .header(
-            "Authorization",
-            format!(
-                "Bearer {}",
-                config
-                    .read()
-                    .await
-                    .credentials
-                    .as_ref()
-                    .expect("OAuth credentials are set")
-                    .access_token
+    if let Some(change_id) = next {
+        let url = format!(
+            "https://api.pathofexile.com/public-stash-tabs?id={}",
+            &change_id
+        );
+        tracing::trace!(change_id = ?change_id, url = ?url);
+        debug!("Requesting {}", url);
+
+        // TODO: static client somewhere
+        let client = reqwest::ClientBuilder::new().build()?;
+        let response = client
+            .get(url)
+            .header("Accept", "application/json")
+            .header("User-Agent", user_agent(&client_id))
+            .header(
+                "Authorization",
+                format!(
+                    "Bearer {}",
+                    config
+                        .read()
+                        .await
+                        .as_ref()
+                        .expect("OAuth credentials are set")
+                        .access_token
+                )
+                .as_str(),
             )
             .as_str(),
         )
         .send()
         .await;
 
-    let mut response = match response {
-        Err(e) => {
-            error!("Error when fetching change_id {}: {:?}", change_id, e);
-            error_span!("handle_fetch_error").in_scope(|| {
-                error!("Error response: {:?}", e);
-                error!(fetch_error = ?e);
-                schedule_job(tx, change_id, config);
-            });
+        let mut response = match response {
+            Err(e) => {
+                error_span!("handle_fetch_error").in_scope(|| {
+                    error!("Error response: {:?}", e);
+                    tracing::trace!(fetch_error = ?e);
+                    schedule_job(jobs, tx, change_id, client_id, client_secret, config);
+                });
+                return Ok(());
+            }
+            Ok(data) => data,
+        };
+
+        let mut bytes = BytesMut::new();
+        let mut prefetch_done = false;
+        while let Some(chunk) = response.chunk().await? {
+            bytes.extend_from_slice(&chunk);
+
+            if bytes.len() > 120 && !prefetch_done {
+                let next_change_id = parse_change_id_from_bytes(&bytes).unwrap();
+                tracing::trace!(next_change_id = ?next_change_id);
+                prefetch_done = true;
+                schedule_job(
+                    jobs.clone(),
+                    tx.clone(),
+                    next_change_id,
+                    client_id.clone(),
+                    client_secret.clone(),
+                    config.clone(),
+                );
+            }
+        }
+
+        // TODO: handle errors by rescheduling based on error
+        let response = serde_json::from_slice::<StashTabResponse>(&bytes)?;
+        debug!(
+            "Read response {} with {} stashes",
+            response.next_change_id,
+            response.stashes.len()
+        );
+        tracing::trace!(number_stashes = ?response.stashes.len());
+
+        // reschedule if payload is empty
+        if response.stashes.is_empty() {
+            info!("Empty response, rescheduling {change_id}");
+            tokio::time::sleep(Duration::from_secs(2)).await;
+            schedule_job(jobs, tx, change_id, client_id, client_secret, config);
             return Ok(());
         }
         Ok(data) => data,

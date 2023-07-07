@@ -6,6 +6,8 @@ pub struct Configuration {
     pub database_url: Option<String>,
     pub rabbitmq: Option<RabbitMqConfig>,
     pub metrics_port: u32,
+    pub client_id: String,
+    pub client_secret: String,
 }
 
 impl Configuration {
@@ -15,11 +17,12 @@ impl Configuration {
             metrics_port: read_int_from_env("METRICS_PORT").unwrap_or(4000),
             rabbitmq: RabbitMqConfig::from_env()?,
             user_config: UserConfiguration::default(),
+            client_id: ensure_string_from_env("POE_CLIENT_ID"),
+            client_secret: ensure_string_from_env("POE_CLIENT_SECRET"),
         })
     }
 }
 
-#[allow(dead_code)]
 fn ensure_string_from_env(name: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| panic!("Missing environment variable {}", name))
 }
