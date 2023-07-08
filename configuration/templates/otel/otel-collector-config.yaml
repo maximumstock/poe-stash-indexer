@@ -9,9 +9,9 @@ processors:
 
 exporters:
   otlp:
-    endpoint: ${NEW_RELIC_OTLP_ENDPOINT}
+    endpoint: ${OTLP_ENDPOINT}
     headers:
-      api-key: ${NEW_RELIC_LICENSE_KEY}
+      api-key: ${OTLP_LICENSE_KEY}
 
 service:
   pipelines:

@@ -8,13 +8,16 @@ use reqwest_tracing::{SpanBackendWithUrl, TracingMiddleware};
 use tracing::info;
 use tracing_subscriber::{prelude::*, EnvFilter, Registry};
 
-pub fn setup_telemetry(service_name: &str) -> Result<(), opentelemetry::trace::TraceError> {
+pub fn setup_telemetry(
+    service_name: &str,
+    endpoint: Option<String>,
+) -> Result<(), opentelemetry::trace::TraceError> {
     let tracer = opentelemetry_otlp::new_pipeline()
         .tracing()
         .with_exporter(
             opentelemetry_otlp::new_exporter()
                 .tonic()
-                .with_endpoint("http://otel-collector:4317"),
+                .with_endpoint(endpoint.unwrap_or("http://otel-collector:4317".into())),
         )
         .with_trace_config(config().with_resource(Resource::new(vec![
             KeyValue::new("service.name".to_string(), service_name.to_string()),
