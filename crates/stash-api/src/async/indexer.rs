@@ -12,11 +12,7 @@ use crate::common::poe_api::{get_oauth_token, user_agent, OAuthResponse};
 use crate::common::{ChangeId, StashTabResponse};
 
 #[derive(Default, Debug)]
-pub struct Indexer {
-    pub(crate) is_stopping: bool,
-}
-
-pub type IndexerResult = Receiver<IndexerMessage>;
+pub struct Indexer;
 
 #[cfg(feature = "async")]
 impl Indexer {
@@ -39,41 +35,36 @@ impl Indexer {
         let credentials = get_oauth_token(&client_id, &client_secret)
             .await
             .expect("Fetch OAuth credentials");
-        info!("Fetched OAuth credentials");
-        let credentials = Some(credentials);
 
         let (tx, rx) = channel(42);
 
         schedule_job(
-            jobs,
             tx,
             change_id,
             client_id,
             client_secret,
-            Arc::new(RwLock::new(credentials)),
+            Arc::new(RwLock::new(Some(credentials))),
         );
         rx
     }
 }
 
 fn schedule_job(
-    jobs: Arc<Mutex<VecDeque<ChangeId>>>,
     tx: Sender<IndexerMessage>,
     next_change_id: ChangeId,
     client_id: String,
     client_secret: String,
     config: Arc<RwLock<Option<OAuthResponse>>>,
 ) {
-    tokio::spawn(async move {
-        jobs.lock().await.push_back(next_change_id);
-        process(jobs, tx, client_id, client_secret, config).await
-    });
+    tokio::spawn(
+        async move { process(next_change_id, tx, client_id, client_secret, config).await },
+    );
 }
 
 #[tracing::instrument(skip(tx))]
 async fn process(
-    jobs: Arc<Mutex<VecDeque<ChangeId>>>,
-    mut tx: Sender<IndexerMessage>,
+    change_id: ChangeId,
+    tx: Sender<IndexerMessage>,
     client_id: String,
     client_secret: String,
     config: Arc<RwLock<Option<OAuthResponse>>>,
@@ -89,84 +80,36 @@ async fn process(
     );
     debug!("Requesting {}", url);
 
-    if let Some(change_id) = next {
-        let url = format!(
-            "https://api.pathofexile.com/public-stash-tabs?id={}",
-            &change_id
-        );
-        tracing::trace!(change_id = ?change_id, url = ?url);
-        debug!("Requesting {}", url);
-
-        // TODO: static client somewhere
-        let client = reqwest::ClientBuilder::new().build()?;
-        let response = client
-            .get(url)
-            .header("Accept", "application/json")
-            .header("User-Agent", user_agent(&client_id))
-            .header(
-                "Authorization",
-                format!(
-                    "Bearer {}",
-                    config
-                        .read()
-                        .await
-                        .as_ref()
-                        .expect("OAuth credentials are set")
-                        .access_token
-                )
-                .as_str(),
+    // TODO: static client somewhere
+    let client = generate_http_client();
+    let response = client
+        .get(url)
+        .header("Accept", "application/json")
+        .header("User-Agent", user_agent(&client_id))
+        .header(
+            "Authorization",
+            format!(
+                "Bearer {}",
+                config
+                    .read()
+                    .await
+                    .as_ref()
+                    .expect("OAuth credentials are set")
+                    .access_token
             )
             .as_str(),
         )
         .send()
         .await;
 
-        let mut response = match response {
-            Err(e) => {
-                error_span!("handle_fetch_error").in_scope(|| {
-                    error!("Error response: {:?}", e);
-                    tracing::trace!(fetch_error = ?e);
-                    schedule_job(jobs, tx, change_id, client_id, client_secret, config);
-                });
-                return Ok(());
-            }
-            Ok(data) => data,
-        };
-
-        let mut bytes = BytesMut::new();
-        let mut prefetch_done = false;
-        while let Some(chunk) = response.chunk().await? {
-            bytes.extend_from_slice(&chunk);
-
-            if bytes.len() > 120 && !prefetch_done {
-                let next_change_id = parse_change_id_from_bytes(&bytes).unwrap();
-                tracing::trace!(next_change_id = ?next_change_id);
-                prefetch_done = true;
-                schedule_job(
-                    jobs.clone(),
-                    tx.clone(),
-                    next_change_id,
-                    client_id.clone(),
-                    client_secret.clone(),
-                    config.clone(),
-                );
-            }
-        }
-
-        // TODO: handle errors by rescheduling based on error
-        let response = serde_json::from_slice::<StashTabResponse>(&bytes)?;
-        debug!(
-            "Read response {} with {} stashes",
-            response.next_change_id,
-            response.stashes.len()
-        );
-        tracing::trace!(number_stashes = ?response.stashes.len());
-
-        // reschedule if payload is empty
-        if response.stashes.is_empty() {
-            info!("Empty response, rescheduling {change_id}");
-            tokio::time::sleep(Duration::from_secs(2)).await;
-            schedule_job(jobs, tx, change_id, client_id, client_secret, config);
+    let mut response = match response {
+        Err(e) => {
+            error!("Error when fetching change_id {}: {:?}", change_id, e);
+            error_span!("handle_fetch_error").in_scope(|| {
+                error!("Error response: {:?}", e);
+                error!(fetch_error = ?e);
+                schedule_job(tx, change_id, client_id, client_secret, config);
+            });
             return Ok(());
         }
         Ok(data) => data,
@@ -178,7 +121,7 @@ async fn process(
             response.status().as_u16()
         );
         tokio::time::sleep(Duration::from_secs(60)).await;
-        schedule_job(tx, change_id, config);
+        schedule_job(tx, change_id, client_id, client_secret, config);
         return Ok(());
     }
 
@@ -187,11 +130,17 @@ async fn process(
     while let Some(chunk) = response.chunk().await? {
         bytes.extend_from_slice(&chunk);
 
-        if bytes.len() > 120 && !prefetch_done {
+        if bytes.len() > 80 && !prefetch_done {
             let next_change_id = parse_change_id_from_bytes(&bytes).unwrap();
             tracing::trace!(next_change_id = ?next_change_id);
             prefetch_done = true;
-            schedule_job(tx.clone(), next_change_id, config.clone());
+            schedule_job(
+                tx.clone(),
+                next_change_id,
+                client_id.clone(),
+                client_secret.clone(),
+                config.clone(),
+            );
         }
     }
 
@@ -203,7 +152,7 @@ async fn process(
                 e.to_string()
             );
             tokio::time::sleep(Duration::from_secs(5)).await;
-            schedule_job(tx, change_id, config);
+            schedule_job(tx, change_id, client_id, client_secret, config);
             return Ok(());
         }
     };
@@ -213,14 +162,6 @@ async fn process(
         deserialised.stashes.len()
     );
     tracing::trace!(number_stashes = ?deserialised.stashes.len());
-
-    // reschedule if payload is empty
-    if deserialised.stashes.is_empty() {
-        info!("Empty response, rescheduling {change_id} in 2s");
-        tokio::time::sleep(Duration::from_secs(2)).await;
-        schedule_job(tx, change_id, config);
-        return Ok(());
-    }
 
     tx.try_send(IndexerMessage::Tick {
         response: deserialised,

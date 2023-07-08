@@ -24,7 +24,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = config::Config::from_env()?;
     info!("Configuration {:#?}", config);
 
-    setup_telemetry("trade-api").expect("Telemetry setup");
+    let otlp_endpoint = std::env::var("OTLP_ENDPOINT").ok();
+    setup_telemetry("trade-api", otlp_endpoint).expect("Telemetry setup");
 
     let pool = PgPool::connect(&config.db_url).await?;
     let mut index = AssetIndex::new();
