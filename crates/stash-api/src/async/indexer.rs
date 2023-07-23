@@ -4,7 +4,7 @@ use bytes::BytesMut;
 use reqwest::StatusCode;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
-use tracing::{debug, error, error_span, info, trace_span};
+use tracing::{debug, error, error_span, info, trace, trace_span};
 use trade_common::telemetry::generate_http_client;
 
 use crate::common::parse::parse_change_id_from_bytes;
@@ -56,9 +56,13 @@ fn schedule_job(
     client_secret: String,
     config: Arc<RwLock<Option<OAuthResponse>>>,
 ) {
-    tokio::spawn(
-        async move { process(next_change_id, tx, client_id, client_secret, config).await },
-    );
+    tokio::spawn(process(
+        next_change_id,
+        tx,
+        client_id,
+        client_secret,
+        config,
+    ));
 }
 
 #[tracing::instrument(skip(tx))]
@@ -130,17 +134,24 @@ async fn process(
     while let Some(chunk) = response.chunk().await? {
         bytes.extend_from_slice(&chunk);
 
-        if bytes.len() > 80 && !prefetch_done {
-            let next_change_id = parse_change_id_from_bytes(&bytes).unwrap();
-            tracing::trace!(next_change_id = ?next_change_id);
-            prefetch_done = true;
-            schedule_job(
-                tx.clone(),
-                next_change_id,
-                client_id.clone(),
-                client_secret.clone(),
-                config.clone(),
-            );
+        if bytes.len() > 60 && !prefetch_done {
+            if seems_empty(&bytes) {
+                info!("Rescheduling in 4s due to empty response");
+                tokio::time::sleep(Duration::from_secs(4)).await;
+                schedule_job(tx, change_id, client_id, client_secret, config);
+                return Ok(());
+            } else {
+                let next_change_id = parse_change_id_from_bytes(&bytes).unwrap();
+                tracing::trace!(next_change_id = ?next_change_id);
+                prefetch_done = true;
+                schedule_job(
+                    tx.clone(),
+                    next_change_id,
+                    client_id.clone(),
+                    client_secret.clone(),
+                    config.clone(),
+                );
+            }
         }
     }
 
@@ -161,7 +172,7 @@ async fn process(
         deserialised.next_change_id,
         deserialised.stashes.len()
     );
-    tracing::trace!(number_stashes = ?deserialised.stashes.len());
+    trace!(number_stashes = ?deserialised.stashes.len());
 
     tx.try_send(IndexerMessage::Tick {
         response: deserialised,
@@ -172,6 +183,13 @@ async fn process(
     .expect("Sending IndexerMessage failed");
 
     Ok(())
+}
+
+fn seems_empty(bytes: &[u8]) -> bool {
+    match std::str::from_utf8(bytes) {
+        Ok(text) => text.contains("stashes:[]") || text.contains("\"stashes\":[]"),
+        Err(_) => false,
+    }
 }
 
 #[derive(Debug, Clone)]
