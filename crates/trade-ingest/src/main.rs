@@ -25,11 +25,11 @@ use crate::metrics::setup_metrics;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    setup_telemetry("trade-ingest").expect("Telemtry setup");
+
     let config = config::Config::from_env()?;
     info!("Configuration {:#?}", config);
 
-    let otlp_endpoint = std::env::var("OTLP_ENDPOINT").ok();
-    setup_telemetry("trade-ingest", otlp_endpoint).expect("Telemtry setup");
     let signal_flag = setup_signal_handlers()?;
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     setup_shutdown_handler(signal_flag, shutdown_tx);

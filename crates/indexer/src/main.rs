@@ -40,12 +40,7 @@ use trade_common::telemetry::setup_telemetry;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
 
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info");
-    }
-
-    let otlp_endpoint = std::env::var("OTLP_ENDPOINT").ok();
-    setup_telemetry("indexer", otlp_endpoint).expect("Telemetry setup");
+    setup_telemetry("indexer").expect("Telemetry setup");
 
     let config = Configuration::from_env()?;
     tracing::info!("Chosen configuration: {:#?}", config);

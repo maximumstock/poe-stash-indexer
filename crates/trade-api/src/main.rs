@@ -21,15 +21,16 @@ use crate::{metrics::setup_metrics, store::Store};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    setup_telemetry("trade-api").expect("Telemetry setup");
+
     let config = config::Config::from_env()?;
     info!("Configuration {:#?}", config);
 
-    let otlp_endpoint = std::env::var("OTLP_ENDPOINT").ok();
-    setup_telemetry("trade-api", otlp_endpoint).expect("Telemetry setup");
-
-    let pool = PgPool::connect(&config.db_url).await?;
+    let pool = PgPool::connect(&config.db_url)
+        .await
+        .expect("Connection to DB");
     let mut index = AssetIndex::new();
-    index.init().await?;
+    index.init().await.expect("Asset index init");
     let store = Arc::new(Store::new(index, pool));
 
     let signal_flag = setup_signal_handlers()?;

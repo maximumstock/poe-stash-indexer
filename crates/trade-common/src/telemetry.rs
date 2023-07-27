@@ -8,34 +8,42 @@ use reqwest_tracing::{SpanBackendWithUrl, TracingMiddleware};
 use tracing::info;
 use tracing_subscriber::{prelude::*, EnvFilter, Registry};
 
-pub fn setup_telemetry(
-    service_name: &str,
-    endpoint: Option<String>,
-) -> Result<(), opentelemetry::trace::TraceError> {
-    let tracer = opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint(endpoint.unwrap_or("http://otel-collector:4317".into())),
-        )
-        .with_trace_config(config().with_resource(Resource::new(vec![
-            KeyValue::new("service.name".to_string(), service_name.to_string()),
-            KeyValue::new(
-                "deployment.environment",
-                std::env::var("ENV").unwrap_or("development".into()),
-            ),
-        ])))
-        .install_batch(opentelemetry::runtime::Tokio)
-        .expect("Error initialising OTLP pipeline");
+pub fn setup_telemetry(service_name: &str) -> Result<(), opentelemetry::trace::TraceError> {
+    if let Ok(otlp_endpoint) = std::env::var("OTLP_ENDPOINT") {
+        let tracer = opentelemetry_otlp::new_pipeline()
+            .tracing()
+            .with_exporter(
+                opentelemetry_otlp::new_exporter()
+                    .tonic()
+                    .with_endpoint(otlp_endpoint),
+            )
+            .with_trace_config(config().with_resource(Resource::new(vec![
+                KeyValue::new("service.name".to_string(), service_name.to_string()),
+                KeyValue::new(
+                    "deployment.environment",
+                    std::env::var("ENV").unwrap_or("development".into()),
+                ),
+            ])))
+            .install_batch(opentelemetry::runtime::Tokio)
+            .expect("Error initialising OTLP pipeline");
 
-    Registry::default()
-        .with(EnvFilter::from_default_env())
-        .with(tracing_opentelemetry::layer().with_tracer(tracer))
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+        Registry::default()
+            .with(EnvFilter::from_default_env())
+            .with(tracing_opentelemetry::layer().with_tracer(tracer))
+            .with(tracing_subscriber::fmt::layer())
+            .init();
 
-    info!("Successfully setup OTLP telemetry");
+        info!("Setup tracing with OTLP");
+    } else {
+        Registry::default()
+            .with(EnvFilter::from_default_env())
+            .with(tracing_subscriber::fmt::layer())
+            .init();
+
+        info!("Setup tracing without OTLP");
+    }
+
+    info!("Successfully setup telemetry");
 
     Ok(())
 }

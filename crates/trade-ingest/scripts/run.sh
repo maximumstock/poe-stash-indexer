@@ -7,7 +7,7 @@ case $ENV in
     exec trade-ingest
     ;;
   *)
-    exec cargo watch -w crates/trade-ingest/src -x "run --bin trade-ingest"
+    exec cargo watch -w crates -x "run --bin trade-ingest"
     ;;
 esac
 

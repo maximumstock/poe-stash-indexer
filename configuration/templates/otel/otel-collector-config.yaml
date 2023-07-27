@@ -9,9 +9,9 @@ processors:
 
 exporters:
   otlp:
-    endpoint: ${OTLP_ENDPOINT}
+    endpoint: ${OTEL_COLLECTOR_ENDPOINT}
     headers:
-      api-key: ${OTLP_LICENSE_KEY}
+      api-key: ${OTEL_COLLECTOR_API_KEY}
 
 service:
   pipelines:
