@@ -21,6 +21,20 @@ A brief overview over what is going on:
 
 `trade-api` exposes a public REST-like API whose documentation you can find [here](crates/trade-api/README.md).
 
+## Quickstart
+
+Generally the workflow for running this project is:
+
+1. Create an `.env.development` from `.env.template`
+2. `make config` to instantiate all service configurations based on `.env.development`
+3. `make build` to build Docker images, as currently still necessary for some parts
+4. `make up`, starting everything as declared in `docker-compose.yml`
+
+For a separate production setup, change the first steps:
+
+1. Create `.env.production` as you want
+2. Run `ENV=production make config`
+
 ## Local Dev Environment
 
 Our [`docker-compose.yaml`](./docker-compose.yaml) describes an examplatory (non-production) setup of the above tools for experimentation, which includes:
