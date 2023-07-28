@@ -1,3 +1,5 @@
+use trade_common::secret::SecretString;
+
 use self::user_config::UserConfiguration;
 
 #[derive(Debug)]
@@ -7,7 +9,7 @@ pub struct Configuration {
     pub rabbitmq: Option<RabbitMqConfig>,
     pub metrics_port: u32,
     pub client_id: String,
-    pub client_secret: String,
+    pub client_secret: SecretString,
 }
 
 impl Configuration {
@@ -18,7 +20,7 @@ impl Configuration {
             rabbitmq: RabbitMqConfig::from_env()?,
             user_config: UserConfiguration::default(),
             client_id: ensure_string_from_env("POE_CLIENT_ID"),
-            client_secret: ensure_string_from_env("POE_CLIENT_SECRET"),
+            client_secret: SecretString::new(ensure_string_from_env("POE_CLIENT_SECRET")),
         })
     }
 }

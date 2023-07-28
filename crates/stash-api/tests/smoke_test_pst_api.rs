@@ -2,11 +2,13 @@ use stash_api::{
     common::{poe_api::get_oauth_token, poe_ninja_client},
     r#async::indexer::Indexer,
 };
+use trade_common::secret::SecretString;
 
-fn extract_credentials_from_env() -> (String, String) {
+fn extract_credentials_from_env() -> (String, SecretString) {
     let _ = dotenv::from_path("../../configuration/environments/.env.development");
     let client_id = std::env::var("POE_CLIENT_ID").expect("POE_CLIENT_ID");
-    let client_secret = std::env::var("POE_CLIENT_SECRET").expect("POE_CLIENT_SECRET");
+    let client_secret =
+        SecretString::new(std::env::var("POE_CLIENT_SECRET").expect("POE_CLIENT_SECRET"));
     (client_id, client_secret)
 }
 

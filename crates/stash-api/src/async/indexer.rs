@@ -5,6 +5,7 @@ use reqwest::StatusCode;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
 use tracing::{debug, error, error_span, info, trace, trace_span};
+use trade_common::secret::SecretString;
 use trade_common::telemetry::generate_http_client;
 
 use crate::common::parse::parse_change_id_from_bytes;
@@ -23,7 +24,7 @@ impl Indexer {
     pub async fn start_at_change_id(
         &self,
         client_id: String,
-        client_secret: String,
+        client_secret: SecretString,
         change_id: ChangeId,
     ) -> Receiver<IndexerMessage> {
         // Workaround to not have to use [tracing::instrument]
@@ -52,7 +53,7 @@ fn schedule_job(
     tx: Sender<IndexerMessage>,
     next_change_id: ChangeId,
     client_id: String,
-    client_secret: String,
+    client_secret: SecretString,
     config: Arc<RwLock<Option<OAuthResponse>>>,
 ) {
     tokio::spawn(process(
@@ -69,7 +70,7 @@ async fn process(
     change_id: ChangeId,
     tx: Sender<IndexerMessage>,
     client_id: String,
-    client_secret: String,
+    client_secret: SecretString,
     config: Arc<RwLock<Option<OAuthResponse>>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // check if stopping

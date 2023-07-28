@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+use trade_common::secret::SecretString;
 
 pub fn user_agent(client_id: &str) -> String {
     format!("OAuth {client_id}/0.1 (contact: mxmlnstock@gmail.com)")
@@ -33,14 +34,14 @@ impl OAuthRequestPayload {
 /// According to https://www.pathofexile.com/developer/docs/authorization
 pub async fn get_oauth_token(
     client_id: &str,
-    client_secret: &str,
+    client_secret: &SecretString,
 ) -> Result<OAuthResponse, Box<dyn std::error::Error>> {
     use trade_common::telemetry::generate_http_client;
 
     let url = "https://www.pathofexile.com/oauth/token";
     let payload = serde_urlencoded::to_string(OAuthRequestPayload::new(
         client_id.into(),
-        client_secret.into(),
+        client_secret.expose().to_string(),
     ))
     .unwrap();
 
