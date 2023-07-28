@@ -14,7 +14,6 @@ use crate::common::{ChangeId, StashTabResponse};
 #[derive(Default, Debug)]
 pub struct Indexer;
 
-#[cfg(feature = "async")]
 impl Indexer {
     pub fn new() -> Self {
         Self {}

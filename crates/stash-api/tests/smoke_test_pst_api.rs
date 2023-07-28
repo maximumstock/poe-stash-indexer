@@ -1,8 +1,5 @@
 use stash_api::{
-    common::{
-        poe_api::{get_oauth_token, get_oauth_token_sync},
-        poe_ninja_client,
-    },
+    common::{poe_api::get_oauth_token, poe_ninja_client},
     r#async::indexer::Indexer,
 };
 
@@ -19,12 +16,6 @@ async fn test_pst_api_oauth_async() {
     get_oauth_token(&client_id, &client_secret)
         .await
         .expect("fetching OAuth token");
-}
-
-#[test]
-fn test_pst_api_oauth() {
-    let (client_id, client_secret) = extract_credentials_from_env();
-    get_oauth_token_sync(&client_id, &client_secret).expect("fetching OAuth token");
 }
 
 #[tokio::test]

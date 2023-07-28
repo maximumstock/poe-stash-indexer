@@ -30,27 +30,6 @@ impl OAuthRequestPayload {
     }
 }
 
-#[cfg(feature = "sync")]
-/// According to https://www.pathofexile.com/developer/docs/authorization
-pub fn get_oauth_token_sync(
-    client_id: &str,
-    client_secret: &str,
-) -> Result<OAuthResponse, Box<dyn std::error::Error>> {
-    let url = "https://www.pathofexile.com/oauth/token";
-    let payload = serde_urlencoded::to_string(OAuthRequestPayload::new(
-        client_id.into(),
-        client_secret.into(),
-    ))
-    .unwrap();
-    let response = ureq::post(url)
-        .set("Content-Type", "application/x-www-form-urlencoded")
-        .set("User-Agent", user_agent(client_id).as_str())
-        .send(payload.as_bytes())?;
-
-    serde_json::from_str(&response.into_string()?).map_err(|e| e.into())
-}
-
-#[cfg(feature = "async")]
 /// According to https://www.pathofexile.com/developer/docs/authorization
 pub async fn get_oauth_token(
     client_id: &str,
