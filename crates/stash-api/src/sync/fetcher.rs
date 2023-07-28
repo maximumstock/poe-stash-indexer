@@ -35,7 +35,7 @@ impl FetchTask {
 
     pub(crate) fn retry(self) -> Option<Self> {
         Some(FetchTask { ..self })
-    }đ
+    }
 }
 
 #[derive(Debug)]
