@@ -35,7 +35,7 @@ impl FetchTask {
 
     pub(crate) fn retry(self) -> Option<Self> {
         Some(FetchTask { ..self })
-    }
+    }đ
 }
 
 #[derive(Debug)]
@@ -63,6 +63,7 @@ pub(crate) fn start_fetcher(
     scheduler_tx: Sender<SchedulerMessage>,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
+        // Should this be prefixed with POE_ or is unused currently?
         let client_id = std::env::var("CLIENT_ID").unwrap();
         let client_secret = std::env::var("CLIENT_SECRET").unwrap();
 
