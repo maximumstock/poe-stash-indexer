@@ -50,6 +50,7 @@ jobs:
         env:
           POE_CLIENT_ID: ${{ secrets.POE_CLIENT_ID }}
           POE_CLIENT_SECRET: ${{ secrets.POE_CLIENT_SECRET }}
+          DEVELOPER_EMAIL: mxmlnstock@gmail.com
         run: cargo test --all-features -- --nocapture --quiet
 
       - name: Format
