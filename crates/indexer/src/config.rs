@@ -10,6 +10,7 @@ pub struct Configuration {
     pub metrics_port: u32,
     pub client_id: String,
     pub client_secret: SecretString,
+    pub developer_mail: SecretString,
 }
 
 impl Configuration {
@@ -21,6 +22,7 @@ impl Configuration {
             user_config: UserConfiguration::default(),
             client_id: ensure_string_from_env("POE_CLIENT_ID"),
             client_secret: SecretString::new(ensure_string_from_env("POE_CLIENT_SECRET")),
+            developer_mail: SecretString::new(ensure_string_from_env("POE_DEVELOPER_MAIL")),
         })
     }
 }

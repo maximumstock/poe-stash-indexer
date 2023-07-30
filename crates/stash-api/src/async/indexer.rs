@@ -25,6 +25,7 @@ impl Indexer {
         &self,
         client_id: String,
         client_secret: SecretString,
+        developer_mail: SecretString,
         change_id: ChangeId,
     ) -> Receiver<IndexerMessage> {
         // Workaround to not have to use [tracing::instrument]
@@ -32,7 +33,7 @@ impl Indexer {
 
         info!("Starting at change id: {}", change_id);
 
-        let credentials = get_oauth_token(&client_id, &client_secret)
+        let credentials = get_oauth_token(&client_id, &client_secret, &developer_mail)
             .await
             .expect("Fetch OAuth credentials");
 
@@ -43,6 +44,7 @@ impl Indexer {
             change_id,
             client_id,
             client_secret,
+            developer_mail,
             Arc::new(RwLock::new(Some(credentials))),
         );
         rx
@@ -54,6 +56,7 @@ fn schedule_job(
     next_change_id: ChangeId,
     client_id: String,
     client_secret: SecretString,
+    developer_mail: SecretString,
     config: Arc<RwLock<Option<OAuthResponse>>>,
 ) {
     tokio::spawn(process(
@@ -61,6 +64,7 @@ fn schedule_job(
         tx,
         client_id,
         client_secret,
+        developer_mail,
         config,
     ));
 }
@@ -71,6 +75,7 @@ async fn process(
     tx: Sender<IndexerMessage>,
     client_id: String,
     client_secret: SecretString,
+    developer_mail: SecretString,
     config: Arc<RwLock<Option<OAuthResponse>>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // check if stopping
@@ -89,7 +94,10 @@ async fn process(
     let response = client
         .get(url)
         .header("Accept", "application/json")
-        .header("User-Agent", user_agent(&client_id))
+        .header(
+            "User-Agent",
+            user_agent(&client_id, developer_mail.expose()),
+        )
         .header(
             "Authorization",
             format!(
@@ -112,7 +120,14 @@ async fn process(
             error_span!("handle_fetch_error").in_scope(|| {
                 error!("Error response: {:?}", e);
                 error!(fetch_error = ?e);
-                schedule_job(tx, change_id, client_id, client_secret, config);
+                schedule_job(
+                    tx,
+                    change_id,
+                    client_id,
+                    client_secret,
+                    developer_mail,
+                    config,
+                );
             });
             return Ok(());
         }
@@ -125,7 +140,14 @@ async fn process(
             response.status().as_u16()
         );
         tokio::time::sleep(Duration::from_secs(60)).await;
-        schedule_job(tx, change_id, client_id, client_secret, config);
+        schedule_job(
+            tx,
+            change_id,
+            client_id,
+            client_secret,
+            developer_mail,
+            config,
+        );
         return Ok(());
     }
 
@@ -138,7 +160,14 @@ async fn process(
             if seems_empty(&bytes) {
                 info!("Rescheduling in 4s due to empty response");
                 tokio::time::sleep(Duration::from_secs(4)).await;
-                schedule_job(tx, change_id, client_id, client_secret, config);
+                schedule_job(
+                    tx,
+                    change_id,
+                    client_id,
+                    client_secret,
+                    developer_mail,
+                    config,
+                );
                 return Ok(());
             } else {
                 let next_change_id = parse_change_id_from_bytes(&bytes).unwrap();
@@ -149,6 +178,7 @@ async fn process(
                     next_change_id,
                     client_id.clone(),
                     client_secret.clone(),
+                    developer_mail.clone(),
                     config.clone(),
                 );
             }
@@ -163,7 +193,14 @@ async fn process(
                 e.to_string()
             );
             tokio::time::sleep(Duration::from_secs(5)).await;
-            schedule_job(tx, change_id, client_id, client_secret, config);
+            schedule_job(
+                tx,
+                change_id,
+                client_id,
+                client_secret,
+                developer_mail,
+                config,
+            );
             return Ok(());
         }
     };

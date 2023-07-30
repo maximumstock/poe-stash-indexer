@@ -3,9 +3,8 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use trade_common::secret::SecretString;
 
-pub fn user_agent(client_id: &str) -> String {
-    let developer_email = std::env::var("DEVELOPER_EMAIL").expect("Missing enviroment variable DEVELOPER_EMAIL");
-    format!("OAuth {client_id}/0.1 (contact: {developer_email})")
+pub fn user_agent(client_id: &str, developer_mail: &str) -> String {
+    format!("OAuth {client_id}/0.1 (contact: {developer_mail})")
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,6 +35,7 @@ impl OAuthRequestPayload {
 pub async fn get_oauth_token(
     client_id: &str,
     client_secret: &SecretString,
+    developer_mail: &SecretString,
 ) -> Result<OAuthResponse, Box<dyn std::error::Error>> {
     use trade_common::telemetry::generate_http_client;
 
@@ -49,7 +49,10 @@ pub async fn get_oauth_token(
     let response = generate_http_client()
         .post(url)
         .header("Content-Type", "application/x-www-form-urlencoded")
-        .header("User-Agent", user_agent(client_id).as_str())
+        .header(
+            "User-Agent",
+            user_agent(client_id, developer_mail.expose()).as_str(),
+        )
         .body(payload)
         .send()
         .await?;

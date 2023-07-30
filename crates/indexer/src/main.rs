@@ -49,23 +49,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sinks = setup_sinks(&config).await?;
     let client_id = config.client_id.clone();
     let client_secret = config.client_secret.clone();
+    let developer_mail = config.developer_mail.clone();
 
     let mut resumption = StateWrapper::load_from_file(&"./indexer_state.json");
     let indexer = Indexer::new();
     let mut rx = match (&config.user_config.restart_mode, &resumption.inner) {
         (RestartMode::Fresh, _) => {
             let latest_change_id = PoeNinjaClient::fetch_latest_change_id_async().await?;
-            indexer.start_at_change_id(client_id, client_secret, latest_change_id)
+            indexer.start_at_change_id(client_id, client_secret, developer_mail, latest_change_id)
         }
         (RestartMode::Resume, Some(next)) => indexer.start_at_change_id(
             client_id,
             client_secret,
+            developer_mail,
             ChangeId::from_str(&next.next_change_id).unwrap(),
         ),
         (RestartMode::Resume, None) => {
             tracing::info!("No previous data found, falling back to RestartMode::Fresh");
             let latest_change_id = PoeNinjaClient::fetch_latest_change_id_async().await?;
-            indexer.start_at_change_id(client_id, client_secret, latest_change_id)
+            indexer.start_at_change_id(client_id, client_secret, developer_mail, latest_change_id)
         }
     }
     .await;
