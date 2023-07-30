@@ -1,6 +1,5 @@
 # Development Build
 FROM rust:bullseye as development
-# Install & integrate mold for faster dev link times
 # Add apt.llvm.org repository and install clang
 RUN apt-get update
 RUN apt-get install -y protobuf-compiler
