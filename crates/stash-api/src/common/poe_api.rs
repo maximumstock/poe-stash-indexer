@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use trade_common::secret::SecretString;
 
 pub fn user_agent(client_id: &str) -> String {
-    format!("OAuth {client_id}/0.1 (contact: mxmlnstock@gmail.com)")
+    let developer_email = std::env::var("DEVELOPER_EMAIL").expect("Missing enviroment variable DEVELOPER_EMAIL");
+    format!("OAuth {client_id}/0.1 (contact: {developer_email})")
 }
 
 #[derive(Debug, Deserialize)]
