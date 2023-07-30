@@ -28,7 +28,6 @@ use crate::{
 use crate::{filter::filter_stash_record, sinks::rabbitmq::RabbitMqSink};
 use crate::{resumption::StateWrapper, stash_record::map_to_stash_records};
 
-use dotenv::dotenv;
 use sinks::sink::Sink;
 use stash_api::{
     common::{poe_ninja_client::PoeNinjaClient, ChangeId},
@@ -38,7 +37,7 @@ use trade_common::telemetry::setup_telemetry;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenv().ok();
+    dotenv::dotenv().ok();
 
     setup_telemetry("indexer").expect("Telemetry setup");
 
