@@ -11,6 +11,5 @@ table! {
         last_character_name -> Nullable<Text>,
         stash_name -> Nullable<Text>,
         league -> Nullable<Text>,
-        chunk_id -> Nullable<Int8>,
     }
 }

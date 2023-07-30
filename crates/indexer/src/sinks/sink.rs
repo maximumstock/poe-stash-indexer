@@ -11,8 +11,6 @@ pub trait Sink {
 
 #[async_trait]
 pub trait SinkResume {
-    /// Returns the next chunk id to continue from counting chunks of `StashTabResponse`.
-    async fn get_next_chunk_id(&self) -> QueryResult<usize>;
     /// Returns the next change id to continue from based on previously fetched data.
     async fn get_next_change_id(&self) -> QueryResult<String>;
 }

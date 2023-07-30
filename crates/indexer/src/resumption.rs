@@ -10,8 +10,6 @@ use serde::{Deserialize, Serialize};
 pub struct State {
     pub(crate) change_id: String,
     pub(crate) next_change_id: String,
-    // i64 because sql_types does not support usize
-    pub(crate) chunk_counter: i64,
 }
 
 pub struct StateWrapper<'a> {
@@ -43,13 +41,5 @@ impl<'a> StateWrapper<'a> {
 
     pub fn update(&mut self, s: State) {
         self.inner.replace(s);
-    }
-
-    pub fn chunk_counter(&self) -> i64 {
-        if let Some(state) = &self.inner {
-            state.chunk_counter + 1
-        } else {
-            0
-        }
     }
 }

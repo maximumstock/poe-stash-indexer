@@ -45,17 +45,6 @@ impl Sink for PostgresSink {
 #[async_trait]
 impl SinkResume for PostgresSink {
     #[tracing::instrument(skip(self))]
-    async fn get_next_chunk_id(&self) -> QueryResult<usize> {
-        let mut conn = self.pool.get().await.unwrap();
-
-        stash_records
-            .select(max(chunk_id))
-            .limit(1)
-            .execute(&mut conn)
-            .await
-    }
-
-    #[tracing::instrument(skip(self))]
     async fn get_next_change_id(&self) -> QueryResult<String> {
         let mut conn = self.pool.get().await.unwrap();
 

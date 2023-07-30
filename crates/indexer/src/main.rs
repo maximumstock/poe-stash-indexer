@@ -72,8 +72,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     .await;
 
-    let mut next_chunk_id = resumption.chunk_counter();
-
     while let Some(msg) = rx.recv().await {
         if signal_flag.load(Ordering::Relaxed) {
             tracing::info!("Shutdown signal detected. Shutting down gracefully.");
@@ -104,34 +102,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 metrics.chunks_processed.inc();
 
                 let next_change_id = response.next_change_id.clone();
-                let stashes =
-                    map_to_stash_records(change_id.clone(), created_at, response, next_chunk_id)
-                        .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
-                            filter::FilterResult::Block { reason } => {
-                                tracing::debug!("Filter: Blocked stash, reason: {}", reason);
-                                None
+                let stashes = map_to_stash_records(change_id.clone(), created_at, response)
+                    .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
+                        filter::FilterResult::Block { reason } => {
+                            tracing::debug!("Filter: Blocked stash, reason: {}", reason);
+                            None
+                        }
+                        filter::FilterResult::Pass => Some(stash),
+                        filter::FilterResult::Filter {
+                            n_total,
+                            n_retained,
+                        } => {
+                            let n_removed = n_total - n_retained;
+                            if n_removed > 0 {
+                                tracing::debug!(
+                                    "Filter: Removed {} \t Retained {} \t Total {}",
+                                    n_removed,
+                                    n_retained,
+                                    n_total
+                                );
                             }
-                            filter::FilterResult::Pass => Some(stash),
-                            filter::FilterResult::Filter {
-                                n_total,
-                                n_retained,
-                            } => {
-                                let n_removed = n_total - n_retained;
-                                if n_removed > 0 {
-                                    tracing::debug!(
-                                        "Filter: Removed {} \t Retained {} \t Total {}",
-                                        n_removed,
-                                        n_retained,
-                                        n_total
-                                    );
-                                }
-                                Some(stash)
-                            }
-                        })
-                        .collect::<Vec<_>>();
+                            Some(stash)
+                        }
+                    })
+                    .collect::<Vec<_>>();
 
                 if !stashes.is_empty() {
-                    next_chunk_id += 1;
                     for sink in &sinks {
                         sink.handle(&stashes).await?;
                     }
@@ -141,7 +137,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 resumption.update(State {
                     change_id: change_id.to_string(),
                     next_change_id,
-                    chunk_counter: next_chunk_id,
                 });
             }
         }
