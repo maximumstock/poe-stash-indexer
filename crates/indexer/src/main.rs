@@ -19,13 +19,13 @@ use std::{
     },
 };
 
-use crate::metrics::setup_metrics;
 use crate::{
     config::{user_config::RestartMode, Configuration},
     resumption::State,
     sinks::postgres::PostgresSink,
 };
 use crate::{filter::filter_stash_record, sinks::rabbitmq::RabbitMqSink};
+use crate::{metrics::setup_metrics, sinks::s3::S3Sink};
 use crate::{resumption::StateWrapper, stash_record::map_to_stash_records};
 
 use sinks::sink::Sink;
@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let signal_flag = setup_signal_handlers()?;
     let metrics = setup_metrics(config.metrics_port)?;
-    let sinks = setup_sinks(&config).await?;
+    let mut sinks = setup_sinks(&config).await?;
     let client_id = config.client_id.clone();
     let client_secret = config.client_secret.clone();
     let developer_mail = config.developer_mail.clone();
@@ -128,7 +128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .collect::<Vec<_>>();
 
                 if !stashes.is_empty() {
-                    for sink in &sinks {
+                    for sink in sinks.iter_mut() {
                         sink.handle(&stashes).await?;
                     }
                 }
@@ -173,6 +173,16 @@ async fn setup_sinks<'a>(
             sinks.push(Box::new(PostgresSink::connect(url).await));
             tracing::info!("Configured PostgreSQL sink");
         }
+    }
+
+    if let Some(config) = &config.s3 {
+        let s3_sink = S3Sink::connect(
+            &config.bucket_name,
+            &config.access_key,
+            config.secret_key.clone(),
+        )
+        .await?;
+        sinks.push(Box::new(s3_sink));
     }
 
     Ok(sinks)

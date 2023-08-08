@@ -30,8 +30,11 @@ impl PostgresSink {
 
 #[async_trait]
 impl Sink for PostgresSink {
-    #[tracing::instrument(skip(self, records), name = "handle-postgres")]
-    async fn handle(&self, records: &[StashRecord]) -> Result<usize, Box<dyn std::error::Error>> {
+    #[tracing::instrument(skip(self, records), name = "sink-handle-postgres")]
+    async fn handle(
+        &mut self,
+        records: &[StashRecord],
+    ) -> Result<usize, Box<dyn std::error::Error>> {
         let mut conn = self.pool.get().await?;
 
         diesel::insert_into(stash_records)

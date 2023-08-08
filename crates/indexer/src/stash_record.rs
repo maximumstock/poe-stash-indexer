@@ -7,7 +7,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::Serialize;
 use stash_api::{common::ChangeId, common::StashTabResponse};
 
-#[derive(Serialize, Insertable, Queryable)]
+#[derive(Debug, Serialize, Insertable, Queryable, Clone)]
 #[diesel(table_name = stash_records)]
 pub struct StashRecord {
     pub created_at: NaiveDateTime,

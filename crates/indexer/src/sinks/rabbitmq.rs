@@ -35,8 +35,11 @@ impl RabbitMqSink {
 
 #[async_trait]
 impl Sink for RabbitMqSink {
-    #[tracing::instrument(skip(self, payload), name = "handle-rabbitmq")]
-    async fn handle(&self, payload: &[StashRecord]) -> Result<usize, Box<dyn std::error::Error>> {
+    #[tracing::instrument(skip(self, payload), name = "sink-handle-rabbitmq")]
+    async fn handle(
+        &mut self,
+        payload: &[StashRecord],
+    ) -> Result<usize, Box<dyn std::error::Error>> {
         let serialized = serde_json::to_string(payload)?;
 
         self.channel
