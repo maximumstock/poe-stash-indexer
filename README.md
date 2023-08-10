@@ -34,6 +34,8 @@ For a separate production setup, change the first steps:
 
 1. Create `.env.production` as you want
 2. Run `ENV=production make config`
+3. Run `make build-prod` to build production Docker images
+4. Run `make up-prod` to start production Docker containers
 
 ## Local Dev Environment
 
