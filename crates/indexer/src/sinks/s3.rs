@@ -1,8 +1,9 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::{collections::HashMap, fmt::Debug, io::Write};
 
 use async_trait::async_trait;
 use aws_sdk_s3::{primitives::ByteStream, Client};
 use chrono::NaiveDateTime;
+use flate2::Compression;
 use serde::Serialize;
 use trade_common::secret::SecretString;
 
@@ -85,22 +86,23 @@ impl Sink for S3Sink {
         };
 
         if should_sync {
-            let payloads = self
-                .buffer
-                .iter()
+            let buffer = std::mem::take(&mut self.buffer);
+            let payloads = buffer
+                .into_iter()
                 .filter(|(_, v)| !v.is_empty())
                 .map(|(k, v)| {
-                    let pay = S3Payload(v.clone());
-                    let serialized = serde_json::to_vec(&pay).unwrap();
-                    let content = ByteStream::from(serialized);
-                    // todo: compression
-                    // todo: flush on graceful shutdown
-                    // todo: error handling of s3 client
                     let key = format!(
-                        "{}/{}.json",
+                        "{}/{}.json.gzip",
                         k,
                         v.last().unwrap().created_at.format(TIME_BUCKET),
                     );
+                    let pay = S3Payload(v);
+                    let serialized = serde_json::to_vec(&pay).unwrap();
+                    let mut d = flate2::write::GzEncoder::new(Vec::new(), Compression::best());
+                    d.write_all(&serialized).unwrap();
+                    let content = ByteStream::from(d.finish().unwrap());
+                    // todo: flush on graceful shutdown
+                    // todo: error handling of s3 client
 
                     self.client
                         .put_object()
