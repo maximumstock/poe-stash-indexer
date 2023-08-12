@@ -59,8 +59,9 @@ impl S3Sink {
     }
 
     async fn sync(&mut self) {
-        info!("Syncing S3 Sink");
         // todo: error handling of s3 client
+        // todo: sync in another tokio task that does not block the rest
+        info!("Syncing S3 Sink");
         let tasks = self
             .buffer
             .read()
@@ -136,7 +137,7 @@ impl Sink for S3Sink {
             }
             None => {
                 self.last_sync = Some(chrono::offset::Utc::now().naive_utc());
-                true
+                false
             }
         };
 
