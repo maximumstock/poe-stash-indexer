@@ -30,8 +30,11 @@ impl PostgresSink {
 
 #[async_trait]
 impl Sink for PostgresSink {
-    #[tracing::instrument(skip(self, records), name = "handle-postgres")]
-    async fn handle(&self, records: &[StashRecord]) -> Result<usize, Box<dyn std::error::Error>> {
+    #[tracing::instrument(skip(self, records), name = "sink-handle-postgres")]
+    async fn handle(
+        &mut self,
+        records: &[StashRecord],
+    ) -> Result<usize, Box<dyn std::error::Error>> {
         let mut conn = self.pool.get().await?;
 
         diesel::insert_into(stash_records)
@@ -40,21 +43,14 @@ impl Sink for PostgresSink {
             .await
             .map_err(|e| e.into())
     }
+
+    async fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
 }
 
 #[async_trait]
 impl SinkResume for PostgresSink {
-    #[tracing::instrument(skip(self))]
-    async fn get_next_chunk_id(&self) -> QueryResult<usize> {
-        let mut conn = self.pool.get().await.unwrap();
-
-        stash_records
-            .select(max(chunk_id))
-            .limit(1)
-            .execute(&mut conn)
-            .await
-    }
-
     #[tracing::instrument(skip(self))]
     async fn get_next_change_id(&self) -> QueryResult<String> {
         let mut conn = self.pool.get().await.unwrap();

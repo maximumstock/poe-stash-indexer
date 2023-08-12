@@ -158,7 +158,7 @@ async fn process(
 
         if bytes.len() > 60 && !prefetch_done {
             if seems_empty(&bytes) {
-                info!("Rescheduling in 4s due to empty response");
+                debug!("Rescheduling in 4s due to empty response");
                 tokio::time::sleep(Duration::from_secs(4)).await;
                 schedule_job(
                     tx,

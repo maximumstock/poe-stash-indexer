@@ -7,6 +7,7 @@ pub struct Configuration {
     pub user_config: UserConfiguration,
     pub database_url: Option<String>,
     pub rabbitmq: Option<RabbitMqConfig>,
+    pub s3: Option<S3Config>,
     pub metrics_port: u32,
     pub client_id: String,
     pub client_secret: SecretString,
@@ -19,6 +20,7 @@ impl Configuration {
             database_url: read_string_from_env("DATABASE_URL"),
             metrics_port: read_int_from_env("METRICS_PORT").unwrap_or(4000),
             rabbitmq: RabbitMqConfig::from_env()?,
+            s3: S3Config::from_env()?,
             user_config: UserConfiguration::default(),
             client_id: ensure_string_from_env("POE_CLIENT_ID"),
             client_secret: SecretString::new(ensure_string_from_env("POE_CLIENT_SECRET")),
@@ -57,14 +59,41 @@ impl RabbitMqConfig {
                 return Ok(None);
             }
 
-            let connection_url =
-                std::env::var("RABBITMQ_URL").expect("RABBITMQ_URL environment variable");
-            let producer_routing_key = std::env::var("RABBITMQ_PRODUCER_ROUTING_KEY")
-                .expect("RABBITMQ_PRODUCER_ROUTING_KEY environment variable");
+            let connection_url = ensure_string_from_env("RABBITMQ_URL");
+            let producer_routing_key = ensure_string_from_env("RABBITMQ_PRODUCER_ROUTING_KEY");
 
             Ok(Some(RabbitMqConfig {
                 connection_url,
                 producer_routing_key,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct S3Config {
+    pub access_key: String,
+    pub secret_key: SecretString,
+    pub bucket_name: String,
+}
+
+impl S3Config {
+    pub fn from_env() -> Result<Option<S3Config>, std::env::VarError> {
+        if let Ok(string) = std::env::var("S3_SINK_ENABLED") {
+            if string.to_lowercase().eq("false") || string.eq("0") {
+                return Ok(None);
+            }
+
+            let access_key = ensure_string_from_env("S3_SINK_ACCESS_KEY");
+            let secret_key = SecretString::new(ensure_string_from_env("S3_SINK_SECRET_KEY"));
+            let bucket_name = ensure_string_from_env("S3_SINK_BUCKET_NAME");
+
+            Ok(Some(S3Config {
+                access_key,
+                secret_key,
+                bucket_name,
             }))
         } else {
             Ok(None)

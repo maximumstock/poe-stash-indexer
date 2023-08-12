@@ -7,7 +7,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::Serialize;
 use stash_api::{common::ChangeId, common::StashTabResponse};
 
-#[derive(Serialize, Insertable, Queryable)]
+#[derive(Debug, Serialize, Insertable, Queryable, Clone)]
 #[diesel(table_name = stash_records)]
 pub struct StashRecord {
     pub created_at: NaiveDateTime,
@@ -21,14 +21,12 @@ pub struct StashRecord {
     pub last_character_name: Option<String>,
     pub stash_name: Option<String>,
     pub league: Option<String>,
-    pub chunk_id: i64,
 }
 
 pub fn map_to_stash_records(
     change_id: ChangeId,
     created_at: SystemTime,
     payload: StashTabResponse,
-    chunk_id: i64,
 ) -> impl Iterator<Item = StashRecord> {
     let next_change_id = payload.next_change_id;
 
@@ -49,6 +47,5 @@ pub fn map_to_stash_records(
             change_id: change_id.clone().into(),
             created_at: DateTime::<Utc>::from(created_at).naive_utc(),
             next_change_id: next_change_id.clone(),
-            chunk_id,
         })
 }

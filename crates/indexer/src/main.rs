@@ -19,13 +19,13 @@ use std::{
     },
 };
 
-use crate::metrics::setup_metrics;
 use crate::{
     config::{user_config::RestartMode, Configuration},
     resumption::State,
     sinks::postgres::PostgresSink,
 };
 use crate::{filter::filter_stash_record, sinks::rabbitmq::RabbitMqSink};
+use crate::{metrics::setup_metrics, sinks::s3::S3Sink};
 use crate::{resumption::StateWrapper, stash_record::map_to_stash_records};
 
 use sinks::sink::Sink;
@@ -33,6 +33,7 @@ use stash_api::{
     common::{poe_ninja_client::PoeNinjaClient, ChangeId},
     r#async::indexer::{Indexer, IndexerMessage},
 };
+use tracing::info;
 use trade_common::telemetry::setup_telemetry;
 
 #[tokio::main]
@@ -46,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let signal_flag = setup_signal_handlers()?;
     let metrics = setup_metrics(config.metrics_port)?;
-    let sinks = setup_sinks(&config).await?;
+    let mut sinks = setup_sinks(&config).await?;
     let client_id = config.client_id.clone();
     let client_secret = config.client_secret.clone();
     let developer_mail = config.developer_mail.clone();
@@ -71,8 +72,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     .await;
-
-    let mut next_chunk_id = resumption.chunk_counter();
 
     while let Some(msg) = rx.recv().await {
         if signal_flag.load(Ordering::Relaxed) {
@@ -104,35 +103,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 metrics.chunks_processed.inc();
 
                 let next_change_id = response.next_change_id.clone();
-                let stashes =
-                    map_to_stash_records(change_id.clone(), created_at, response, next_chunk_id)
-                        .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
-                            filter::FilterResult::Block { reason } => {
-                                tracing::debug!("Filter: Blocked stash, reason: {}", reason);
-                                None
+                let stashes = map_to_stash_records(change_id.clone(), created_at, response)
+                    .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
+                        filter::FilterResult::Block { reason } => {
+                            tracing::debug!("Filter: Blocked stash, reason: {}", reason);
+                            None
+                        }
+                        filter::FilterResult::Pass => Some(stash),
+                        filter::FilterResult::Filter {
+                            n_total,
+                            n_retained,
+                        } => {
+                            let n_removed = n_total - n_retained;
+                            if n_removed > 0 {
+                                tracing::debug!(
+                                    "Filter: Removed {} \t Retained {} \t Total {}",
+                                    n_removed,
+                                    n_retained,
+                                    n_total
+                                );
                             }
-                            filter::FilterResult::Pass => Some(stash),
-                            filter::FilterResult::Filter {
-                                n_total,
-                                n_retained,
-                            } => {
-                                let n_removed = n_total - n_retained;
-                                if n_removed > 0 {
-                                    tracing::debug!(
-                                        "Filter: Removed {} \t Retained {} \t Total {}",
-                                        n_removed,
-                                        n_retained,
-                                        n_total
-                                    );
-                                }
-                                Some(stash)
-                            }
-                        })
-                        .collect::<Vec<_>>();
+                            Some(stash)
+                        }
+                    })
+                    .collect::<Vec<_>>();
 
                 if !stashes.is_empty() {
-                    next_chunk_id += 1;
-                    for sink in &sinks {
+                    for sink in sinks.iter_mut() {
                         sink.handle(&stashes).await?;
                     }
                 }
@@ -141,10 +138,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 resumption.update(State {
                     change_id: change_id.to_string(),
                     next_change_id,
-                    chunk_counter: next_chunk_id,
                 });
             }
         }
+    }
+
+    info!("Flushing sinks");
+    for sink in sinks.iter_mut() {
+        sink.flush().await?;
     }
 
     match resumption.save() {
@@ -178,6 +179,16 @@ async fn setup_sinks<'a>(
             sinks.push(Box::new(PostgresSink::connect(url).await));
             tracing::info!("Configured PostgreSQL sink");
         }
+    }
+
+    if let Some(config) = &config.s3 {
+        let s3_sink = S3Sink::connect(
+            &config.bucket_name,
+            &config.access_key,
+            config.secret_key.clone(),
+        )
+        .await?;
+        sinks.push(Box::new(s3_sink));
     }
 
     Ok(sinks)
