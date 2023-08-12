@@ -54,4 +54,8 @@ impl Sink for RabbitMqSink {
             .map(|_| payload.len())
             .map_err(|e| e.into())
     }
+
+    async fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
 }

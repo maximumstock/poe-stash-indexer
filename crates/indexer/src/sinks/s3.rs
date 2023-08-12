@@ -1,10 +1,16 @@
-use std::{collections::HashMap, fmt::Debug, io::Write};
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    io::Write,
+    sync::{Arc, RwLock},
+};
 
 use async_trait::async_trait;
 use aws_sdk_s3::{primitives::ByteStream, Client};
 use chrono::NaiveDateTime;
 use flate2::Compression;
-use serde::Serialize;
+use futures::{stream::FuturesUnordered, StreamExt};
+use tracing::{error, info};
 use trade_common::secret::SecretString;
 
 use crate::stash_record::StashRecord;
@@ -14,7 +20,7 @@ use super::sink::Sink;
 pub struct S3Sink {
     client: Client,
     bucket: String,
-    buffer: HashMap<String, Vec<StashRecord>>,
+    buffer: Arc<RwLock<HashMap<String, Vec<StashRecord>>>>,
     last_sync: Option<NaiveDateTime>,
 }
 
@@ -51,10 +57,59 @@ impl S3Sink {
             last_sync: None,
         })
     }
-}
 
-#[derive(Debug, Serialize)]
-struct S3Payload(Vec<StashRecord>);
+    async fn sync(&mut self) {
+        info!("Syncing S3 Sink");
+        // todo: error handling of s3 client
+        let tasks = self
+            .buffer
+            .read()
+            .unwrap()
+            .iter()
+            .filter(|(_, stashes)| !stashes.is_empty())
+            .map(|(league, stashes)| {
+                let key = format!(
+                    "{}/{}.json.gzip",
+                    league,
+                    stashes.last().unwrap().created_at.format(TIME_BUCKET),
+                );
+                let mut encoder = flate2::write::GzEncoder::new(Vec::new(), Compression::best());
+                encoder
+                    .write_all(&serde_json::to_vec(&stashes).unwrap())
+                    .unwrap();
+                let compressed = encoder.finish().unwrap();
+                let payload = ByteStream::from(compressed);
+                (league.clone(), key, payload)
+            })
+            .collect::<Vec<_>>();
+
+        let mut tasks = tasks
+            .into_iter()
+            .map(|(league, key, payload)| {
+                let f = self
+                    .client
+                    .put_object()
+                    .bucket(&self.bucket)
+                    .key(key)
+                    .body(payload)
+                    .send();
+
+                async { (league, f.await) }
+            })
+            .collect::<FuturesUnordered<_>>();
+
+        while let Some((league, res)) = tasks.next().await {
+            if let Err(e) = res {
+                error!(
+                    "Error when flushing S3 sink with league {}: {} - will re-attempt sync next interval",
+                    league, e
+                )
+            } else if let Some(entry) = self.buffer.write().unwrap().get_mut(&league) {
+                entry.clear();
+            }
+        }
+    }
+}
 
 const TIME_BUCKET: &str = "%Y/%m/%d/%H/%M";
 
@@ -86,46 +141,26 @@ impl Sink for S3Sink {
         };
 
         if should_sync {
-            let buffer = std::mem::take(&mut self.buffer);
-            let payloads = buffer
-                .into_iter()
-                .filter(|(_, v)| !v.is_empty())
-                .map(|(k, v)| {
-                    let key = format!(
-                        "{}/{}.json.gzip",
-                        k,
-                        v.last().unwrap().created_at.format(TIME_BUCKET),
-                    );
-                    let pay = S3Payload(v);
-                    let serialized = serde_json::to_vec(&pay).unwrap();
-                    let mut d = flate2::write::GzEncoder::new(Vec::new(), Compression::best());
-                    d.write_all(&serialized).unwrap();
-                    let content = ByteStream::from(d.finish().unwrap());
-                    // todo: flush on graceful shutdown
-                    // todo: error handling of s3 client
-
-                    self.client
-                        .put_object()
-                        .bucket(&self.bucket)
-                        .key(key)
-                        .body(content)
-                        .send()
-                })
-                .collect::<Vec<_>>();
-
-            futures::future::join_all(payloads).await;
-            self.buffer.clear();
+            self.sync().await;
         } else {
             for stash in payload {
                 if let Some(league) = &stash.league {
                     self.buffer
+                        .write()
+                        .unwrap()
                         .entry(league.clone())
                         .or_default()
+                        // todo: box stash records
                         .push(stash.clone());
                 }
             }
         }
 
         Ok(payload.len())
+    }
+
+    async fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.sync().await;
+        Ok(())
     }
 }

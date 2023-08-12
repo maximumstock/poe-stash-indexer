@@ -10,6 +10,9 @@ pub trait Sink {
         &mut self,
         payload: &[StashRecord],
     ) -> Result<usize, Box<dyn std::error::Error>>;
+
+    /// Sinks can be stateful and so want to be flushed upon graceful shutdown.
+    async fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 #[async_trait]

@@ -33,6 +33,7 @@ use stash_api::{
     common::{poe_ninja_client::PoeNinjaClient, ChangeId},
     r#async::indexer::{Indexer, IndexerMessage},
 };
+use tracing::info;
 use trade_common::telemetry::setup_telemetry;
 
 #[tokio::main]
@@ -140,6 +141,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
             }
         }
+    }
+
+    info!("Flushing sinks");
+    for sink in sinks.iter_mut() {
+        sink.flush().await?;
     }
 
     match resumption.save() {

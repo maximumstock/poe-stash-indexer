@@ -43,6 +43,10 @@ impl Sink for PostgresSink {
             .await
             .map_err(|e| e.into())
     }
+
+    async fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
 }
 
 #[async_trait]
