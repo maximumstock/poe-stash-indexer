@@ -7,6 +7,7 @@ use std::{
 
 use async_trait::async_trait;
 use aws_sdk_s3::{primitives::ByteStream, Client};
+use aws_types::region::Region;
 use chrono::NaiveDateTime;
 use flate2::Compression;
 use futures::{stream::FuturesUnordered, StreamExt};
@@ -30,6 +31,7 @@ impl S3Sink {
         bucket: impl Into<String> + Debug,
         access_key: impl Into<String> + Debug,
         secret_key: SecretString,
+        region: impl Into<String> + Debug,
     ) -> Result<Self, lapin::Error> {
         let bucket = bucket.into();
         let access_key = access_key.into();
@@ -45,6 +47,7 @@ impl S3Sink {
         let credentials_provider =
             aws_credential_types::provider::SharedCredentialsProvider::new(credentials);
         let config = aws_config::from_env()
+            .region(Region::new(region.into()))
             .credentials_provider(credentials_provider)
             .load()
             .await;

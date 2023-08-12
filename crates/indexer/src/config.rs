@@ -77,6 +77,7 @@ pub struct S3Config {
     pub access_key: String,
     pub secret_key: SecretString,
     pub bucket_name: String,
+    pub region: String,
 }
 
 impl S3Config {
@@ -89,11 +90,13 @@ impl S3Config {
             let access_key = ensure_string_from_env("S3_SINK_ACCESS_KEY");
             let secret_key = SecretString::new(ensure_string_from_env("S3_SINK_SECRET_KEY"));
             let bucket_name = ensure_string_from_env("S3_SINK_BUCKET_NAME");
+            let region = ensure_string_from_env("S3_SINK_REGION");
 
             Ok(Some(S3Config {
                 access_key,
                 secret_key,
                 bucket_name,
+                region,
             }))
         } else {
             Ok(None)

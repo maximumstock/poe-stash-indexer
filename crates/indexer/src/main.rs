@@ -186,6 +186,7 @@ async fn setup_sinks<'a>(
             &config.bucket_name,
             &config.access_key,
             config.secret_key.clone(),
+            &config.region,
         )
         .await?;
         sinks.push(Box::new(s3_sink));
