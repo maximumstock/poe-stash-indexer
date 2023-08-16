@@ -10,7 +10,7 @@ edition = "2021"
 # csv = "1.1.6"
 csv = { git = "https://github.com/gootorov/rust-csv.git", rev = "31d1105f9ee50bf02dff178f20be4a1ec9fdff2d" }
 serde = { version = "1.0.160", features = ["derive"] }
-serde_json = "1.0.104"
+serde_json = "1.0.105"
 sqlx = { version = "0.6.2", features = [
     "runtime-tokio-rustls",
     "postgres",
