@@ -77,10 +77,12 @@ impl S3Sink {
                     league,
                     stashes.last().unwrap().created_at.format(TIME_BUCKET),
                 );
+                let mut w = Vec::new();
+                stashes.iter().for_each(|s| {
+                    let _ = jsonl::write(&mut w, s);
+                });
                 let mut encoder = flate2::write::GzEncoder::new(Vec::new(), Compression::best());
-                encoder
-                    .write_all(&serde_json::to_vec(&stashes).unwrap())
-                    .unwrap();
+                encoder.write_all(&w).unwrap();
                 let compressed = encoder.finish().unwrap();
                 let payload = ByteStream::from(compressed);
                 (league.clone(), key, payload)
