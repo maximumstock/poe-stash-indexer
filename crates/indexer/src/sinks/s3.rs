@@ -95,6 +95,7 @@ impl S3Sink {
                 let f = self
                     .client
                     .put_object()
+                    .storage_class(aws_sdk_s3::types::StorageClass::OnezoneIa)
                     .bucket(&self.bucket)
                     .key(key)
                     .body(payload)
