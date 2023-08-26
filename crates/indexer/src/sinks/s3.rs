@@ -73,7 +73,7 @@ impl S3Sink {
             .filter(|(_, stashes)| !stashes.is_empty())
             .map(|(league, stashes)| {
                 let key = format!(
-                    "{}/{}.json.gzip",
+                    "{}/{}.json.gz",
                     league,
                     stashes.last().unwrap().created_at.format(TIME_BUCKET),
                 );
