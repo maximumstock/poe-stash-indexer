@@ -24,7 +24,7 @@ trade-common = { path = "../trade-common" }
 async-trait = "0.1.73"
 diesel-async = { version = "0.2.2", features = ["postgres", "bb8"] }
 lapin = "2.1.1"
-aws-sdk-s3 = "0.28.0"
+aws-sdk-s3 = "0.30.0"
 aws-types = "0.55.3"
 aws-config = "0.55.3"
 aws-credential-types = "0.55.3"
