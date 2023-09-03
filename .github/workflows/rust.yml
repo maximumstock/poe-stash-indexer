@@ -9,6 +9,10 @@ env:
   # Because matklad said so https://matklad.github.io/2021/09/04/fast-rust-builds.html
   CARGO_INCREMENTAL: 0
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 permissions:
   actions: write # allow dependabot PRs to manipulate CI cache
 
