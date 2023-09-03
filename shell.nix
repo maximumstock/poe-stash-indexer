@@ -23,10 +23,7 @@ pkgs.mkShell rec {
 
     openssl
     postgresql
-    # (rust-bin.nightly.latest.default.override {
-    #   extensions = ["rust-src" "clippy"];
-    # })
-    (rust-bin.stable."1.67.0".default.override {
+    (rust-bin.stable.latest.default.override {
       extensions = [ "rust-src" "clippy" ];
     })
     protobuf
