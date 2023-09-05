@@ -1,5 +1,4 @@
-use serde::Deserialize;
-use sqlx::{postgres::PgRow, Row};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub type AccountName = String;
@@ -79,7 +78,7 @@ impl From<StashRecord> for Stash {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct StashRecord {
     pub change_id: String,
     pub next_change_id: String,
@@ -88,10 +87,10 @@ pub struct StashRecord {
     pub account_name: Option<String>,
     pub league: Option<String>,
     pub public: bool,
-    pub created_at: sqlx::types::chrono::NaiveDateTime,
+    pub created_at: chrono::NaiveDateTime,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Item {
     pub id: String,
     pub type_line: String,
@@ -108,23 +107,6 @@ impl Item {
             type_line: type_line.into(),
             ..Self::default()
         }
-    }
-}
-
-impl<'r> sqlx::FromRow<'r, PgRow> for StashRecord {
-    fn from_row(row: &'r PgRow) -> Result<Self, sqlx::Error> {
-        Ok(StashRecord {
-            change_id: row.try_get("change_id")?,
-            next_change_id: row.try_get("next_change_id")?,
-            stash_id: row.try_get("stash_id")?,
-            account_name: row.try_get::<Option<String>, &str>("account_name")?,
-            league: row.try_get::<Option<String>, &str>("league")?,
-            items: row
-                .try_get::<sqlx::types::Json<Vec<Item>>, &str>("items")?
-                .0,
-            public: row.try_get("public")?,
-            created_at: row.try_get("created_at")?,
-        })
     }
 }
 

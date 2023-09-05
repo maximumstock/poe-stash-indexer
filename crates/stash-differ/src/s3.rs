@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use async_trait::async_trait;
+use crate::stash::StashRecord;
 use aws_sdk_s3::{primitives::ByteStream, Client};
 use aws_types::region::Region;
 use chrono::NaiveDateTime;
@@ -14,9 +14,7 @@ use futures::{stream::FuturesUnordered, StreamExt};
 use tracing::{error, info};
 use trade_common::secret::SecretString;
 
-use crate::stash_record::StashRecord;
-
-use super::sink::Sink;
+const TIME_BUCKET: &str = "%Y/%m/%d/%H/%M";
 
 pub struct S3Sink {
     client: Client,
@@ -42,7 +40,7 @@ impl S3Sink {
             secret_key.expose(),
             None,
             None,
-            "poe-stash-indexer",
+            "poe-stash-differ",
         );
         let credentials_provider =
             aws_credential_types::provider::SharedCredentialsProvider::new(credentials);
@@ -116,12 +114,7 @@ impl S3Sink {
             }
         }
     }
-}
 
-const TIME_BUCKET: &str = "%Y/%m/%d/%H/%M";
-
-#[async_trait]
-impl Sink for S3Sink {
     #[tracing::instrument(skip(self, payload), name = "sink-handle-s3")]
     async fn handle(
         &mut self,
