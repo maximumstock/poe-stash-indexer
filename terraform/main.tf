@@ -21,6 +21,38 @@ resource "aws_s3_bucket" "poe-stash-stream-raw-prod" {
   bucket = "poe-stash-stream-raw-prod"
 }
 
+resource "aws_s3_bucket_lifecycle_configuration" "archive-raw-prod" {
+  bucket = aws_s3_bucket.poe-stash-stream-raw-prod.id
+
+  rule {
+    id     = "archive"
+    status = "Enabled"
+
+    transition {
+      days          = 30
+      storage_class = "ONEZONE_IA"
+    }
+  }
+}
+
+resource "aws_s3_bucket" "poe-stash-stream-daily-prod" {
+  bucket = "poe-stash-stream-daily-prod"
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "archive-daily-prod" {
+  bucket = aws_s3_bucket.poe-stash-stream-daily-prod.id
+
+  rule {
+    id     = "archive"
+    status = "Enabled"
+
+    transition {
+      days          = 30
+      storage_class = "ONEZONE_IA"
+    }
+  }
+}
+
 resource "aws_iam_role" "glue" {
   name = "glue"
   assume_role_policy = jsonencode({
@@ -100,7 +132,8 @@ data "aws_iam_policy_document" "poe-stash-stream-policy" {
     resources = [
       "arn:aws:s3:::*/*",
       aws_s3_bucket.poe-stash-stream-raw.arn,
-      aws_s3_bucket.poe-stash-stream-raw-prod.arn
+      aws_s3_bucket.poe-stash-stream-raw-prod.arn,
+      aws_s3_bucket.poe-stash-stream-daily-prod.arn
     ]
   }
 }
