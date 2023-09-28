@@ -11,16 +11,6 @@ Exile's [Public Stash Tab API](https://www.pathofexile.com/developer/docs/refere
 - [trade-api](crates/trade-api/README.md) - a service exposes a REST-like API to query player's trading offers from said PostgreSQL instance
 - [stash-differ](crates/stash-differ/README.md) - a work-in-progress cli tool to generate diff events between stash snapshots to create a player trading behaviour dataset
 
-## Service Architecture
-
-A brief overview over what is going on:
-
-![img](docs/architecture.svg)
-
-## Public Services
-
-`trade-api` exposes a public REST-like API whose documentation you can find [here](crates/trade-api/README.md).
-
 ## Quickstart
 
 Generally the workflow for running this project is:

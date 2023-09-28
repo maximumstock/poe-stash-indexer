@@ -11,7 +11,8 @@ and lets you save its data to different [sinks](#sinks).
 - [x] Emits stash updates as a stream of [Stash Records](indexer/src/stash_record.rs)
 - [x] Lets you export said stream into [TimescaleDB](https://www.timescale.com/) and/or [RabbitMQ](https://www.rabbitmq.com/) for further processing
 
-**Note: Around 800 MB - 1 GB is generated per hour of indexing during active play-time**
+This generated around 670 GB of data for the first six weeks after Ancestor league start (2023-08-18 - 2023-09-30)
+across all leagues, ie. all SC, all HC, and private leagues.
 
 ## Sinks
 
