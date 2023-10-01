@@ -1,6 +1,5 @@
 use std::{sync::Arc, time::Duration};
 
-use bytes::BytesMut;
 use reqwest::StatusCode;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
@@ -37,7 +36,7 @@ impl Indexer {
             .await
             .expect("Fetch OAuth credentials");
 
-        let (tx, rx) = channel(42);
+        let (tx, rx) = channel(3);
 
         schedule_job(
             tx,
@@ -151,10 +150,10 @@ async fn process(
         return Ok(());
     }
 
-    let mut bytes = BytesMut::new();
+    let mut bytes = vec![];
     let mut prefetch_done = false;
     while let Some(chunk) = response.chunk().await? {
-        bytes.extend_from_slice(&chunk);
+        bytes.extend(chunk);
 
         if bytes.len() > 60 && !prefetch_done {
             if seems_empty(&bytes) {

@@ -1,124 +1,149 @@
-use serde::Serialize;
-use std::ops::AddAssign;
+use std::borrow::Cow;
 
-use crate::stash::{AccountStash, Stash};
+use chrono::NaiveDateTime;
+use serde::Serialize;
+use stash_api::common::Item;
+use tracing::info;
+
+use crate::store::SearchableStash;
 
 pub struct StashDiffer;
 
 impl StashDiffer {
-    pub fn diff_accounts(before: &AccountStash, after: &AccountStash) -> Vec<DiffEvent> {
-        let mut events = vec![];
-
-        for (stash_id, before_stash) in &before.stashes {
-            if let Some(after_stash) = after.stashes.get(stash_id) {
-                Self::diff_stash(before_stash, after_stash, &mut events);
-            }
+    pub fn diff_stash(
+        before: &SearchableStash,
+        after: &SearchableStash,
+        buffer: &mut Vec<DiffEvent>,
+    ) {
+        if !after.public {
+            // Avoid non-public stashes, since its optional data fields are null anyway
+            return;
         }
 
-        events
-    }
-
-    pub fn diff_stash(before: &Stash, after: &Stash, buffer: &mut Vec<DiffEvent>) {
-        for (item_id, before_item) in before.content.iter() {
-            let item_age = Some(before_item.birthday.map_or(0, |b| before.update_count - b));
-
-            if let Some(after_item) = after.content.get(item_id) {
-                // Check for changed notes
-                if before_item.note.ne(&after_item.note) {
-                    buffer.push(DiffEvent::NoteChanged(Diff {
-                        id: after_item.id.clone(),
-                        name: after_item.type_line.clone(),
-                        before: before_item.note.clone(),
-                        after: after_item.note.clone(),
-                        age: item_age,
-                    }));
-                }
-
+        // We know now that all the optional fields are set
+        info!("Diffing stash {}", before.id);
+        for (item_id, before_item) in before.items.iter() {
+            if let Some(after_item) = after.items.get(item_id) {
                 // Check for changed stack_sizes
-                if before_item.stack_size.ne(&after_item.stack_size) {
-                    buffer.push(DiffEvent::StackSizeChanged(Diff {
-                        id: after_item.id.clone(),
-                        name: after_item.type_line.clone(),
-                        before: before_item.stack_size,
-                        after: after_item.stack_size,
-                        age: item_age,
+                let stack_size_changed = before_item.stack_size.ne(&after_item.stack_size);
+                // Check for changed notes
+                let note_changed = before_item.note.ne(&after_item.note);
+
+                if note_changed || stack_size_changed {
+                    buffer.push(DiffEvent::Changed(Changed {
+                        old: before_item.clone(),
+                        new: after_item.clone(),
+                        note_changed,
+                        stack_size_changed,
+                        meta: DiffMeta {
+                            league: before.league.clone().expect("league option empty"),
+                            account_name: before
+                                .account_name
+                                .clone()
+                                .expect("account name option empty"),
+                            stash_type: before.stash_type.clone(),
+                            old_change_id: before.change_id.clone(),
+                            new_change_id: after.change_id.clone(),
+                            old_timestamp: before.timestamp,
+                            new_timestamp: after.timestamp,
+                        },
                     }));
                 }
             } else {
-                buffer.push(DiffEvent::Removed(Diff {
-                    before: (),
-                    after: (),
-                    id: before_item.id.clone(),
-                    name: before_item.type_line.clone(),
-                    age: item_age,
+                buffer.push(DiffEvent::Removed(Removed {
+                    item: before_item.clone(),
+                    meta: DiffMeta {
+                        league: before.league.clone().expect("league option empty"),
+                        account_name: before
+                            .account_name
+                            .clone()
+                            .expect("account name option empty"),
+                        stash_type: before.stash_type.clone(),
+                        old_change_id: before.change_id.clone(),
+                        new_change_id: after.change_id.clone(),
+                        old_timestamp: before.timestamp,
+                        new_timestamp: after.timestamp,
+                    },
                 }));
             }
         }
 
-        for (item_id, after_item) in after.content.iter() {
-            if before.content.get(item_id).is_none() {
-                buffer.push(DiffEvent::Added(Diff {
-                    before: (),
-                    after: (),
-                    id: after_item.id.clone(),
-                    name: after_item.type_line.clone(),
-                    age: None,
+        for (item_id, after_item) in after.items.iter() {
+            if before.items.get(item_id).is_none() {
+                buffer.push(DiffEvent::Added(Added {
+                    item: after_item.clone(),
+                    meta: DiffMeta {
+                        league: before.league.clone().expect("league option empty"),
+                        account_name: before
+                            .account_name
+                            .clone()
+                            .expect("account name option empty"),
+                        stash_type: before.stash_type.clone(),
+                        old_change_id: before.change_id.clone(),
+                        new_change_id: after.change_id.clone(),
+                        old_timestamp: before.timestamp,
+                        new_timestamp: after.timestamp,
+                    },
                 }));
             }
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Serialize)]
+#[derive(Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum DiffEvent {
-    Added(Diff<()>),
-    Removed(Diff<()>),
-    NoteChanged(Diff<Option<String>>),
-    StackSizeChanged(Diff<Option<u32>>),
+    Added(Added),
+    Removed(Removed),
+    Changed(Changed),
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Serialize)]
-pub struct Diff<T: Serialize> {
-    id: String,
-    name: String,
-    before: T,
-    after: T,
-    age: Option<u64>,
-}
+impl DiffEvent {
+    pub fn timestamp(&self) -> NaiveDateTime {
+        match self {
+            DiffEvent::Added(added) => added.meta.new_timestamp,
+            DiffEvent::Removed(removed) => removed.meta.new_timestamp,
+            DiffEvent::Changed(changed) => changed.meta.new_timestamp,
+        }
+    }
 
-#[derive(Debug, Copy, Clone, Default)]
-pub struct DiffStats {
-    pub added: u32,
-    pub removed: u32,
-    pub note: u32,
-    pub stack_size: u32,
-}
-
-impl AddAssign for DiffStats {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = Self {
-            added: self.added + rhs.added,
-            removed: self.removed + rhs.removed,
-            note: self.note + rhs.note,
-            stack_size: self.stack_size + rhs.stack_size,
+    pub fn league(&self) -> &str {
+        match self {
+            DiffEvent::Added(added) => &added.meta.league,
+            DiffEvent::Removed(removed) => &removed.meta.league,
+            DiffEvent::Changed(changed) => &changed.meta.league,
         }
     }
 }
 
-impl From<&[DiffEvent]> for DiffStats {
-    fn from(events: &[DiffEvent]) -> Self {
-        let mut stats = DiffStats::default();
+#[derive(Serialize, Clone)]
+pub struct Added {
+    item: Item,
+    meta: DiffMeta,
+}
 
-        for ev in events {
-            match ev {
-                DiffEvent::Added(_) => stats.added += 1,
-                DiffEvent::Removed(_) => stats.removed += 1,
-                DiffEvent::NoteChanged(_) => stats.note += 1,
-                DiffEvent::StackSizeChanged(_) => stats.stack_size += 1,
-            }
-        }
+#[derive(Serialize, Clone)]
+pub struct Removed {
+    item: Item,
+    meta: DiffMeta,
+}
 
-        stats
-    }
+#[derive(Serialize, Clone)]
+pub struct Changed {
+    old: Item,
+    new: Item,
+    note_changed: bool,
+    stack_size_changed: bool,
+    meta: DiffMeta,
+}
+
+#[derive(Serialize, Clone)]
+pub struct DiffMeta {
+    league: Cow<'static, str>,
+    account_name: Cow<'static, str>,
+    stash_type: Cow<'static, str>,
+    old_change_id: Cow<'static, str>,
+    new_change_id: Cow<'static, str>,
+    old_timestamp: NaiveDateTime,
+    new_timestamp: NaiveDateTime,
 }

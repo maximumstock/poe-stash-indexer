@@ -149,17 +149,17 @@ impl Sink for S3Sink {
 
         if should_sync {
             self.sync().await;
-        } else {
-            for stash in payload {
-                if let Some(league) = &stash.league {
-                    self.buffer
-                        .write()
-                        .unwrap()
-                        .entry(league.clone())
-                        .or_default()
-                        // todo: box stash records
-                        .push(stash.clone());
-                }
+        }
+
+        for stash in payload {
+            if let Some(league) = &stash.league {
+                self.buffer
+                    .write()
+                    .unwrap()
+                    .entry(league.clone())
+                    .or_default()
+                    // todo: box stash records
+                    .push(stash.clone());
             }
         }
 
