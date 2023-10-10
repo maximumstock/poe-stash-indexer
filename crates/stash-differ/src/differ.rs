@@ -15,11 +15,6 @@ impl StashDiffer {
         after: &SearchableStash,
         buffer: &mut Vec<DiffEvent>,
     ) {
-        if !after.public {
-            // Avoid non-public stashes, since its optional data fields are null anyway
-            return;
-        }
-
         // We know now that all the optional fields are set
         info!("Diffing stash {}", before.id);
         for (item_id, before_item) in before.items.iter() {
@@ -36,11 +31,8 @@ impl StashDiffer {
                         note_changed,
                         stack_size_changed,
                         meta: DiffMeta {
-                            league: before.league.clone().expect("league option empty"),
-                            account_name: before
-                                .account_name
-                                .clone()
-                                .expect("account name option empty"),
+                            league: before.league.clone(),
+                            account_name: before.account_name.clone(),
                             stash_type: before.stash_type.clone(),
                             old_change_id: before.change_id.clone(),
                             new_change_id: after.change_id.clone(),
@@ -53,11 +45,8 @@ impl StashDiffer {
                 buffer.push(DiffEvent::Removed(Removed {
                     item: before_item.clone(),
                     meta: DiffMeta {
-                        league: before.league.clone().expect("league option empty"),
-                        account_name: before
-                            .account_name
-                            .clone()
-                            .expect("account name option empty"),
+                        league: before.league.clone(),
+                        account_name: before.account_name.clone(),
                         stash_type: before.stash_type.clone(),
                         old_change_id: before.change_id.clone(),
                         new_change_id: after.change_id.clone(),
@@ -73,11 +62,8 @@ impl StashDiffer {
                 buffer.push(DiffEvent::Added(Added {
                     item: after_item.clone(),
                     meta: DiffMeta {
-                        league: before.league.clone().expect("league option empty"),
-                        account_name: before
-                            .account_name
-                            .clone()
-                            .expect("account name option empty"),
+                        league: before.league.clone(),
+                        account_name: before.account_name.clone(),
                         stash_type: before.stash_type.clone(),
                         old_change_id: before.change_id.clone(),
                         new_change_id: after.change_id.clone(),
