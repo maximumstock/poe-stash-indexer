@@ -19,7 +19,7 @@ signal-hook = "0.3.15"
 prometheus_exporter = "0.8.5"
 tokio = { version = "1.27.0", features = ["full"] }
 futures = "0.3.28"
-tracing = "0.1.38"
+tracing = "0.1.40"
 trade-common = { path = "../trade-common" }
 async-trait = "0.1.73"
 diesel-async = { version = "0.2.2", features = ["postgres", "bb8"] }

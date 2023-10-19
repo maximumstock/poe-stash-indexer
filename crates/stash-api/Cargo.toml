@@ -20,5 +20,5 @@ futures = { version = "0.3.27" }
 bytes = { version = "1.4.0" }
 serde_urlencoded = "0.7.1"
 trade-common = { path = "../trade-common" }
-tracing = "0.1.38"
+tracing = "0.1.40"
 dotenv = "0.15.0"
