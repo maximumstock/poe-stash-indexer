@@ -178,39 +178,39 @@ jobs:
             maximumstock2/trade-api:latest
             maximumstock2/trade-api:${{ steps.vars.outputs.short_sha }}
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs:
-      - ci
-      - docker
-    if: "!contains(github.event.head_commit.message, 'deploy skip') && github.ref_name == 'master'"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Deployment
-        env:
-          DEPLOY_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          AGE_KEY: ${{ secrets.AGE_KEY }}
-        run: |
-          eval $(ssh-agent -s)
-          ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
-          ssh -q -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << EOF
-            export AGE_KEY="$AGE_KEY"
-            export ENV="production"
+  # deploy:
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     - ci
+  #     - docker
+  #   if: "!contains(github.event.head_commit.message, 'deploy skip') && github.ref_name == 'master'"
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Deployment
+  #       env:
+  #         DEPLOY_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+  #         DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+  #         DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+  #         AGE_KEY: ${{ secrets.AGE_KEY }}
+  #       run: |
+  #         eval $(ssh-agent -s)
+  #         ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
+  #         ssh -q -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << EOF
+  #           export AGE_KEY="$AGE_KEY"
+  #           export ENV="production"
 
-            set -ex
-            echo "Environment: $ENV"
+  #           set -ex
+  #           echo "Environment: $ENV"
 
-            # Make sure we have the latest images
-            docker pull maximumstock2/trade-api:latest
-            docker pull maximumstock2/trade-ingest:latest
-            docker pull maximumstock2/indexer:latest
+  #           # Make sure we have the latest images
+  #           docker pull maximumstock2/trade-api:latest
+  #           docker pull maximumstock2/trade-ingest:latest
+  #           docker pull maximumstock2/indexer:latest
 
-            cd deployment && git pull
-            make config
-            docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build --force-rm reverse-proxy rabbitmq
-            make up-prod
-            docker-compose -f docker-compose.yaml -f docker-compose.production.yaml logs --tail=1000 trade-api trade-store indexer
-          EOF
+  #           cd deployment && git pull
+  #           make config
+  #           docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build --force-rm reverse-proxy rabbitmq
+  #           make up-prod
+  #           docker-compose -f docker-compose.yaml -f docker-compose.production.yaml logs --tail=1000 trade-api trade-store indexer
+  #         EOF
