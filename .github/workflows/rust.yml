@@ -41,6 +41,9 @@ jobs:
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          components: rustfmt, clippy
 
       - name: Compile
         run: cargo build
