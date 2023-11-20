@@ -35,7 +35,6 @@ impl S3Sink {
     ) -> Result<Self, lapin::Error> {
         let bucket = bucket.into();
         let access_key = access_key.into();
-        let secret_key = secret_key;
 
         let credentials = aws_credential_types::Credentials::new(
             &access_key,
