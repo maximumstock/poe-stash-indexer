@@ -27,7 +27,7 @@ lapin = "2.1.1"
 aws-sdk-s3 = "0.28.0"
 aws-types = "0.55.3"
 aws-config = "0.55.3"
-aws-credential-types = "0.55.3"
+aws-credential-types = "1.0.0"
 flate2 = "1.0.27"
 jsonl = "4.0.1"
 
