@@ -21,7 +21,7 @@ tokio = { version = "1.27.0", features = ["full"] }
 futures = "0.3.28"
 tracing = "0.1.38"
 trade-common = { path = "../trade-common" }
-async-trait = "0.1.73"
+async-trait = "0.1.75"
 diesel-async = { version = "0.2.2", features = ["postgres", "bb8"] }
 lapin = "2.1.1"
 aws-sdk-s3 = "0.28.0"
