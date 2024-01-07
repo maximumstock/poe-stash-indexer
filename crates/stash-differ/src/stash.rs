@@ -50,8 +50,8 @@ impl Stash {
 
 impl From<Vec<StashRecord>> for AccountStash {
     fn from(stash_records: Vec<StashRecord>) -> Self {
-        let account_name = stash_records.get(0).unwrap().account_name.clone();
-        let league = stash_records.get(0).unwrap().league.clone();
+        let account_name = stash_records.first().unwrap().account_name.clone();
+        let league = stash_records.first().unwrap().league.clone();
 
         Self {
             account_name,
