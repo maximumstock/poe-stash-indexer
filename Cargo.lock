@@ -667,7 +667,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16a3d0bf4f324f4ef9793b86a1701d9700fbcdbd12a846da45eed104c634c6e8"
 dependencies = [
  "base64-simd",
- "itoa 1.0.10",
+ "itoa",
  "num-integer",
  "ryu",
  "time",
@@ -712,7 +712,7 @@ dependencies = [
  "http",
  "http-body",
  "hyper",
- "itoa 1.0.10",
+ "itoa",
  "matchit",
  "memchr",
  "mime",
@@ -841,18 +841,6 @@ dependencies = [
  "futures-lite 2.2.0",
  "piper",
  "tracing",
-]
-
-[[package]]
-name = "bstr"
-version = "0.2.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba3569f383e8f1598449f1a423e72e99569137b47740b1da11ef19af3d5c3223"
-dependencies = [
- "lazy_static",
- "memchr",
- "regex-automata 0.1.10",
- "serde",
 ]
 
 [[package]]
@@ -1070,26 +1058,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "csv"
-version = "1.1.5"
-source = "git+https://github.com/gootorov/rust-csv.git?rev=31d1105f9ee50bf02dff178f20be4a1ec9fdff2d#31d1105f9ee50bf02dff178f20be4a1ec9fdff2d"
-dependencies = [
- "bstr",
- "csv-core",
- "itoa 0.4.8",
- "ryu",
- "serde",
-]
-
-[[package]]
-name = "csv-core"
-version = "0.1.10"
-source = "git+https://github.com/gootorov/rust-csv.git?rev=31d1105f9ee50bf02dff178f20be4a1ec9fdff2d#31d1105f9ee50bf02dff178f20be4a1ec9fdff2d"
-dependencies = [
- "memchr",
-]
-
-[[package]]
 name = "dashmap"
 version = "5.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1130,7 +1098,7 @@ dependencies = [
  "byteorder",
  "chrono",
  "diesel_derives",
- "itoa 1.0.10",
+ "itoa",
  "serde_json",
 ]
 
@@ -1653,7 +1621,7 @@ checksum = "8947b1a6fad4393052c7ba1f4cd97bed3e953a95c79c92ad9b051a04611d9fbb"
 dependencies = [
  "bytes",
  "fnv",
- "itoa 1.0.10",
+ "itoa",
 ]
 
 [[package]]
@@ -1709,7 +1677,7 @@ dependencies = [
  "http-body",
  "httparse",
  "httpdate",
- "itoa 1.0.10",
+ "itoa",
  "pin-project-lite",
  "socket2 0.5.5",
  "tokio",
@@ -1894,12 +1862,6 @@ checksum = "25db6b064527c5d482d0423354fcd07a89a2dfe07b67892e62411946db7f07b0"
 dependencies = [
  "either",
 ]
-
-[[package]]
-name = "itoa"
-version = "0.4.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b71991ff56294aa922b450139ee08b3bfc70982c6b2c7562771375cf73542dd4"
 
 [[package]]
 name = "itoa"
@@ -3153,7 +3115,7 @@ version = "1.0.111"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "176e46fa42316f18edd598015a5166857fc835ec732f5215eac6b7bdbf0a84f4"
 dependencies = [
- "itoa 1.0.10",
+ "itoa",
  "ryu",
  "serde",
 ]
@@ -3164,7 +3126,7 @@ version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebd154a240de39fdebcf5775d2675c204d7c13cf39a4c697be6493c8e734337c"
 dependencies = [
- "itoa 1.0.10",
+ "itoa",
  "serde",
 ]
 
@@ -3175,7 +3137,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3491c14715ca2294c4d6a88f15e84739788c1d030eed8c110436aafdaa2f3fd"
 dependencies = [
  "form_urlencoded",
- "itoa 1.0.10",
+ "itoa",
  "ryu",
  "serde",
 ]
@@ -3335,7 +3297,7 @@ dependencies = [
  "hkdf",
  "hmac",
  "indexmap 1.9.3",
- "itoa 1.0.10",
+ "itoa",
  "libc",
  "log",
  "md-5",
@@ -3373,7 +3335,6 @@ dependencies = [
  "once_cell",
  "proc-macro2",
  "quote",
- "serde_json",
  "sha2",
  "sqlx-core",
  "sqlx-rt",
@@ -3413,15 +3374,24 @@ dependencies = [
 name = "stash-differ"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "aws-config",
+ "aws-credential-types",
+ "aws-sdk-s3",
+ "aws-types",
  "chrono",
- "csv",
  "dotenv",
- "log",
+ "flate2",
+ "futures",
+ "jsonl",
  "pretty_env_logger",
+ "prometheus_exporter",
  "serde",
- "serde_json",
- "sqlx",
+ "signal-hook",
+ "stash-api",
  "tokio",
+ "tracing",
+ "trade-common",
 ]
 
 [[package]]
@@ -3557,7 +3527,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f657ba42c3f86e7680e53c8cd3af8abbe56b5491790b46e22e19c0d57463583e"
 dependencies = [
  "deranged",
- "itoa 1.0.10",
+ "itoa",
  "powerfmt",
  "serde",
  "time-core",

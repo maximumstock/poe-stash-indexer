@@ -1,72 +1,93 @@
-extern crate log;
-extern crate pretty_env_logger;
+extern crate dotenv;
 
-mod db;
+mod config;
 mod differ;
-mod processing;
-mod stash;
+mod s3;
 mod store;
 
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
-use db::StashRecordIterator;
-use dotenv::dotenv;
-use processing::{aggregation_consumer, flat_consumer, SharedState};
-use sqlx::postgres::PgPoolOptions;
+use crate::{config::Configuration, s3::S3Sink};
+use stash_api::{
+    common::poe_ninja_client::PoeNinjaClient,
+    r#async::indexer::{Indexer, IndexerMessage},
+};
+use tracing::info;
+use trade_common::telemetry::setup_telemetry;
 
-fn main() -> Result<(), sqlx::Error> {
-    dotenv().ok();
-    pretty_env_logger::init();
+use anyhow::Result;
 
-    let database_url =
-        std::env::var("DATABASE_URL").expect("Missing DATABASE_URL environment variable");
-    let league = std::env::var("LEAGUE").expect("Missing LEAGUE environment variable");
-    let use_flat_consumer = std::env::args().any(|x| x.eq("--flat"));
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<()> {
+    dotenv::dotenv().ok();
 
-    let shared_state = SharedState::default();
-    let shared_state2 = Arc::clone(&shared_state);
+    setup_telemetry("differ").expect("Telemetry setup");
+    let signal_flag = setup_signal_handlers()?;
 
-    let producer =
-        std::thread::spawn(move || producer(shared_state, database_url.as_ref(), league.as_ref()));
+    let config = Configuration::from_env()?;
+    tracing::info!("Chosen configuration: {:#?}", config);
 
-    let consumer = if use_flat_consumer {
-        log::info!("Using aggregation consumer");
-        std::thread::spawn(|| aggregation_consumer(shared_state2))
-    } else {
-        log::info!("Using flat consumer");
-        std::thread::spawn(|| flat_consumer(shared_state2))
+    let mut sink = match config.s3 {
+        Some(c) => S3Sink::connect(c.bucket_name, c.access_key, c.secret_key, c.region).await,
+        None => anyhow::bail!("no"),
     };
 
-    producer.join().unwrap();
-    consumer.join().unwrap();
+    let client_id = config.client_id.clone();
+    let client_secret = config.client_secret.clone();
+    let developer_mail = config.developer_mail.clone();
+
+    let indexer = Indexer::new();
+
+    let latest_change_id = PoeNinjaClient::fetch_latest_change_id_async()
+        .await
+        .unwrap();
+    let mut rx = indexer
+        .start_at_change_id(client_id, client_secret, developer_mail, latest_change_id)
+        .await;
+
+    let mut store = store::StashStore::new();
+
+    while let Some(msg) = rx.recv().await {
+        if signal_flag.load(Ordering::Relaxed) {
+            tracing::info!("Shutdown signal detected. Shutting down gracefully.");
+            break;
+        }
+
+        match msg {
+            IndexerMessage::Stop => break,
+            IndexerMessage::RateLimited(timer) => {
+                tracing::info!("Rate limited for {} seconds...waiting", timer.as_secs());
+            }
+            IndexerMessage::Tick {
+                change_id,
+                response,
+                ..
+            } => {
+                let n_stashes = response.stashes.len();
+                let events = store.ingest(response);
+                tracing::info!(
+                    "Chunk ID: {} - {} events from {} stashes",
+                    change_id,
+                    events.len(),
+                    n_stashes
+                );
+                sink.handle(events).await;
+            }
+        }
+    }
+
+    info!("Flushing sinks");
+    sink.flush().await?;
 
     Ok(())
 }
 
-fn producer(shared_state: SharedState, database_url: &str, league: &str) {
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .expect("Error when creating Tokio runtime");
-
-    let pool = runtime
-        .block_on(async {
-            PgPoolOptions::new()
-                .max_connections(5)
-                .connect(database_url)
-                .await
-        })
-        .unwrap();
-
-    let mut iterator = StashRecordIterator::new(&pool, &runtime, 10000, league);
-
-    while let Some(next) = iterator.next_chunk() {
-        let (lock, cvar) = &*shared_state;
-        let queue = &mut lock.lock().unwrap().queue;
-        queue.push_back(next);
-
-        if queue.len() > 3 {
-            cvar.notify_one();
-        }
-    }
+fn setup_signal_handlers() -> anyhow::Result<Arc<AtomicBool>> {
+    let signal_flag = Arc::new(AtomicBool::new(false));
+    signal_hook::flag::register(signal_hook::consts::SIGINT, signal_flag.clone())?;
+    signal_hook::flag::register(signal_hook::consts::SIGTERM, signal_flag.clone())?;
+    Ok(signal_flag)
 }

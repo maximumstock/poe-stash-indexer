@@ -13,9 +13,3 @@ From there, we generate events like:
 - ItemStackSizeChanged
 
 to track player activity on an abstract level and persist them as CSV.
-
-## Internal Notes for Ritual League
-
-To efficiently scan through our old `Ritual` league data, we need this index:
-
-`create index chunk on stash_records using gist (league, int8range(id, id, '[]'))`

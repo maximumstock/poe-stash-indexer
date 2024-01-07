@@ -188,7 +188,8 @@ async fn setup_sinks<'a>(
             config.secret_key.clone(),
             &config.region,
         )
-        .await?;
+        .await
+        .unwrap();
         sinks.push(Box::new(s3_sink));
     }
 
