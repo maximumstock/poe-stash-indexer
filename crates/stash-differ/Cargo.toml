@@ -18,7 +18,7 @@ tokio = { version = "1.27.0", features = ["full"] }
 futures = "0.3.28"
 tracing = "0.1.38"
 trade-common = { path = "../trade-common" }
-aws-sdk-s3 = "0.28.0"
+aws-sdk-s3 = "1.11.0"
 aws-types = "0.55.3"
 aws-config = "0.55.3"
 aws-credential-types = "0.55.3"
