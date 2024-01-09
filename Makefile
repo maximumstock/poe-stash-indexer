@@ -45,7 +45,7 @@ logs:
 	${dc} logs -f -t --tail=20
 
 tidy:
-	cargo fmt --all && cargo clippy --all-features --all-targets -- -D warnings --no-deps
+	cargo fmt --all && cargo clippy --fix --all-features --all-targets -- -D warnings --no-deps
 
 test:
 	cargo test --all-features -- --nocapture

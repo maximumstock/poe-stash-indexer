@@ -37,7 +37,7 @@ impl S3Sink {
         let access_key = access_key.into();
 
         let credentials = aws_credential_types::Credentials::new(
-            &access_key,
+            access_key,
             secret_key.expose(),
             None,
             None,
@@ -45,11 +45,10 @@ impl S3Sink {
         );
         let credentials_provider =
             aws_credential_types::provider::SharedCredentialsProvider::new(credentials);
-        let config = aws_config::from_env()
+        let config = aws_types::sdk_config::SdkConfig::builder()
             .region(Region::new(region.into()))
             .credentials_provider(credentials_provider)
-            .load()
-            .await;
+            .build();
         let client = Client::new(&config);
 
         Ok(Self {
