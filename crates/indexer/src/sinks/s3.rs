@@ -37,7 +37,7 @@ impl S3Sink {
         let access_key = access_key.into();
 
         let credentials = aws_credential_types::Credentials::new(
-            &access_key,
+            access_key,
             secret_key.expose(),
             None,
             None,
