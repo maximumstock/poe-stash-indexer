@@ -6,6 +6,7 @@ use std::{
 };
 
 use crate::differ::DiffEvent;
+use aws_config::BehaviorVersion;
 use aws_sdk_s3::{primitives::ByteStream, Client};
 use aws_types::region::Region;
 use chrono::NaiveDateTime;
@@ -43,6 +44,7 @@ impl S3Sink {
         let credentials_provider =
             aws_credential_types::provider::SharedCredentialsProvider::new(credentials);
         let config = aws_types::sdk_config::SdkConfig::builder()
+            .behavior_version(BehaviorVersion::latest())
             .region(Region::new(region.into()))
             .credentials_provider(credentials_provider)
             .build();
