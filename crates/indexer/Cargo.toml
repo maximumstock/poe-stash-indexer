@@ -26,7 +26,7 @@ diesel-async = { version = "0.2.2", features = ["postgres", "bb8"] }
 lapin = "2.1.1"
 aws-sdk-s3 = "1.11.0"
 aws-types = "1.1.1"
-aws-config = "1.1.1"
+aws-config = "1.1.3"
 aws-credential-types = "1.1.1"
 flate2 = "1.0.27"
 jsonl = "4.0.1"
