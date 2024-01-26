@@ -15,7 +15,7 @@ signal-hook = "0.3.15"
 tokio = { version = "1.26.0", features = ["full"] }
 prometheus_exporter = "0.8.5"
 tracing = "0.1.37"
-chrono = { version = "0.4.28", features = ["serde"] }
+chrono = { version = "0.4.33", features = ["serde"] }
 sqlx = { version = "0.7.3", features = [
     "runtime-tokio-rustls",
     "postgres",
