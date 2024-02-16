@@ -9,7 +9,6 @@ and lets you save its data to different [sinks](#sinks).
 - [x] Minimum indexing delay due to look-ahead for next `change_id` on partial HTTP response
 - [x] Respects Stash Tab API [rate limit](https://pathofexile.gamepedia.com/Public_stash_tab_API#Rate_Limit)
 - [x] Emits stash updates as a stream of [Stash Records](indexer/src/stash_record.rs)
-- [x] Lets you export said stream into [TimescaleDB](https://www.timescale.com/) and/or [RabbitMQ](https://www.rabbitmq.com/) for further processing
 
 This generated around 670 GB of data for the first six weeks after Ancestor league start (2023-08-18 - 2023-09-30)
 across all leagues, ie. all SC, all HC, and private leagues.
@@ -19,10 +18,9 @@ across all leagues, ie. all SC, all HC, and private leagues.
 You can configure different sinks to pipe the indexed data to.
 There are currently two types of sinks supported:
 
-- TimescaleDB (a thin layer on top of PostgreSQL) - for persistent storage of raw API data
 - RabbitMQ - for further processing pipelines
+- S3 - a bunch of timestamp partitioned `.jsonl` files
 
-For using TimescaleDB set the `DATABASE_URL` environment variable to a valid PostgreSQL connection string.
 
 For using RabbitMQ set the following environment variables:
 

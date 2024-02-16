@@ -152,6 +152,7 @@ impl S3Sink {
         n_events
     }
 
+    #[tracing::instrument(skip(self), name = "sink-flush-s3")]
     pub async fn flush(&mut self) -> anyhow::Result<()> {
         self.sync().await;
         Ok(())

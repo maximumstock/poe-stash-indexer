@@ -2,13 +2,11 @@
 
 use std::time::SystemTime;
 
-use crate::schema::stash_records;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::Serialize;
 use stash_api::{common::ChangeId, common::StashTabResponse};
 
-#[derive(Debug, Serialize, Insertable, Queryable, Clone)]
-#[diesel(table_name = stash_records)]
+#[derive(Debug, Serialize, Clone)]
 pub struct StashRecord {
     pub created_at: NaiveDateTime,
     pub change_id: String,

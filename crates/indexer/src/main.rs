@@ -2,12 +2,9 @@ mod config;
 mod filter;
 mod metrics;
 mod resumption;
-mod schema;
 mod sinks;
 mod stash_record;
 
-#[macro_use]
-extern crate diesel;
 extern crate dotenv;
 
 use std::{
@@ -22,7 +19,6 @@ use std::{
 use crate::{
     config::{user_config::RestartMode, Configuration},
     resumption::State,
-    sinks::postgres::PostgresSink,
 };
 use crate::{filter::filter_stash_record, sinks::rabbitmq::RabbitMqSink};
 use crate::{metrics::setup_metrics, sinks::s3::S3Sink};
@@ -172,13 +168,6 @@ async fn setup_sinks<'a>(
         let mq_sink = RabbitMqSink::connect(conf.clone()).await?;
         sinks.push(Box::new(mq_sink));
         tracing::info!("Configured RabbitMQ fanout sink");
-    }
-
-    if let Some(url) = &config.database_url {
-        if !url.is_empty() {
-            sinks.push(Box::new(PostgresSink::connect(url).await));
-            tracing::info!("Configured PostgreSQL sink");
-        }
     }
 
     if let Some(config) = &config.s3 {
