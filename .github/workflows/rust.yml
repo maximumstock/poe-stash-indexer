@@ -27,64 +27,20 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v3
 
-      - name: Set up Rust cache
-        uses: actions/cache/restore@v3
-        id: restore-cache
+      - uses: cachix/install-nix-action@v20
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: poe-stash-indexer-ci
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
       - name: Compile
-        run: cargo build
+        run: nix-shell --command "cargo test --all-targets --all-features --no-run --locked"
 
       - name: Test
-        env:
-          POE_CLIENT_ID: ${{ secrets.POE_CLIENT_ID }}
-          POE_CLIENT_SECRET: ${{ secrets.POE_CLIENT_SECRET }}
-          POE_DEVELOPER_MAIL: "test@example.com"
-        run: cargo test --all-features -- --nocapture --quiet
+        run: nix-shell --command "make test"
 
-      - name: Format
-        run: cargo fmt --all -- --check
-
-      - name: Lint
-        run: cargo clippy --all-features --all-targets -- -D warnings --no-deps
-
-      # Workaround for overriding existing cache
-      - name: Clear Rust CI step cache
-        if: ${{ steps.restore-cache.outputs.cache-hit }}
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh extension install actions/gh-actions-cache
-          gh actions-cache delete poe-stash-indexer-ci --confirm
-        continue-on-error: true
-
-      - name: Save Rust CI step cache
-        uses: actions/cache/save@v3
-        if: always()
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ steps.restore-cache.outputs.cache-primary-key }}
+      - name: Format & Lint
+        run: nix-shell --command "make tidy"
 
   docker:
     runs-on: ubuntu-latest
