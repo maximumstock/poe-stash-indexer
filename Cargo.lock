@@ -2681,9 +2681,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest-tracing"
-version = "0.4.7"
+version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a0152176687dd5cfe7f507ac1cb1a491c679cfe483afd133a7db7aaea818bb3"
+checksum = "190838e54153d7a7e2ea98851304b3ce92daeabf14c54d32b01b84a3e636f683"
 dependencies = [
  "anyhow",
  "async-trait",
