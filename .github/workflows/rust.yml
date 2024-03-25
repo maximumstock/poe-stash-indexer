@@ -35,7 +35,7 @@ jobs:
 
       - uses: cachix/cachix-action@v14
         with:
-          name: poe-stash-indexer
+          name: "${{ secrets.CACHIX_AUTH_USERNAME }}"
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
       - name: Compile
