@@ -95,7 +95,6 @@ impl S3Sink {
                 let f = self
                     .client
                     .put_object()
-                    .storage_class(aws_sdk_s3::types::StorageClass::OnezoneIa)
                     .bucket(&self.bucket)
                     .key(key)
                     .body(payload)
@@ -134,12 +133,12 @@ impl Sink for S3Sink {
         let should_sync = match &self.last_sync {
             Some(last_sync) => {
                 let batch_timestamp = payload.first().unwrap().created_at;
-                let next = format!("{}", batch_timestamp.format(TIME_BUCKET))
+                let sync_needed = format!("{}", batch_timestamp.format(TIME_BUCKET))
                     > format!("{}", last_sync.format(TIME_BUCKET));
-                if next {
+                if sync_needed {
                     self.last_sync = Some(batch_timestamp);
                 }
-                next
+                sync_needed
             }
             None => {
                 self.last_sync = Some(chrono::offset::Utc::now().naive_utc());

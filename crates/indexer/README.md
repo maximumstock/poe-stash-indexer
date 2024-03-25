@@ -16,17 +16,38 @@ across all leagues, ie. all SC, all HC, and private leagues.
 ## Sinks
 
 You can configure different sinks to pipe the indexed data to.
-There are currently two types of sinks supported:
+You can run zero or more sinks at any given time by configuring their respective environment variables.
 
 - RabbitMQ - for further processing pipelines
 - S3 - a bunch of timestamp partitioned `.jsonl` files
 
+### RabbitMQ
 
-For using RabbitMQ set the following environment variables:
+The idea here is that `indexer` publishes whatever it finds under a pre-defined routing key,
+which other services (eg. `trade-ingest` or something completely different) can consume to
+build data pipelines.
+
+#### Environemnt Variables
 
 - `RABBITMQ_SINK_ENABLED=true|false|1|0` - to toggle the sink
 - `RABBITMQ_URL` - a connection string to your RabbitMQ instance
 - `RABBITMQ_PRODUCER_ROUTING_KEY` - the routing key to publish messages under
+
+### S3
+
+The idea here is to flush one minute-wide buffers of `StashRecord[]` as gzipped JSONL files
+into a specified S3 bucket. Every minute, a new file in `{bucket-name}/{league}/{YYYY/mm/dd/HH/MM}.json.gz`
+will be created, eg. `poe-stash-indexer/Ancestor/2023/08/23/12/34.json.gz`.
+
+You are free to further process the data in whatever way you see fit.
+AWS EMR/Glue and Athena could be used to compact the minute-wide chunks or run analytics on them.
+
+#### Environment Variables
+
+- `S3_SINK_ENABLED=true|false|1|0` - to toggle the sink
+- `S3_BUCKET_NAME` - the name of the S3 bucket where the JSONL files will be stored
+- `S3_REGION` - the AWS region where the S3 bucket is located
+- `S3_SINK_ACCESS_KEY` & `S3_SINK_SECRET_KEY` - the AWS credentials to access the specified S3 bucket
 
 ## Error Handling
 
