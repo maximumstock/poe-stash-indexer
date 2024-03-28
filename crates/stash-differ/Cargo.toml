@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 serde = { version = "1.0.179", features = ["derive"] }
-chrono = { version = "0.4.34", features = ["serde"] }
+chrono = { version = "0.4.37", features = ["serde"] }
 dotenv = "0.15.0"
 stash-api = { path = "../stash-api" }
 signal-hook = "0.3.15"
