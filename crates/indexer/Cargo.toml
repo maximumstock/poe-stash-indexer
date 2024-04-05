@@ -10,7 +10,7 @@ edition = "2021"
 serde = { version = "1.0.179", features = ["derive"] }
 serde_json = "1.0.115"
 dotenv = "0.15.0"
-chrono = { version = "0.4.34", features = ["serde"] }
+chrono = { version = "0.4.37", features = ["serde"] }
 stash-api = { path = "../stash-api" }
 signal-hook = "0.3.15"
 prometheus_exporter = "0.8.5"
