@@ -19,7 +19,7 @@ futures = "0.3.28"
 tracing = "0.1.38"
 trade-common = { path = "../trade-common" }
 async-trait = "0.1.80"
-lapin = "2.3.3"
+lapin = "2.3.4"
 aws-sdk-s3 = "1.11.0"
 aws-types = "1.1.1"
 aws-config = "1.1.1"
