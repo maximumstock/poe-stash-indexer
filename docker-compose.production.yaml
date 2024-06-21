@@ -1,4 +1,3 @@
-version: "3"
 services:
   indexer:
     privileged: true # to enable log forwarding
@@ -42,6 +41,11 @@ services:
       - configuration/environments/.env.production
 
   trade-store:
+    privileged: true # to enable log forwarding
+    env_file:
+      - configuration/environments/.env.production
+
+  jaeger:
     privileged: true # to enable log forwarding
     env_file:
       - configuration/environments/.env.production
