@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use chrono::NaiveDateTime;
+use chrono::DateTime;
 use futures::StreamExt;
 use lapin::options::BasicAckOptions;
 
@@ -126,7 +126,7 @@ async fn ingest(
         query.push_bind(asset_index.get_name(&o.sell).unwrap_or(&o.sell).clone());
         query.push_bind(asset_index.get_name(&o.buy).unwrap_or(&o.buy).clone());
         query.push_bind(o.conversion_rate);
-        query.push_bind(NaiveDateTime::from_timestamp_millis(o.created_at as i64));
+        query.push_bind(DateTime::from_timestamp_millis(o.created_at as i64));
     });
 
     let ingest_query = query_builder.build();

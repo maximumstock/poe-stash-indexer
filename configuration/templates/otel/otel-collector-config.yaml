@@ -10,8 +10,8 @@ processors:
 exporters:
   otlp:
     endpoint: ${OTEL_COLLECTOR_ENDPOINT}
-    headers:
-      api-key: ${OTEL_COLLECTOR_API_KEY}
+    tls:
+      insecure: true
 
 service:
   pipelines:

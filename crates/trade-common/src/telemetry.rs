@@ -9,13 +9,14 @@ use tracing::info;
 use tracing_subscriber::{prelude::*, EnvFilter, Registry};
 
 pub fn setup_telemetry(service_name: &str) -> Result<(), opentelemetry::trace::TraceError> {
-    if let Ok(otlp_endpoint) = std::env::var("OTLP_ENDPOINT") {
+    if let Ok(otel_collector) = std::env::var("OTEL_COLLECTOR") {
+        info!("Connecting to OTEL_COLLECTOR {}", otel_collector);
         let tracer = opentelemetry_otlp::new_pipeline()
             .tracing()
             .with_exporter(
                 opentelemetry_otlp::new_exporter()
                     .tonic()
-                    .with_endpoint(otlp_endpoint),
+                    .with_endpoint(&otel_collector),
             )
             .with_trace_config(config().with_resource(Resource::new(vec![
                 KeyValue::new("service.name".to_string(), service_name.to_string()),
@@ -33,7 +34,7 @@ pub fn setup_telemetry(service_name: &str) -> Result<(), opentelemetry::trace::T
             .with(tracing_subscriber::fmt::layer())
             .init();
 
-        info!("Setup tracing with OTLP");
+        info!("Setup tracing with OTLP ({})", otel_collector);
     } else {
         Registry::default()
             .with(EnvFilter::from_default_env())
