@@ -1,8 +1,5 @@
-use opentelemetry::{
-    sdk::{trace::config, Resource},
-    KeyValue,
-};
 use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::Resource;
 use reqwest_middleware::ClientBuilder;
 use reqwest_tracing::{SpanBackendWithUrl, TracingMiddleware};
 use tracing::info;
@@ -18,14 +15,19 @@ pub fn setup_telemetry(service_name: &str) -> Result<(), opentelemetry::trace::T
                     .tonic()
                     .with_endpoint(&otel_collector),
             )
-            .with_trace_config(config().with_resource(Resource::new(vec![
-                KeyValue::new("service.name".to_string(), service_name.to_string()),
-                KeyValue::new(
-                    "deployment.environment",
-                    std::env::var("ENV").unwrap_or("development".into()),
-                ),
-            ])))
-            .install_batch(opentelemetry::runtime::Tokio)
+            .with_trace_config(opentelemetry_sdk::trace::Config::default().with_resource(
+                Resource::new(vec![
+                    opentelemetry::KeyValue::new(
+                        "service.name".to_string(),
+                        service_name.to_string(),
+                    ),
+                    opentelemetry::KeyValue::new(
+                        "deployment.environment",
+                        std::env::var("ENV").unwrap_or("development".into()),
+                    ),
+                ]),
+            ))
+            .install_batch(opentelemetry_sdk::runtime::Tokio)
             .expect("Error initialising OTLP pipeline");
 
         Registry::default()
