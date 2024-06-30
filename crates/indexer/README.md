@@ -4,50 +4,76 @@ This crate defines the `indexer` part of this project, which listens to the
 [Public Stash Tab API](https://www.pathofexile.com/developer/docs/reference#publicstashes)
 and lets you save its data to different [sinks](#sinks).
 
+## Installation & Quickstart
+
+You can either build and install the application yourself by:
+
+```bash
+git clone https://github.com/maximumstock/poe-stash-indexer
+cargo install --path crates/indexer
+```
+
+or use the latest Docker image:
+
+```bash
+docker run \
+    -e POE_CLIENT_ID="" \
+    -e POE_CLIENT_SECRET="" \
+    -e POE_DEVELOPER_MAIL="your@email.com" \
+    maximumstock2/indexer:latest
+```
+
+### Configuration
+
+Here is a list of all available environment variable configuration options:
+
+| Environment Variable            | Default             | Required                             | Description                                                                   |
+| ------------------------------- | ------------------- | ------------------------------------ | ----------------------------------------------------------------------------- |
+| `POE_CLIENT_ID`                 |                     | yes                                  | Your personal Path of Exile API client id                                     |
+| `POE_CLIENT_CLIENT_SECRET`      |                     | yes                                  | Your personal Path of Exile API client secret key                             |
+| `POE_DEVELOPER_EMAIL`           |                     | yes                                  | A contact email for GGG to contact if the linked API account misbehaves       |
+| `RABBITMQ_SINK_ENABLED`         | false               | no                                   | To toggle the sink                                                            |
+| `RABBITMQ_URL`                  |                     | if `RABBITMQ_SINK_ENABLED` is `true` | The connection string to your RabbitMQ instance                               |
+| `RABBITMQ_PRODUCER_ROUTING_KEY` | "poe-stash-indexer" | no                                   | The routing key to publish messages under                                     |
+| `S3_SINK_ENABLED`               | false               | no                                   | To toggle the sink                                                            |
+| `S3_SINK_BUCKET_NAME`           |                     | if `S3_SINK_ENABLED" is `true`       | The name of the S3 bucket where the JSONL files will be stored                |
+| `S3_SINK_REGION`                |                     | no                                   | The AWS region where the S3 bucket is located                                 |
+| `OTEL_COLLECTOR`                |                     | no                                   | The gRPC endpoint of an OTEL collector sidecar daemon, collecting OTLP traces |
+
 ## Features
 
-- [x] Minimum indexing delay due to look-ahead for next `change_id` on partial HTTP response
-- [x] Respects Stash Tab API [rate limit](https://pathofexile.gamepedia.com/Public_stash_tab_API#Rate_Limit)
 - [x] Emits stash updates as a stream of [Stash Records](indexer/src/stash_record.rs)
+- [x] Respects Stash Tab API [rate limit](https://pathofexile.gamepedia.com/Public_stash_tab_API#Rate_Limit)
+- [x] Minimum indexing delay due to look-ahead for next `change_id` on partial HTTP response
+- [x] Graceful handling of shutdown signals by flushing all sinks
 
 This generated around 670 GB of data for the first six weeks after Ancestor league start (2023-08-18 - 2023-09-30)
 across all leagues, ie. all SC, all HC, and private leagues.
 
-## Sinks
+### Sinks
 
 You can configure different sinks to pipe the indexed data to.
 You can run zero or more sinks at any given time by configuring their respective environment variables.
 
 - RabbitMQ - for further processing pipelines
-- S3 - a bunch of timestamp partitioned `.jsonl` files
+- S3 - a bunch of timestamp partitioned `.json` files in JSONL format
 
-### RabbitMQ
+#### RabbitMQ
 
 The idea here is that `indexer` publishes whatever it finds under a pre-defined routing key,
 which other services (eg. `trade-ingest` or something completely different) can consume to
 build data pipelines.
 
-#### Environemnt Variables
-
-- `RABBITMQ_SINK_ENABLED=true|false|1|0` - to toggle the sink
-- `RABBITMQ_URL` - a connection string to your RabbitMQ instance
-- `RABBITMQ_PRODUCER_ROUTING_KEY` - the routing key to publish messages under
-
-### S3
+#### S3
 
 The idea here is to flush one minute-wide buffers of `StashRecord[]` as gzipped JSONL files
 into a specified S3 bucket. Every minute, a new file in `{bucket-name}/{league}/{YYYY/mm/dd/HH/MM}.json.gz`
 will be created, eg. `poe-stash-indexer/Ancestor/2023/08/23/12/34.json.gz`.
 
+By default, the AWS Rust SDK reads your environment variables to find AWS credentials and picks up your credentials & region, but you can always override the latter via `S3_SINK_REGION`.
+
 You are free to further process the data in whatever way you see fit.
 AWS EMR/Glue and Athena could be used to compact the minute-wide chunks or run analytics on them.
-
-#### Environment Variables
-
-- `S3_SINK_ENABLED=true|false|1|0` - to toggle the sink
-- `S3_BUCKET_NAME` - the name of the S3 bucket where the JSONL files will be stored
-- `S3_REGION` - the AWS region where the S3 bucket is located
-- `S3_SINK_ACCESS_KEY` & `S3_SINK_SECRET_KEY` - the AWS credentials to access the specified S3 bucket
 
 ## Error Handling
 

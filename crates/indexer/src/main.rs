@@ -171,14 +171,9 @@ async fn setup_sinks<'a>(
     }
 
     if let Some(config) = &config.s3 {
-        let s3_sink = S3Sink::connect(
-            &config.bucket_name,
-            &config.access_key,
-            config.secret_key.clone(),
-            &config.region,
-        )
-        .await
-        .unwrap();
+        let s3_sink = S3Sink::connect(&config.bucket_name, &config.region)
+            .await
+            .unwrap();
         sinks.push(Box::new(s3_sink));
     }
 

@@ -5,7 +5,6 @@ use self::user_config::UserConfiguration;
 #[derive(Debug)]
 pub struct Configuration {
     pub user_config: UserConfiguration,
-    pub database_url: Option<String>,
     pub rabbitmq: Option<RabbitMqConfig>,
     pub s3: Option<S3Config>,
     pub metrics_port: u32,
@@ -17,7 +16,6 @@ pub struct Configuration {
 impl Configuration {
     pub fn from_env() -> Result<Configuration, std::env::VarError> {
         Ok(Configuration {
-            database_url: read_string_from_env("DATABASE_URL"),
             metrics_port: read_int_from_env("METRICS_PORT").unwrap_or(4000),
             rabbitmq: RabbitMqConfig::from_env()?,
             s3: S3Config::from_env()?,
@@ -60,7 +58,8 @@ impl RabbitMqConfig {
             }
 
             let connection_url = ensure_string_from_env("RABBITMQ_URL");
-            let producer_routing_key = ensure_string_from_env("RABBITMQ_PRODUCER_ROUTING_KEY");
+            let producer_routing_key = read_string_from_env("RABBITMQ_PRODUCER_ROUTING_KEY")
+                .unwrap_or("poe-stash-indexer".into());
 
             Ok(Some(RabbitMqConfig {
                 connection_url,
@@ -74,8 +73,6 @@ impl RabbitMqConfig {
 
 #[derive(Debug, Clone)]
 pub struct S3Config {
-    pub access_key: String,
-    pub secret_key: SecretString,
     pub bucket_name: String,
     pub region: String,
 }
@@ -87,14 +84,10 @@ impl S3Config {
                 return Ok(None);
             }
 
-            let access_key = ensure_string_from_env("S3_SINK_ACCESS_KEY");
-            let secret_key = SecretString::new(ensure_string_from_env("S3_SINK_SECRET_KEY"));
             let bucket_name = ensure_string_from_env("S3_SINK_BUCKET_NAME");
             let region = ensure_string_from_env("S3_SINK_REGION");
 
             Ok(Some(S3Config {
-                access_key,
-                secret_key,
                 bucket_name,
                 region,
             }))

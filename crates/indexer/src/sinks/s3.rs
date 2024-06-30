@@ -13,7 +13,6 @@ use chrono::NaiveDateTime;
 use flate2::Compression;
 use futures::{stream::FuturesUnordered, StreamExt};
 use tracing::{error, info};
-use trade_common::secret::SecretString;
 
 use crate::stash_record::StashRecord;
 
@@ -30,28 +29,16 @@ impl S3Sink {
     #[tracing::instrument]
     pub async fn connect(
         bucket: impl Into<String> + Debug,
-        access_key: impl Into<String> + Debug,
-        secret_key: SecretString,
         region: impl Into<String> + Debug,
     ) -> Result<Self, ()> {
         let bucket = bucket.into();
-        let access_key = access_key.into();
 
-        let credentials = aws_credential_types::Credentials::new(
-            access_key,
-            secret_key.expose(),
-            None,
-            None,
-            "poe-stash-indexer",
-        );
-        let credentials_provider =
-            aws_credential_types::provider::SharedCredentialsProvider::new(credentials);
-        let config = aws_types::sdk_config::SdkConfig::builder()
-            .behavior_version(BehaviorVersion::latest())
-            .region(Region::new(region.into()))
-            .credentials_provider(credentials_provider)
+        let mut config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+        config = config
+            .into_builder()
+            .region(Some(Region::new(region.into())))
             .build();
-        let client = Client::new(&config);
+        let client = aws_sdk_s3::Client::new(&config);
 
         Ok(Self {
             client,
@@ -107,7 +94,7 @@ impl S3Sink {
         while let Some((league, res)) = tasks.next().await {
             if let Err(e) = res {
                 error!(
-                    "Error when flushing S3 sink with league {}: {} - will re-attempt sync next interval",
+                    "Error when flushing S3 sink with league {}: {:?} - will re-attempt sync next interval",
                     league, e
                 )
             } else if let Some(entry) = self.buffer.write().unwrap().get_mut(&league) {
