@@ -2,24 +2,37 @@
 
 # poe-stash-indexer
 
-This project focuses on building tooling to gather and analyse data from Path of Exile's [Public Stash Tab API](https://www.pathofexile.com/developer/docs/reference#publicstashes) ([Wiki Documentation](https://pathofexile.gamepedia.com/Public_stash_tab_API)).
+This project aims to build tooling to gather data from Path of Exile's
+[Public Stash Tab API](https://www.pathofexile.com/developer/docs/reference#publicstashes)
+(see also the older [community wiki documentation](https://pathofexile.gamepedia.com/Public_stash_tab_API)).
 
-## Use-Cases
+The main component in this project is the [indexer](crates/indexer/README.md) application.
+It offers an easy way to consume the [Public Stash Tab API river](https://www.pathofexile.com/developer/docs/reference#publicstashes)
+and flush it data sinks like RabbitMQ or S3 for further processing.
+More on the installation & usage in the dedicated [README.md](./crates/indexer/README.md).
 
-1. Do you need a service to scrape the [Public Stash Tab API river](https://www.pathofexile.com/developer/docs/reference#publicstashes)?
+## Project Structure
 
-Use [indexer](crates/indexer/README.md) either self-compiled or as a pre-packaged Docker image.
-
-2. Do you want to programmatically scrape the [Public Stash Tab API river](https://www.pathofexile.com/developer/docs/reference#publicstashes)?
-
-Use [stash-api](crates/stash-api/README.md) to programmatically consume
-
-- [indexer](crates/indexer/README.md) - a service that saves API river snapshots to different sinks like RabbitMQ or S3
-- [stash-api](crates/stash-api/README.md) - a library for consuming the [Public Stash Tab API](https://www.pathofexile.com/developer/docs/reference#publicstashes) river
+```bash
+├── Makefile
+├── README.md       # you are here
+├── crates
+│   ├── indexer     # the main application
+│   ├── stash-api   # an internal library that `indexer` uses
+│                   # below are some internal prototypes, you can ignore for now
+│   ├── stash-differ
+│   ├── trade-api
+│   ├── trade-common
+│   └── trade-ingest
+├── notes           # some notes for myself
+├── infra           # internal scripts, CI parts and documentation for my own `indexer` deployment
+└── shell.nix
+```
 
 ## Local Dev Environment
 
-Our [`docker-compose.yaml`](./docker-compose.yaml) defines a setup of the above tools for experimentation, which includes:
+There is [`infra/docker-compose.yaml`](./docker-compose.yaml) defines a setup of `indexer` and some of the other prototypes.
+Feel free to use or copy any of it.
 
 - `indexer` - setup of the `indexer` service to start fetching and feed the data stream into a RabbitMQ instance
 - `rabbitmq` - a RabbitMQ instance for `indexer` to ingest new `StashRecord` batches into and `trade-ingest` to read data from
@@ -28,20 +41,12 @@ Our [`docker-compose.yaml`](./docker-compose.yaml) defines a setup of the above 
 - `otel-collector` - an [OTLP setup](https://github.com/open-telemetry/opentelemetry-rust) (integrating with New Relic) to investigate metrics of the `indexer`, `trade-ingest`, `trade-api`
 - `reverse-proxy` - exposes a reverse proxy setup via nginx to easily access all services (see below)
 
-Here is how you can run it:
-
-1. Create an `configuration/environments/.env.development` from `.env.template` with your credentials
-2. `make config` to instantiate all service configurations based on `.env.development`
-3. `make build` to build Docker images, as currently still necessary for some parts (note: this might take some time initially)
-4. `make up`, starting everything as declared in `docker-compose.yml`
-5. `make down`, stopping everything as declared in `docker-compose.yml`
-
-When you change the environment variables, go back to step 2.
-
-`make logs` lets you inspect all Docker container logs. Check out `Makefile` for more command aliases.
-
 Here is a list of services in this local development setup and and their credentials (`username`:`password`):
 
 - [Trade API](http://trade.localhost:8888) (public)
 - [RabbitMQ Control Panel](http://rabbitmq.localhost:8888) (Basic Auth: `poe:poe`)
 - [Jaeger Dashboard](http://jaeger.localhost:8888) (public)
+
+```
+
+```

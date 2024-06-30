@@ -12,8 +12,8 @@ services:
 
   indexer:
     build:
-      context: .
-      dockerfile: crates/indexer/Dockerfile
+      context: ..
+      dockerfile: ../crates/indexer/Dockerfile
       target: development
     env_file:
       - configuration/environments/.env.development
@@ -26,8 +26,8 @@ services:
 
   trade-ingest:
     build:
-      context: .
-      dockerfile: crates/trade-ingest/Dockerfile
+      context: ..
+      dockerfile: ../crates/trade-ingest/Dockerfile
       target: development
     depends_on:
       - rabbitmq
@@ -41,8 +41,8 @@ services:
 
   trade-api:
     build:
-      context: .
-      dockerfile: crates/trade-api/Dockerfile
+      context: ..
+      dockerfile: ../crates/trade-api/Dockerfile
       target: development
     depends_on:
       - trade-store
