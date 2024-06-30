@@ -4,6 +4,13 @@ This crate defines the `indexer` part of this project, which listens to the
 [Public Stash Tab API](https://www.pathofexile.com/developer/docs/reference#publicstashes)
 and lets you save its data to different [sinks](#sinks).
 
+## Features
+
+- [x] Emits stash updates as a stream of [Stash Records](src/stash_record.rs)
+- [x] Respects Stash Tab API [rate limit](https://pathofexile.gamepedia.com/Public_stash_tab_API#Rate_Limit)
+- [x] Minimum indexing delay due to look-ahead for next `change_id` on partial HTTP response
+- [x] Graceful handling of shutdown signals by flushing all sinks
+
 ## Installation & Quickstart
 
 You can either build and install the application yourself by:
@@ -17,38 +24,33 @@ or use the latest Docker image:
 
 ```bash
 docker run \
+    # these configuration options are required to talk to the API
+    # see the configuration options below
     -e POE_CLIENT_ID="" \
     -e POE_CLIENT_SECRET="" \
-    -e POE_DEVELOPER_MAIL="your@email.com" \
+    -e POE_DEVELOPER_MAIL="" \
     maximumstock2/indexer:latest
 ```
 
 ### Configuration
 
-Here is a list of all available environment variable configuration options:
+Here is a list of all available environment variable configuration options.
 
-| Environment Variable            | Default             | Required                             | Description                                                                   |
-| ------------------------------- | ------------------- | ------------------------------------ | ----------------------------------------------------------------------------- |
-| `POE_CLIENT_ID`                 |                     | yes                                  | Your personal Path of Exile API client id                                     |
-| `POE_CLIENT_CLIENT_SECRET`      |                     | yes                                  | Your personal Path of Exile API client secret key                             |
-| `POE_DEVELOPER_EMAIL`           |                     | yes                                  | A contact email for GGG to contact if the linked API account misbehaves       |
-| `RABBITMQ_SINK_ENABLED`         | false               | no                                   | To toggle the sink                                                            |
-| `RABBITMQ_URL`                  |                     | if `RABBITMQ_SINK_ENABLED` is `true` | The connection string to your RabbitMQ instance                               |
-| `RABBITMQ_PRODUCER_ROUTING_KEY` | "poe-stash-indexer" | no                                   | The routing key to publish messages under                                     |
-| `S3_SINK_ENABLED`               | false               | no                                   | To toggle the sink                                                            |
-| `S3_SINK_BUCKET_NAME`           |                     | if `S3_SINK_ENABLED" is `true`       | The name of the S3 bucket where the JSONL files will be stored                |
-| `S3_SINK_REGION`                |                     | no                                   | The AWS region where the S3 bucket is located                                 |
-| `OTEL_COLLECTOR`                |                     | no                                   | The gRPC endpoint of an OTEL collector sidecar daemon, collecting OTLP traces |
+The required Path of Exile API credentials can be obtained by requesting an account through GGG, as
+described in [their API documentation](https://www.pathofexile.com/developer/docs/index#gettingstarted).
 
-## Features
-
-- [x] Emits stash updates as a stream of [Stash Records](indexer/src/stash_record.rs)
-- [x] Respects Stash Tab API [rate limit](https://pathofexile.gamepedia.com/Public_stash_tab_API#Rate_Limit)
-- [x] Minimum indexing delay due to look-ahead for next `change_id` on partial HTTP response
-- [x] Graceful handling of shutdown signals by flushing all sinks
-
-This generated around 670 GB of data for the first six weeks after Ancestor league start (2023-08-18 - 2023-09-30)
-across all leagues, ie. all SC, all HC, and private leagues.
+| Environment Variable            | Required                             | Default             | Description                                                                   |
+| ------------------------------- | ------------------------------------ | ------------------- | ----------------------------------------------------------------------------- |
+| `POE_CLIENT_ID`                 | yes                                  |                     | Your personal Path of Exile API client id                                     |
+| `POE_CLIENT_CLIENT_SECRET`      | yes                                  |                     | Your personal Path of Exile API client secret key                             |
+| `POE_DEVELOPER_EMAIL`           | yes                                  |                     | A contact email for GGG to contact if the linked API account misbehaves       |
+| `RABBITMQ_SINK_ENABLED`         | no                                   | false               | To toggle the sink                                                            |
+| `RABBITMQ_URL`                  | if `RABBITMQ_SINK_ENABLED` is `true` |                     | The connection string to your RabbitMQ instance                               |
+| `RABBITMQ_PRODUCER_ROUTING_KEY` | no                                   | "poe-stash-indexer" | The routing key to publish messages under                                     |
+| `S3_SINK_ENABLED`               | no                                   | false               | To toggle the sink                                                            |
+| `S3_SINK_BUCKET_NAME`           | if `S3_SINK_ENABLED" is `true`       |                     | The name of the S3 bucket where the JSONL files will be stored                |
+| `S3_SINK_REGION`                | no                                   |                     | The AWS region where the S3 bucket is located                                 |
+| `OTEL_COLLECTOR`                | no                                   |                     | The gRPC endpoint of an OTEL collector sidecar daemon, collecting OTLP traces |
 
 ### Sinks
 
@@ -60,7 +62,7 @@ You can run zero or more sinks at any given time by configuring their respective
 
 #### RabbitMQ
 
-The idea here is that `indexer` publishes whatever it finds under a pre-defined routing key,
+The idea here is that `indexer` publishes whatever it finds under a (customisable) routing key,
 which other services (eg. `trade-ingest` or something completely different) can consume to
 build data pipelines.
 

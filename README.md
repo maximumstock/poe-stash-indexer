@@ -7,9 +7,8 @@ This project aims to build tooling to gather data from Path of Exile's
 (see also the older [community wiki documentation](https://pathofexile.gamepedia.com/Public_stash_tab_API)).
 
 The main component in this project is the [indexer](crates/indexer/README.md) application.
-It offers an easy way to consume the [Public Stash Tab API river](https://www.pathofexile.com/developer/docs/reference#publicstashes)
-and flush it data sinks like RabbitMQ or S3 for further processing.
-More on the installation & usage in the dedicated [README.md](./crates/indexer/README.md).
+It offers an easy way to consume the [Public Stash Tab API river](https://www.pathofexile.com/developer/docs/reference#publicstashes) and flush it data sinks like RabbitMQ or S3 for further processing.
+More on the installation & usage in the dedicated [documentation](./crates/indexer/README.md).
 
 ## Project Structure
 
