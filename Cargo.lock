@@ -2146,6 +2146,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "opentelemetry"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "803801d3d3b71cd026851a53f974ea03df3d179cb758b260136a6c9e22e196af"
+dependencies = [
+ "futures-core",
+ "futures-sink",
+ "js-sys",
+ "once_cell",
+ "pin-project-lite",
+ "thiserror",
+]
+
+[[package]]
 name = "opentelemetry-otlp"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3856,7 +3870,7 @@ dependencies = [
 name = "trade-common"
 version = "0.1.0"
 dependencies = [
- "opentelemetry 0.23.0",
+ "opentelemetry 0.25.0",
  "opentelemetry-otlp",
  "opentelemetry_sdk 0.23.0",
  "reqwest",
