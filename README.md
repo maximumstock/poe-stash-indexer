@@ -45,7 +45,3 @@ Here is a list of services in this local development setup and and their credent
 - [Trade API](http://trade.localhost:8888) (public)
 - [RabbitMQ Control Panel](http://rabbitmq.localhost:8888) (Basic Auth: `poe:poe`)
 - [Jaeger Dashboard](http://jaeger.localhost:8888) (public)
-
-```
-
-```
