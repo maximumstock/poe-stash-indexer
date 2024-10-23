@@ -22,7 +22,7 @@ aws-config = "1.1.1"
 aws-credential-types = "1.2.0"
 flate2 = "1.0.30"
 jsonl = "4.0.1"
-anyhow = "1.0.86"
+anyhow = "1.0.91"
 
 [[bin]]
 name = "stash-differ"
