@@ -43,7 +43,6 @@ impl StashStore {
 pub struct SearchableStash {
     pub account_name: Cow<'static, str>,
     pub id: String,
-    pub stash: String,
     pub stash_type: Cow<'static, str>,
     pub items: HashMap<String, Item>,
     pub league: Cow<'static, str>,
@@ -60,7 +59,6 @@ impl SearchableStash {
         Some(Self {
             account_name: Cow::Owned(value.account_name.unwrap()),
             id: value.id,
-            stash: value.stash.unwrap(),
             stash_type: Cow::from(value.stash_type),
             items: value
                 .items

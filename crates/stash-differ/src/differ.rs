@@ -58,7 +58,7 @@ impl StashDiffer {
         }
 
         for (item_id, after_item) in after.items.iter() {
-            if before.items.get(item_id).is_none() {
+            if !before.items.contains_key(item_id) {
                 buffer.push(DiffEvent::Added(Added {
                     item: after_item.clone(),
                     meta: DiffMeta {
