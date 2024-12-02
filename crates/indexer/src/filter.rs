@@ -71,15 +71,12 @@ pub fn filter_stash_record(stash_record: &mut StashRecord, config: &Configuratio
 
 #[derive(Debug, Deserialize)]
 pub struct Item {
-    pub type_line: String,
     pub extended: ItemExtendedProp,
-    pub name: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ItemExtendedProp {
     pub category: String,
-    pub base_type: String,
 }
 
 // @todo add tests
