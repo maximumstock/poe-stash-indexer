@@ -1,6 +1,5 @@
 use std::{sync::Arc, time::Duration};
 
-use reqwest::StatusCode;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
 use tracing::{debug, error, error_span, info, trace, trace_span};
@@ -133,7 +132,7 @@ async fn process(
         Ok(data) => data,
     };
 
-    if response.status() != StatusCode::OK {
+    if !response.status().is_success() {
         info!(
             "Rescheduling in 60s due to HTTP response status code {}",
             response.status().as_u16()
