@@ -35,7 +35,7 @@ impl Indexer {
             .await
             .expect("Fetch OAuth credentials");
 
-        let (tx, rx) = channel(3);
+        let (tx, rx) = channel(100);
 
         schedule_job(
             tx,
