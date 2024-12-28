@@ -5,6 +5,7 @@ let
 in pkgs.mkShell rec {
   buildInputs = with pkgs;
     [
+      clang
       nixfmt-classic
       pkg-config
       gettext
@@ -26,6 +27,10 @@ in pkgs.mkShell rec {
       clang
       linuxPackages.perf
       mold
+    ]) ++ (pkgs.lib.optionals pkgs.stdenv.isDarwin [
+      # Additional darwin specific inputs can be set here
+      pkgs.libiconv
+      pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
     ]);
 
   RUST_BACKTRACE = 1;

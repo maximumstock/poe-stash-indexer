@@ -11,10 +11,5 @@ members = [
 
 resolver = "1"
 
-[profile.dev]
-# Disabling debug info speeds up builds a bunch,
-# and we don't rely on it for debugging that much.
-debug = false
-
 [profile.release]
 debug = true
