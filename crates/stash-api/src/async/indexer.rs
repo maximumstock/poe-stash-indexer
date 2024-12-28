@@ -67,7 +67,7 @@ fn schedule_job(
     ));
 }
 
-#[tracing::instrument(skip(tx))]
+#[tracing::instrument(skip(tx, config))]
 async fn process(
     change_id: ChangeId,
     tx: Sender<IndexerMessage>,

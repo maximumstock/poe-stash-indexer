@@ -32,24 +32,16 @@ fn format_secret(secret: &str) -> String {
 impl Debug for SecretString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.inner.len() > LIMIT {
-            f.debug_struct("SecretString")
-                .field("inner", &format_secret(&self.inner))
-                .finish()
+            f.write_str(&format_secret(&self.inner))
         } else {
-            f.debug_struct("SecretString")
-                .field("inner", &"[redacted]".to_owned())
-                .finish()
+            f.write_str("[redacted]")
         }
     }
 }
 
 impl Display for SecretString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.inner.len() > LIMIT {
-            f.write_str(&format_secret(&self.inner))?;
-        } else {
-            f.write_str("[redacted]")?;
-        }
+        Debug::fmt(self, f)?;
         Ok(())
     }
 }
