@@ -71,7 +71,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     while let Some(msg) = rx.recv().await {
         if signal_flag.load(Ordering::Relaxed) {
-            tracing::info!("Shutdown signal detected. Shutting down gracefully.");
+            tracing::info!(
+                "Shutdown signal detected. Shutting down gracefully while flushing sinks."
+            );
             break;
         }
 
