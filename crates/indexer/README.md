@@ -73,6 +73,9 @@ into a specified S3 bucket. Every minute, a new file in `{bucket-name}/{league}/
 will be created, eg. `poe-stash-indexer/Ancestor/2023/08/23/12/34.json.gz`.
 
 By default, the AWS Rust SDK reads your environment variables to find AWS credentials and picks up your credentials & region, but you can always override the latter via `S3_SINK_REGION`.
+So if you use your AWS CLI locally to create AWS credentials for your shell session and export these environment variables, the AWS SDK and `indexer` will
+automatically pick up your credentials.
+If you use SSO via your AWS CLI then you might have to set the environment variable `AWS_PROFILE` to specify the correct credential SSO profile, ie. `AWS_PROFILE="my-profile" cargo run --bin indexer`.
 
 You are free to further process the data in whatever way you see fit.
 AWS EMR/Glue and Athena could be used to compact the minute-wide chunks or run analytics on them.
