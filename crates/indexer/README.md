@@ -6,7 +6,7 @@ and lets you save its data to different [sinks](#sinks).
 
 ## Features
 
-- [x] Emits stash updates as a stream of [Stash Records](src/stash_record.rs)
+- [x] Collects stash updates as a stream of [Stash Records](src/stash_record.rs)
 - [x] Respects Stash Tab API [rate limit](https://pathofexile.gamepedia.com/Public_stash_tab_API#Rate_Limit)
 - [x] Minimum indexing delay due to look-ahead for next `change_id` on partial HTTP response
 - [x] Graceful handling of shutdown signals by flushing all sinks
@@ -44,6 +44,7 @@ described in [their API documentation](https://www.pathofexile.com/developer/doc
 | `POE_CLIENT_ID`                 | yes                                  |                     | Your personal Path of Exile API client id                                     |
 | `POE_CLIENT_CLIENT_SECRET`      | yes                                  |                     | Your personal Path of Exile API client secret key                             |
 | `POE_DEVELOPER_EMAIL`           | yes                                  |                     | A contact email for GGG to contact if the linked API account misbehaves       |
+| `RESTART_MODE`                  | no                                   | "fresh"             | See [Stopping & Resuming](#stopping--resuming) for more information           |
 | `RABBITMQ_SINK_ENABLED`         | no                                   | false               | To toggle the sink                                                            |
 | `RABBITMQ_URL`                  | if `RABBITMQ_SINK_ENABLED` is `true` |                     | The connection string to your RabbitMQ instance                               |
 | `RABBITMQ_PRODUCER_ROUTING_KEY` | no                                   | "poe-stash-indexer" | The routing key to publish messages under                                     |
@@ -79,6 +80,20 @@ If you use SSO via your AWS CLI then you might have to set the environment varia
 
 You are free to further process the data in whatever way you see fit.
 AWS EMR/Glue and Athena could be used to compact the minute-wide chunks or run analytics on them.
+
+## Stopping & Resuming
+
+When stopping `indexer` (sending `SIGINT` or `SIGTERM` e.g. via your CLI, `top` or `systemd`), it flushes some state to
+`./indexer_state.json` in its local directory on disk.
+This file contains metadata so `indexer` knows where it left off when it was stopped the last time.
+
+By default, when you start `indexer` again, it uses `RestartMode::Fresh` and fetches the latest change id [poe.ninja](https://poe.ninja/)
+and therefore might skip the change id between when you left off and when you restart `indexer`.
+
+If you want to force `indexer` to pick up where it left off you can enable `RestartMode::Resume` by setting the environment variable `RESTART_MODE=resume`.
+With this you will make sure to traverse all change ids in order, but you might not catch up to the latest data on the stream and be continuously behind.
+
+I recommend just using the defaults unless you specifically are fine with scraping out-of-date data.
 
 ## Error Handling
 
