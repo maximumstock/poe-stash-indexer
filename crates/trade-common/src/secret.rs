@@ -54,14 +54,11 @@ mod tests {
     fn test_dbg() {
         let secret = SecretString::new("a secret that is longer than the limit".to_owned());
         let dbg = format!("{:?}", secret);
-        assert_eq!(
-            dbg,
-            "SecretString { inner: \"a s***********************************\" }"
-        );
+        assert_eq!(dbg, "a s***********************************");
 
         let secret = SecretString::new("ab".to_owned());
         let dbg = format!("{:?}", secret);
-        assert_eq!(dbg, "SecretString { inner: \"[redacted]\" }");
+        assert_eq!(dbg, "[redacted]");
     }
 
     #[test]
