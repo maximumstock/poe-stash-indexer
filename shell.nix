@@ -34,7 +34,7 @@ in pkgs.mkShell rec {
     ]);
 
   RUST_BACKTRACE = 1;
-  AWS_PROFILE = maximumstock;
+  AWS_PROFILE = "maximumstock";
 
 } // pkgs.lib.mkIf (pkgs.stdenv.isLinux) rec {
   MOLD_PATH = "${pkgs.mold.out}/bin/mold";
