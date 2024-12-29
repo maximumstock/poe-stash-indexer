@@ -10,39 +10,46 @@ use crate::common::parse::parse_change_id_from_bytes;
 use crate::common::poe_api::{get_oauth_token, user_agent, OAuthResponse};
 use crate::common::{ChangeId, StashTabResponse};
 
-#[derive(Default, Debug)]
-pub struct Indexer;
+#[derive(Debug)]
+pub struct Indexer {
+    pub(crate) client_id: String,
+    pub(crate) client_secret: SecretString,
+    pub(crate) developer_mail: SecretString,
+}
 
 impl Indexer {
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    /// Start the indexer with a given change_id
-    pub async fn start_at_change_id(
-        &self,
+    pub fn new(
         client_id: String,
         client_secret: SecretString,
         developer_mail: SecretString,
-        change_id: ChangeId,
-    ) -> Receiver<IndexerMessage> {
+    ) -> Self {
+        Self {
+            client_id,
+            client_secret,
+            developer_mail,
+        }
+    }
+
+    /// Start the indexer with a given change_id
+    pub async fn start_at_change_id(&self, change_id: ChangeId) -> Receiver<IndexerMessage> {
         // Workaround to not have to use [tracing::instrument]
         trace_span!("start_at_change_id", change_id = change_id.inner.as_str());
 
         info!("Starting at change id: {}", change_id);
 
-        let credentials = get_oauth_token(&client_id, &client_secret, &developer_mail)
-            .await
-            .expect("Fetch OAuth credentials");
+        let credentials =
+            get_oauth_token(&self.client_id, &self.client_secret, &self.developer_mail)
+                .await
+                .expect("Fetch OAuth credentials");
 
         let (tx, rx) = channel(100);
 
         schedule_job(
             tx,
             change_id,
-            client_id,
-            client_secret,
-            developer_mail,
+            self.client_id.clone(),
+            self.client_secret.clone(),
+            self.developer_mail.clone(),
             Arc::new(RwLock::new(Some(credentials))),
         );
         rx
