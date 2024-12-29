@@ -71,7 +71,7 @@ pub async fn retry_setup_consumer(config: &Config, league: &League) -> Consumer 
 pub async fn setup_consumer(config: &Config, league: &League) -> Result<Consumer> {
     let conn = Connection::connect(&config.amqp_addr, ConnectionProperties::default()).await?; // Note the `with_tokio()` here
     let channel = conn.create_channel().await?;
-    let queue_name = league.to_ident();
+    let queue_name = league.as_ref();
 
     let queue = channel
         .queue_declare(

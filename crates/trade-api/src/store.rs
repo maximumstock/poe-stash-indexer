@@ -51,10 +51,8 @@ impl Store {
             query.sell = self.asset_index.get_name(sell).cloned().or(query.sell);
         }
 
-        let mut builder = QueryBuilder::<Postgres>::new(format!(
-            "SELECT * FROM {} WHERE 1=1 ",
-            league.to_ident()
-        ));
+        let mut builder =
+            QueryBuilder::<Postgres>::new(format!("SELECT * FROM {} WHERE 1=1 ", league.as_ref()));
 
         if let Some(sell) = query.sell {
             builder.push("AND sell = ").push_bind(sell);

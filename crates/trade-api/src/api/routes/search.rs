@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 use axum::{http::StatusCode, response::IntoResponse, Extension, Json};
 use serde::{Deserialize, Serialize};
@@ -30,8 +30,8 @@ pub(crate) async fn handle_search<M: ApiMetrics>(
 
     let league = {
         match &payload.league {
-            None => Ok(League::Challenge),
-            Some(str) => League::from_str(str).map_err(|_| QueryEmptyResultError {}),
+            None => Err(QueryEmptyResultError {}),
+            Some(str) => Ok(League::new(str.clone())),
         }
     }?;
 

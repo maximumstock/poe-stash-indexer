@@ -20,20 +20,20 @@ pub async fn setup_rabbitmq_consumer(
     pool: Arc<Pool<Postgres>>,
     mut metrics: impl StoreMetrics,
     asset_index: Arc<AssetIndex>,
-    league: League,
+    league: &League,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Initial connection should be retried until it works
-    let mut consumer = retry_setup_consumer(config, &league).await;
+    let mut consumer = retry_setup_consumer(config, league).await;
 
     loop {
         if let Some(delivery) = consumer.next().await {
             match delivery {
                 Err(_) => {
                     // This takes care of reconnection if the connection drops after the initial connect
-                    consumer = retry_setup_consumer(config, &league).await;
+                    consumer = retry_setup_consumer(config, league).await;
                 }
                 Ok(delivery) => {
-                    consume(&delivery, &pool, &mut metrics, &asset_index, &league).await?;
+                    consume(&delivery, &pool, &mut metrics, &asset_index, league).await?;
                     delivery.ack(BasicAckOptions::default()).await?;
                 }
             }
@@ -56,7 +56,7 @@ async fn consume(
 
     let ingestable_stashes = stash_records
         .into_iter()
-        .filter(|s| s.league.eq(league.to_str()))
+        .filter(|s| s.league.eq(league.as_ref()))
         .collect::<Vec<_>>();
 
     ingest(metrics, pool, league, asset_index, ingestable_stashes).await?;
@@ -82,7 +82,7 @@ async fn ingest(
 
     sqlx::query(&format!(
         "DELETE FROM {} WHERE stash_id in ($1)",
-        league.to_ident()
+        league.as_ref()
     ))
     .bind(&stash_ids)
     .execute(&**pool)
@@ -104,7 +104,7 @@ async fn ingest(
 
     let mut query_builder = QueryBuilder::<Postgres>::new(format!(
         "INSERT INTO {} ({}) ",
-        league.to_ident(),
+        league.as_ref(),
         [
             "item_id",
             "stash_id",

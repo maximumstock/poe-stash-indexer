@@ -23,15 +23,15 @@ impl StoreMetrics for StoreMetricStore {
 }
 
 impl StoreMetricStore {
-    pub fn new(league: League) -> Self {
+    pub fn new(league: &League) -> Self {
         StoreMetricStore {
             offers_ingested: prometheus_exporter::prometheus::register_int_counter!(
-                format!("offers_ingested_{}", league.to_ident()),
+                format!("offers_ingested_{}", league.as_ref()),
                 "The current rate of offer ingestion"
             )
             .unwrap(),
             stashes_ingested: prometheus_exporter::prometheus::register_int_counter!(
-                format!("stashes_ingested_{}", league.to_ident()),
+                format!("stashes_ingested_{}", league.as_ref()),
                 "The current rate of stash ingestion"
             )
             .unwrap(),

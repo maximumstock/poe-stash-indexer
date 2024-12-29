@@ -15,7 +15,7 @@ use std::sync::{
 use tokio::sync::oneshot::{Receiver, Sender};
 use trade_common::{
     assets::AssetIndex,
-    league::League,
+    league::{League, CHALLENGE_LEAGUE, CHALLENGE_LEAGUE_HC},
     telemetry::{setup_telemetry, teardown_telemetry},
 };
 
@@ -72,15 +72,20 @@ async fn setup_work(
 
     sqlx::migrate!("./migrations").run(&*pool).await?;
 
-    let (store_metrics, store_metrics_hc) = setup_metrics(config).expect("failed to setup metrics");
+    let challenge_league = League::new(CHALLENGE_LEAGUE.to_owned());
+    let challenge_league_hc = League::new(CHALLENGE_LEAGUE_HC.to_owned());
+
+    let (store_metrics, store_metrics_hc) =
+        setup_metrics(config, &challenge_league, &challenge_league_hc)
+            .expect("failed to setup metrics");
 
     let mut asset_index = AssetIndex::new();
     asset_index.init().await.unwrap();
     let asset_index = Arc::new(asset_index);
 
     tokio::select! {
-        _ = setup_league(config, Arc::clone(&pool), store_metrics, Arc::clone(&asset_index), League::Challenge) => {},
-        _ = setup_league(config, Arc::clone(&pool), store_metrics_hc, Arc::clone(&asset_index), League::ChallengeHardcore) => {},
+        _ = setup_league(config, Arc::clone(&pool), store_metrics, Arc::clone(&asset_index), &challenge_league) => {},
+        _ = setup_league(config, Arc::clone(&pool), store_metrics_hc, Arc::clone(&asset_index), &challenge_league_hc) => {},
         _ = async {
             loop {
                 if let Ok(_) | Err(tokio::sync::oneshot::error::TryRecvError::Closed) = shutdown_rx.try_recv() {
@@ -99,7 +104,7 @@ async fn setup_league(
     pool: Arc<Pool<Postgres>>,
     metrics: impl StoreMetrics + Send + Sync + 'static,
     asset_index: Arc<AssetIndex>,
-    league: League,
+    league: &League,
 ) {
     match consumer::setup_rabbitmq_consumer(config, pool, metrics, asset_index, league).await {
         Err(e) => error!("Error setting up RabbitMQ consumer: {:?}", e),
