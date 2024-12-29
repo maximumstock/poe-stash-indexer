@@ -1,5 +1,4 @@
 mod config;
-mod filter;
 mod metrics;
 mod resumption;
 mod sinks;
@@ -16,14 +15,12 @@ use std::{
     },
 };
 
-use crate::{
-    config::{user_config::RestartMode, Configuration},
-    resumption::State,
-};
-use crate::{filter::filter_stash_record, sinks::rabbitmq::RabbitMqSink};
+use crate::resumption::State;
+use crate::sinks::rabbitmq::RabbitMqSink;
 use crate::{metrics::setup_metrics, sinks::s3::S3Sink};
 use crate::{resumption::StateWrapper, stash_record::map_to_stash_records};
 
+use config::{Configuration, RestartMode};
 use sinks::sink::Sink;
 use stash_api::{
     common::{poe_ninja_client::PoeNinjaClient, ChangeId},
@@ -43,28 +40,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let signal_flag = setup_signal_handlers()?;
     let metrics = setup_metrics(config.metrics_port)?;
-    let mut sinks = setup_sinks(&config).await?;
-    let client_id = config.client_id.clone();
-    let client_secret = config.client_secret.clone();
-    let developer_mail = config.developer_mail.clone();
+    let mut sinks = setup_sinks(config.clone()).await?;
 
     let mut resumption = StateWrapper::load_from_file(&"./indexer_state.json");
-    let indexer = Indexer::new();
-    let mut rx = match (&config.user_config.restart_mode, &resumption.inner) {
+    let indexer = Indexer::new(
+        config.client_id.clone(),
+        config.client_secret.clone(),
+        config.developer_mail.clone(),
+    );
+    let mut rx = match (&config.restart_mode, &resumption.inner) {
         (RestartMode::Fresh, _) => {
             let latest_change_id = PoeNinjaClient::fetch_latest_change_id_async().await?;
-            indexer.start_at_change_id(client_id, client_secret, developer_mail, latest_change_id)
+            indexer.start_at_change_id(latest_change_id)
         }
-        (RestartMode::Resume, Some(next)) => indexer.start_at_change_id(
-            client_id,
-            client_secret,
-            developer_mail,
-            ChangeId::from_str(&next.next_change_id).unwrap(),
-        ),
+        (RestartMode::Resume, Some(next)) => {
+            indexer.start_at_change_id(ChangeId::from_str(&next.next_change_id).unwrap())
+        }
         (RestartMode::Resume, None) => {
             tracing::info!("No previous data found, falling back to RestartMode::Fresh");
             let latest_change_id = PoeNinjaClient::fetch_latest_change_id_async().await?;
-            indexer.start_at_change_id(client_id, client_secret, developer_mail, latest_change_id)
+            indexer.start_at_change_id(latest_change_id)
         }
     }
     .await;
@@ -102,28 +97,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let next_change_id = response.next_change_id.clone();
                 let stashes = map_to_stash_records(change_id.clone(), created_at, response)
-                    .filter_map(|mut stash| match filter_stash_record(&mut stash, &config) {
-                        filter::FilterResult::Block { reason } => {
-                            tracing::debug!("Filter: Blocked stash, reason: {}", reason);
-                            None
-                        }
-                        filter::FilterResult::Pass => Some(stash),
-                        filter::FilterResult::Filter {
-                            n_total,
-                            n_retained,
-                        } => {
-                            let n_removed = n_total - n_retained;
-                            if n_removed > 0 {
-                                tracing::debug!(
-                                    "Filter: Removed {} \t Retained {} \t Total {}",
-                                    n_removed,
-                                    n_retained,
-                                    n_total
-                                );
-                            }
-                            Some(stash)
-                        }
-                    })
                     .collect::<Vec<_>>();
 
                 if !stashes.is_empty() {
@@ -162,17 +135,17 @@ fn setup_signal_handlers() -> Result<Arc<AtomicBool>, Box<dyn std::error::Error>
 }
 
 async fn setup_sinks<'a>(
-    config: &'a Configuration,
-) -> Result<Vec<Box<dyn Sink + 'a>>, Box<dyn std::error::Error>> {
+    config: Configuration,
+) -> Result<Vec<Box<dyn Sink>>, Box<dyn std::error::Error>> {
     let mut sinks: Vec<Box<dyn Sink>> = vec![];
 
-    if let Some(conf) = &config.rabbitmq {
-        let mq_sink = RabbitMqSink::connect(conf.clone()).await?;
+    if let Some(conf) = config.rabbitmq {
+        let mq_sink = RabbitMqSink::connect(conf).await?;
         sinks.push(Box::new(mq_sink));
         tracing::info!("Configured RabbitMQ fanout sink");
     }
 
-    if let Some(config) = &config.s3 {
+    if let Some(config) = config.s3 {
         let s3_sink = S3Sink::connect(&config.bucket_name, &config.region)
             .await
             .unwrap();

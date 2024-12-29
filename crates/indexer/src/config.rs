@@ -1,16 +1,31 @@
 use trade_common::secret::SecretString;
 
-use self::user_config::UserConfiguration;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RestartMode {
+    Resume,
+    Fresh,
+}
+impl RestartMode {
+    fn from_env() -> RestartMode {
+        let env_value = std::env::var("RESTART_MODE").unwrap_or("".to_string());
 
-#[derive(Debug)]
+        if env_value.to_lowercase().eq("resume") {
+            return RestartMode::Resume;
+        } else {
+            RestartMode::Fresh
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Configuration {
-    pub user_config: UserConfiguration,
     pub rabbitmq: Option<RabbitMqConfig>,
     pub s3: Option<S3Config>,
     pub metrics_port: u32,
     pub client_id: String,
     pub client_secret: SecretString,
     pub developer_mail: SecretString,
+    pub restart_mode: RestartMode,
 }
 
 impl Configuration {
@@ -19,10 +34,10 @@ impl Configuration {
             metrics_port: read_int_from_env("METRICS_PORT").unwrap_or(4000),
             rabbitmq: RabbitMqConfig::from_env()?,
             s3: S3Config::from_env()?,
-            user_config: UserConfiguration::default(),
             client_id: ensure_string_from_env("POE_CLIENT_ID"),
             client_secret: SecretString::new(ensure_string_from_env("POE_CLIENT_SECRET")),
             developer_mail: SecretString::new(ensure_string_from_env("POE_DEVELOPER_MAIL")),
+            restart_mode: RestartMode::from_env(),
         })
     }
 }
@@ -93,106 +108,6 @@ impl S3Config {
             }))
         } else {
             Ok(None)
-        }
-    }
-}
-
-pub mod user_config {
-
-    use serde::Deserialize;
-
-    #[derive(Debug, Deserialize, Clone)]
-    pub struct UserConfiguration {
-        pub filter: Filter,
-        pub restart_mode: RestartMode,
-    }
-
-    #[derive(Debug, Deserialize, Clone)]
-    pub struct Filter {
-        pub item_categories: Option<Vec<String>>,
-        pub leagues: Option<Vec<String>>,
-    }
-    #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
-    pub enum RestartMode {
-        Resume,
-        Fresh,
-    }
-
-    impl UserConfiguration {
-        #[allow(dead_code)]
-        pub fn builder() -> UserConfigurationBuilder {
-            UserConfigurationBuilder::new()
-        }
-    }
-
-    impl Default for UserConfiguration {
-        fn default() -> Self {
-            Self {
-                filter: Filter {
-                    item_categories: None,
-                    leagues: None,
-                },
-                restart_mode: RestartMode::Fresh,
-            }
-        }
-    }
-
-    #[derive(Default)]
-    pub struct UserConfigurationBuilder {
-        #[allow(dead_code)]
-        configuration: UserConfiguration,
-    }
-
-    impl UserConfigurationBuilder {
-        #[allow(dead_code)]
-        pub fn new() -> Self {
-            UserConfigurationBuilder::default()
-        }
-
-        #[allow(dead_code)]
-        pub fn with_categories(mut self, categories: Vec<String>) -> Self {
-            self.configuration.filter.item_categories = Some(categories);
-            self
-        }
-
-        #[allow(dead_code)]
-        pub fn with_restart_mode(mut self, restart_mode: RestartMode) -> Self {
-            self.configuration.restart_mode = restart_mode;
-            self
-        }
-
-        #[allow(dead_code)]
-        pub fn build(self) -> UserConfiguration {
-            self.configuration
-        }
-    }
-
-    #[cfg(test)]
-    mod test {
-        use super::{RestartMode, UserConfigurationBuilder};
-        #[test]
-        fn test_configuration_builder_with_categories() {
-            let configuration = UserConfigurationBuilder::new()
-                .with_categories(vec!["currency".into(), "maps".into()])
-                .build();
-            assert_eq!(
-                configuration.filter.item_categories,
-                Some(vec!["currency".to_string(), "maps".to_string()])
-            );
-        }
-
-        #[test]
-        fn test_configuration_builder_with_restart_mode() {
-            let configuration = UserConfigurationBuilder::new()
-                .with_restart_mode(RestartMode::Resume)
-                .build();
-            assert_eq!(configuration.restart_mode, RestartMode::Resume);
-        }
-
-        #[test]
-        fn test_default_restart_mode_is_fresh() {
-            let configuration = UserConfigurationBuilder::new().build();
-            assert_eq!(configuration.restart_mode, RestartMode::Fresh);
         }
     }
 }
