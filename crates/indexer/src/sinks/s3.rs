@@ -12,16 +12,17 @@ use aws_types::region::Region;
 use chrono::NaiveDateTime;
 use flate2::Compression;
 use futures::{stream::FuturesUnordered, StreamExt};
+use stash_api::common::stash::Stash;
 use tracing::{error, info};
 
-use crate::stash_record::StashRecord;
+use crate::config::ensure_string_from_env;
 
 use super::sink::Sink;
 
 pub struct S3Sink {
     client: Client,
     bucket: String,
-    buffer: Arc<RwLock<HashMap<String, Vec<StashRecord>>>>,
+    buffer: Arc<RwLock<HashMap<String, Vec<Stash>>>>,
     last_sync: Option<NaiveDateTime>,
 }
 
@@ -30,7 +31,7 @@ impl S3Sink {
     pub async fn connect(
         bucket: impl Into<String> + Debug,
         region: impl Into<String> + Debug,
-    ) -> Result<Self, ()> {
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let bucket = bucket.into();
 
         let mut config = aws_config::load_defaults(BehaviorVersion::latest()).await;
@@ -109,10 +110,7 @@ const TIME_BUCKET: &str = "%Y/%m/%d/%H/%M";
 #[async_trait]
 impl Sink for S3Sink {
     #[tracing::instrument(skip(self, payload), name = "sink-handle-s3")]
-    async fn handle(
-        &mut self,
-        payload: &[StashRecord],
-    ) -> Result<usize, Box<dyn std::error::Error>> {
+    async fn handle(&mut self, payload: &[Stash]) -> Result<usize, Box<dyn std::error::Error>> {
         if payload.is_empty() {
             return Ok(0);
         }
@@ -155,5 +153,31 @@ impl Sink for S3Sink {
     async fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         self.sync().await;
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct S3Config {
+    pub bucket_name: String,
+    pub region: String,
+}
+
+impl S3Config {
+    pub fn from_env() -> Result<Option<S3Config>, std::env::VarError> {
+        if let Ok(string) = std::env::var("S3_SINK_ENABLED") {
+            if string.to_lowercase().eq("false") || string.eq("0") {
+                return Ok(None);
+            }
+
+            let bucket_name = ensure_string_from_env("S3_SINK_BUCKET_NAME");
+            let region = ensure_string_from_env("S3_SINK_REGION");
+
+            Ok(Some(S3Config {
+                bucket_name,
+                region,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 }

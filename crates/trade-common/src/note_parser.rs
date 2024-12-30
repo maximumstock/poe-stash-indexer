@@ -2,12 +2,18 @@ const PRICE_PATTERN: &str = "^(~b/o|~price) ([0-9]+[\\./]?[0-9]*) ([a-zA-Z-]*)";
 
 #[derive(Debug)]
 pub struct Price<'a> {
-    pub(crate) ratio: f32,
-    pub(crate) item: &'a str,
+    pub ratio: f32,
+    pub item: &'a str,
 }
 
 pub struct PriceParser {
     regex: regex::Regex,
+}
+
+impl Default for PriceParser {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PriceParser {

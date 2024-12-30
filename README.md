@@ -22,7 +22,6 @@ More on the installation & usage in the dedicated [documentation](./crates/index
 │   ├── stash-differ
 │   ├── trade-api
 │   ├── trade-common
-│   └── trade-ingest
 ├── notes           # some notes for myself
 ├── infra           # internal scripts, CI parts and documentation for my own `indexer` deployment
 └── shell.nix
@@ -34,7 +33,7 @@ There is [`infra/docker-compose.yaml`](./docker-compose.yaml) defines a setup of
 Feel free to use or copy any of it.
 
 - `indexer` - setup of the `indexer` service to start fetching and feed the data stream into a RabbitMQ instance
-- `rabbitmq` - a RabbitMQ instance for `indexer` to ingest new `StashRecord` batches into and `trade-ingest` to read data from
+- `rabbitmq` - a RabbitMQ instance for `indexer` to ingest new `Stash` batches into to test the RabbmitMQ sink
 - setup of the `trade-ingest` & `trade-api` services to consume above stream and expose it via its REST-like API, respectively
 - `trade-store` - a PostgreSQL instance for `trade-ingest` to ingest into and `trade-api` to read data from
 - `otel-collector` - an [OTLP setup](https://github.com/open-telemetry/opentelemetry-rust) (integrating with New Relic) to investigate metrics of the `indexer`, `trade-ingest`, `trade-api`

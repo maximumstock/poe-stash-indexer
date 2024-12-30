@@ -5,7 +5,7 @@ In this document I try to describe the current situation and the data format.
 
 ## Raw Data
 
-We have collected player stash data in the form of `StashRecord`s.
+We have collected player stash data in the form of `Stash`s.
 Each stash record describes the contents of a single player stash at a given
 point in time.
 
@@ -17,9 +17,26 @@ and its new contents.
 Each stash records describes only a single stash with a uniquely identifying id.
 Therefore, moving an item between two stashes should generate two separate stash record updates.
 
-A `StashRecord` looks like this:
+A `Stash` looks roughly like this:
 
-```json
+```rs
+
+pub struct Stash {
+    #[serde(rename(deserialize = "accountName"))]
+    pub account_name: String,
+    #[serde(rename(deserialize = "lastCharacterName"))]
+    pub last_character_name: Option<String>,
+    pub id: String,
+    pub stash: Option<String>,
+    #[serde(rename(deserialize = "stashType"))]
+    pub stash_type: String,
+    pub items: Vec<Item>,
+    pub public: bool,
+    pub league: Option<String>,
+    pub created_at: NaiveDateTime,
+    pub change_id: String,
+    pub next_change_id: String,
+}
 ```
 
 The API does not offer any temporal metadata on these stash updates.
@@ -36,7 +53,7 @@ A chunk might contain more than one stash record associated with a specific play
 Since chunks heavily vary in size (0 - ~500 from what I've seen), we assume each chunk resembles player
 activity within a fixed amount of time before it is published.
 
-## Comparing Raw StashRecord Snapshots
+## Comparing Raw Stash Snapshots
 
 The idea for this project is this:
 
@@ -55,10 +72,10 @@ Finding the differences between two given snapshots of a given stash might resul
   - the `note` field changes, which contains eg. its selling price set by the owner
   - the `stack_size` field changes, because the item was a stackable item and parts were added or removed
 
-
 # Questions:
 
 1. How to track item age?
+
 - Goal: Track item age NOT event age in relation to stash or a specific tab
 - Track item age as number of stash updates since an item was added
 - This means we only need one extra data point per item and one per stash:
@@ -68,6 +85,7 @@ Finding the differences between two given snapshots of a given stash might resul
   - on change, the age can be calculated for the event and the item's age is set to the current stash age
 
 2. What event data to store and how?
+
 - we have different events coming in different forms, eg. event age does not appear on every event type
 - currently, we aggregate all events per player & 30-minute time window into a single .csv line for our dataset
 - Problem: So far we had only simple counts, but event age data cannot be easily aggregated without losing information
@@ -75,4 +93,3 @@ Finding the differences between two given snapshots of a given stash might resul
   - Option 2: store event data unaggregated
 - Aggregation probably has to go at some point down the line anyways because it just loses so much granularity, therefore lets go with Option #2
   Processing of the dataset will then become a downstream problem/task, which sounds very reasonable
-

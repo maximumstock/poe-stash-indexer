@@ -48,6 +48,8 @@ described in [their API documentation](https://www.pathofexile.com/developer/doc
 | `RABBITMQ_SINK_ENABLED`         | no                                   | false               | To toggle the sink                                                            |
 | `RABBITMQ_URL`                  | if `RABBITMQ_SINK_ENABLED` is `true` |                     | The connection string to your RabbitMQ instance                               |
 | `RABBITMQ_PRODUCER_ROUTING_KEY` | no                                   | "poe-stash-indexer" | The routing key to publish messages under                                     |
+| `POSTGRES_SINK_ENABLED`         | no                                   | false               | To toggle the sink                                                            |
+| `POSTGRES_URL`                  | if `POSTGRES_SINK_ENABLED` is `true` |                     | The connection string to your PostgreSQL instance                             |
 | `S3_SINK_ENABLED`               | no                                   | false               | To toggle the sink                                                            |
 | `S3_SINK_BUCKET_NAME`           | if `S3_SINK_ENABLED" is `true`       |                     | The name of the S3 bucket where the JSONL files will be stored                |
 | `S3_SINK_REGION`                | no                                   |                     | The AWS region where the S3 bucket is located                                 |
@@ -69,7 +71,7 @@ build data pipelines.
 
 #### S3
 
-The idea here is to flush one minute-wide buffers of `StashRecord[]` as gzipped JSONL files
+The idea here is to flush one minute-wide buffers of `Stash[]` as gzipped JSONL files
 into a specified S3 bucket. Every minute, a new file in `{bucket-name}/{league}/{YYYY/mm/dd/HH/MM}.json.gz`
 will be created, eg. `poe-stash-indexer/Ancestor/2023/08/23/12/34.json.gz`.
 

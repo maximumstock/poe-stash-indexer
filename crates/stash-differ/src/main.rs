@@ -39,14 +39,12 @@ async fn main() -> Result<()> {
     let client_secret = config.client_secret.clone();
     let developer_mail = config.developer_mail.clone();
 
-    let indexer = Indexer::new();
+    let indexer = Indexer::new(client_id, client_secret, developer_mail);
 
     let latest_change_id = PoeNinjaClient::fetch_latest_change_id_async()
         .await
         .unwrap();
-    let mut rx = indexer
-        .start_at_change_id(client_id, client_secret, developer_mail, latest_change_id)
-        .await;
+    let mut rx = indexer.start_at_change_id(latest_change_id).await;
 
     let mut store = store::StashStore::new();
 
@@ -62,12 +60,10 @@ async fn main() -> Result<()> {
                 tracing::info!("Rate limited for {} seconds...waiting", timer.as_secs());
             }
             IndexerMessage::Tick {
-                change_id,
-                response,
-                ..
+                change_id, stashes, ..
             } => {
-                let n_stashes = response.stashes.len();
-                let events = store.ingest(response);
+                let n_stashes = stashes.len();
+                let events = store.ingest(stashes, change_id.to_string());
                 tracing::info!(
                     "Chunk ID: {} - {} events from {} stashes",
                     change_id,

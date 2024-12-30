@@ -4,7 +4,6 @@ members = [
     "crates/indexer",
     "crates/stash-api",
     "crates/stash-differ",
-    "crates/trade-ingest",
     "crates/trade-api",
     "crates/trade-common",
 ]

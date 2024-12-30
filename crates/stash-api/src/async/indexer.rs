@@ -1,5 +1,7 @@
+use std::str::FromStr;
 use std::{sync::Arc, time::Duration};
 
+use chrono::Utc;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
 use tracing::{debug, error, error_span, info, trace, trace_span};
@@ -8,7 +10,9 @@ use trade_common::telemetry::generate_http_client;
 
 use crate::common::parse::parse_change_id_from_bytes;
 use crate::common::poe_api::{get_oauth_token, user_agent, OAuthResponse};
-use crate::common::{ChangeId, StashTabResponse};
+use crate::common::stash::protocol::StashTabResponseInternal;
+use crate::common::stash::Stash;
+use crate::common::ChangeId;
 
 #[derive(Debug)]
 pub struct Indexer {
@@ -190,13 +194,10 @@ async fn process(
         }
     }
 
-    let deserialised = match serde_json::from_slice::<StashTabResponse>(&bytes) {
+    let deserialised = match serde_json::from_slice::<StashTabResponseInternal>(&bytes) {
         Ok(deserialised) => deserialised,
         Err(e) => {
-            info!(
-                "Rescheduling in 5s due to deserialization issue {}",
-                e.to_string()
-            );
+            info!("Rescheduling in 5s due to deserialization issue {:?}", e);
             tokio::time::sleep(Duration::from_secs(5)).await;
             schedule_job(
                 tx,
@@ -216,10 +217,31 @@ async fn process(
     );
     trace!(number_stashes = ?deserialised.stashes.len());
 
+    let next_change_id =
+        ChangeId::from_str(&deserialised.next_change_id).expect("Invalid next_change_id");
+    let now = Utc::now().naive_utc();
+    let stashes = deserialised
+        .stashes
+        .into_iter()
+        .map(|s| Stash {
+            account_name: s.account_name,
+            last_character_name: s.last_character_name,
+            id: s.id,
+            stash: s.stash,
+            stash_type: s.stash_type,
+            items: s.items,
+            public: s.public,
+            league: s.league,
+            created_at: now,
+            change_id: change_id.to_string(),
+            next_change_id: deserialised.next_change_id.clone(),
+        })
+        .collect::<Vec<_>>();
+
     tx.try_send(IndexerMessage::Tick {
-        response: deserialised,
-        previous_change_id: change_id.clone(),
+        stashes,
         change_id,
+        next_change_id,
         created_at: std::time::SystemTime::now(),
     })
     .expect("Sending IndexerMessage failed");
@@ -237,9 +259,11 @@ fn seems_empty(bytes: &[u8]) -> bool {
 #[derive(Debug, Clone)]
 pub enum IndexerMessage {
     Tick {
-        response: StashTabResponse,
+        stashes: Vec<Stash>,
+        /// The [`ChangeId`] of the current set of stashes
         change_id: ChangeId,
-        previous_change_id: ChangeId,
+        /// The [`ChangeId`] of the next set of stashes after this tick
+        next_change_id: ChangeId,
         created_at: std::time::SystemTime,
     },
     RateLimited(Duration),

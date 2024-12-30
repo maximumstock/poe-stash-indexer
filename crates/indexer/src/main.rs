@@ -2,12 +2,10 @@ mod config;
 mod metrics;
 mod resumption;
 mod sinks;
-mod stash_record;
 
 extern crate dotenv;
 
 use std::{
-    convert::TryInto,
     str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -16,18 +14,18 @@ use std::{
 };
 
 use crate::resumption::State;
+use crate::resumption::StateWrapper;
 use crate::sinks::rabbitmq::RabbitMqSink;
 use crate::{metrics::setup_metrics, sinks::s3::S3Sink};
-use crate::{resumption::StateWrapper, stash_record::map_to_stash_records};
 
 use config::{Configuration, RestartMode};
-use sinks::sink::Sink;
+use sinks::{postgres::PostgresSink, sink::Sink};
 use stash_api::{
     common::{poe_ninja_client::PoeNinjaClient, ChangeId},
     r#async::indexer::{Indexer, IndexerMessage},
 };
 use tracing::info;
-use trade_common::telemetry::setup_telemetry;
+use trade_common::{assets::AssetIndex, telemetry::setup_telemetry};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -80,24 +78,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             IndexerMessage::Tick {
                 change_id,
-                response,
-                created_at,
+                stashes,
+                next_change_id,
                 ..
             } => {
-                tracing::info!(
-                    "Processing {} ({} stashes)",
-                    change_id,
-                    response.stashes.len()
-                );
+                tracing::info!("Processing {} ({} stashes)", change_id, stashes.len());
 
                 metrics
                     .stashes_processed
-                    .inc_by(response.stashes.len().try_into().unwrap());
+                    .inc_by(stashes.len().try_into().unwrap());
                 metrics.chunks_processed.inc();
 
-                let next_change_id = response.next_change_id.clone();
-                let stashes = map_to_stash_records(change_id.clone(), created_at, response)
-                    .collect::<Vec<_>>();
+                let next_change_id = next_change_id.clone();
 
                 if !stashes.is_empty() {
                     for sink in sinks.iter_mut() {
@@ -108,15 +100,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Update resumption state at the end of each tick
                 resumption.update(State {
                     change_id: change_id.to_string(),
-                    next_change_id,
+                    next_change_id: next_change_id.to_string(),
                 });
             }
         }
     }
 
-    info!("Flushing sinks");
-    for sink in sinks.iter_mut() {
-        sink.flush().await?;
+    if !sinks.is_empty() {
+        info!("Flushing sinks");
+        for sink in sinks.iter_mut() {
+            sink.flush().await?;
+        }
     }
 
     match resumption.save() {
@@ -146,10 +140,18 @@ async fn setup_sinks<'a>(
     }
 
     if let Some(config) = config.s3 {
-        let s3_sink = S3Sink::connect(&config.bucket_name, &config.region)
-            .await
-            .unwrap();
+        let s3_sink = S3Sink::connect(&config.bucket_name, &config.region).await?;
         sinks.push(Box::new(s3_sink));
+        tracing::info!("Configured S3 sink");
+    }
+
+    if let Some(config) = config.postgres {
+        let mut asset_index = AssetIndex::new();
+        asset_index.init().await?;
+
+        let postgres_sink = PostgresSink::connect(&config, asset_index).await.unwrap();
+        sinks.push(Box::new(postgres_sink));
+        tracing::info!("Configured PostgreSQL sink");
     }
 
     Ok(sinks)

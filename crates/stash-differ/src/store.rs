@@ -1,7 +1,7 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::collections::HashMap;
 
 use chrono::{NaiveDateTime, Utc};
-use stash_api::common::{Item, Stash, StashTabResponse};
+use stash_api::common::stash::{protocol::Item, Stash};
 use tracing::info;
 
 use crate::differ::{DiffEvent, StashDiffer};
@@ -18,14 +18,14 @@ impl StashStore {
         Self::default()
     }
 
-    pub fn ingest(&mut self, incoming: StashTabResponse) -> Vec<DiffEvent> {
+    pub fn ingest(&mut self, incoming: Vec<Stash>, next_change_id: String) -> Vec<DiffEvent> {
         let mut events = vec![];
         let now = Utc::now().naive_local();
 
         info!("Store: {} stashes", self.inner.len());
-        for s in incoming.stashes {
+        for s in incoming {
             if s.public {
-                if let Some(s) = SearchableStash::from(s, incoming.next_change_id.clone(), now) {
+                if let Some(s) = SearchableStash::from(s, next_change_id.clone(), now) {
                     if let Some(previous) = self.inner.get(&s.id) {
                         StashDiffer::diff_stash(previous, &s, &mut events);
                     }
@@ -41,13 +41,13 @@ impl StashStore {
 }
 
 pub struct SearchableStash {
-    pub account_name: Cow<'static, str>,
+    pub account_name: Option<String>,
     pub id: String,
-    pub stash_type: Cow<'static, str>,
+    pub stash_type: String,
     pub items: HashMap<String, Item>,
-    pub league: Cow<'static, str>,
+    pub league: Option<String>,
     pub timestamp: NaiveDateTime,
-    pub change_id: Cow<'static, str>,
+    pub change_id: String,
 }
 
 impl SearchableStash {
@@ -57,17 +57,17 @@ impl SearchableStash {
         }
 
         Some(Self {
-            account_name: Cow::Owned(value.account_name.unwrap()),
+            account_name: value.account_name,
             id: value.id,
-            stash_type: Cow::from(value.stash_type),
+            stash_type: value.stash_type,
             items: value
                 .items
                 .into_iter()
                 .map(|item| (item.id.clone(), item))
                 .collect(),
-            league: Cow::Owned(value.league.unwrap()),
+            league: value.league,
             timestamp,
-            change_id: Cow::from(change_id),
+            change_id,
         })
     }
 }

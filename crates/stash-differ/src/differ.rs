@@ -1,8 +1,6 @@
-use std::borrow::Cow;
-
 use chrono::NaiveDateTime;
 use serde::Serialize;
-use stash_api::common::Item;
+use stash_api::common::stash::protocol::Item;
 use tracing::info;
 
 use crate::store::SearchableStash;
@@ -31,8 +29,8 @@ impl StashDiffer {
                         note_changed,
                         stack_size_changed,
                         meta: DiffMeta {
-                            league: before.league.clone(),
-                            account_name: before.account_name.clone(),
+                            league: before.league.clone().unwrap(),
+                            account_name: before.account_name.clone().unwrap(),
                             stash_type: before.stash_type.clone(),
                             old_change_id: before.change_id.clone(),
                             new_change_id: after.change_id.clone(),
@@ -45,8 +43,8 @@ impl StashDiffer {
                 buffer.push(DiffEvent::Removed(Removed {
                     item: before_item.clone(),
                     meta: DiffMeta {
-                        league: before.league.clone(),
-                        account_name: before.account_name.clone(),
+                        league: before.league.clone().unwrap(),
+                        account_name: before.account_name.clone().unwrap(),
                         stash_type: before.stash_type.clone(),
                         old_change_id: before.change_id.clone(),
                         new_change_id: after.change_id.clone(),
@@ -62,8 +60,8 @@ impl StashDiffer {
                 buffer.push(DiffEvent::Added(Added {
                     item: after_item.clone(),
                     meta: DiffMeta {
-                        league: before.league.clone(),
-                        account_name: before.account_name.clone(),
+                        league: before.league.clone().unwrap(),
+                        account_name: before.account_name.clone().unwrap(),
                         stash_type: before.stash_type.clone(),
                         old_change_id: before.change_id.clone(),
                         new_change_id: after.change_id.clone(),
@@ -125,11 +123,11 @@ pub struct Changed {
 
 #[derive(Serialize, Clone)]
 pub struct DiffMeta {
-    league: Cow<'static, str>,
-    account_name: Cow<'static, str>,
-    stash_type: Cow<'static, str>,
-    old_change_id: Cow<'static, str>,
-    new_change_id: Cow<'static, str>,
+    league: String,
+    account_name: String,
+    stash_type: String,
+    old_change_id: String,
+    new_change_id: String,
     old_timestamp: NaiveDateTime,
     new_timestamp: NaiveDateTime,
 }
