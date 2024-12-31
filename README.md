@@ -44,3 +44,9 @@ Here is a list of services in this local development setup and and their credent
 - [Trade API](http://trade.localhost:8888) (public)
 - [RabbitMQ Control Panel](http://rabbitmq.localhost:8888) (Basic Auth: `poe:poe`)
 - [Jaeger Dashboard](http://jaeger.localhost:8888) (public)
+
+For testing the PostgreSQL `indexer` sink, you can run something like:
+
+`docker run --name pg-poe -e POSTGRES_PASSWORD=poe -e POSTGRES_USER=poe -e POSTGRES_DB=poe -p 5432:5432 postgres:latest`
+
+and connect to `pg://poe:poe@127.0.0.1:5432/poe`.

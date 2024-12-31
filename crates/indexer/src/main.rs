@@ -19,13 +19,13 @@ use crate::sinks::rabbitmq::RabbitMqSink;
 use crate::{metrics::setup_metrics, sinks::s3::S3Sink};
 
 use config::{Configuration, RestartMode};
-use sinks::{postgres::PostgresSink, sink::Sink};
+use sinks::sink::Sink;
 use stash_api::{
     common::{poe_ninja_client::PoeNinjaClient, ChangeId},
     r#async::indexer::{Indexer, IndexerMessage},
 };
 use tracing::info;
-use trade_common::{assets::AssetIndex, telemetry::setup_telemetry};
+use trade_common::telemetry::setup_telemetry;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -145,14 +145,14 @@ async fn setup_sinks<'a>(
         tracing::info!("Configured S3 sink");
     }
 
-    if let Some(config) = config.postgres {
-        let mut asset_index = AssetIndex::new();
-        asset_index.init().await?;
+    // if let Some(config) = config.postgres {
+    //     let mut asset_index = AssetIndex::new();
+    //     asset_index.init().await?;
 
-        let postgres_sink = PostgresSink::connect(&config, asset_index).await.unwrap();
-        sinks.push(Box::new(postgres_sink));
-        tracing::info!("Configured PostgreSQL sink");
-    }
+    //     let postgres_sink = PostgresSink::connect(&config, asset_index).await.unwrap();
+    //     sinks.push(Box::new(postgres_sink));
+    //     tracing::info!("Configured PostgreSQL sink");
+    // }
 
     Ok(sinks)
 }

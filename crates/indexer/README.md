@@ -6,7 +6,8 @@ and lets you save its data to different [sinks](#sinks).
 
 ## Features
 
-- [x] Collects stash updates as a stream of [Stash Records](src/stash_record.rs)
+- [x] Collects stash updates as a stream of [`Stash`](../stash-api/src/common/stash.rs) via the [`stash-api`](../stash-api/README.md) crate
+- [x] Export data to different [sinks](#sinks)
 - [x] Respects Stash Tab API [rate limit](https://pathofexile.gamepedia.com/Public_stash_tab_API#Rate_Limit)
 - [x] Minimum indexing delay due to look-ahead for next `change_id` on partial HTTP response
 - [x] Graceful handling of shutdown signals by flushing all sinks
@@ -32,7 +33,7 @@ docker run \
     maximumstock2/indexer:latest
 ```
 
-### Configuration
+## Configuration
 
 Here is a list of all available environment variable configuration options.
 
@@ -55,33 +56,58 @@ described in [their API documentation](https://www.pathofexile.com/developer/doc
 | `S3_SINK_REGION`                | no                                   |                     | The AWS region where the S3 bucket is located                                 |
 | `OTEL_COLLECTOR`                | no                                   |                     | The gRPC endpoint of an OTEL collector sidecar daemon, collecting OTLP traces |
 
-### Sinks
+## Sinks
 
-You can configure different sinks to pipe the indexed data to.
+The `indexer` crate uses the [`stash-api`](../stash-api/README.md) crate to collect stash updates from the official
+Path of Exile API and transforms it into a stream of [`Stash`](../stash-api/src/common/stash.rs) records.
+
 You can run zero or more sinks at any given time by configuring their respective environment variables.
 
-- RabbitMQ - for further processing pipelines
-- S3 - a bunch of timestamp partitioned `.json` files in JSONL format
+Implemented:
 
-#### RabbitMQ
+- [x] [RabbitMQ](#rabbitmq) - for further processing pipelines
+- [x] [S3](#s3) - a bunch of timestamp partitioned `.jsonl` files in JSONL format
 
-The idea here is that `indexer` publishes whatever it finds under a (customisable) routing key,
-which other services (eg. `trade-ingest` or something completely different) can consume to
-build data pipelines.
+In Progress:
 
-#### S3
+- [PostgreSQL](#postgresql)
+- [JSON file](#local-file) - exporting the stream directly to a local file in JSON format for quicker prototyping
+- [Kafka](#kafka)
 
-The idea here is to flush one minute-wide buffers of `Stash[]` as gzipped JSONL files
+Each sink was created with a certain idea and use-case in mind.
+See below to find out more on each sink design and what data format to expect.
+
+### RabbitMQ
+
+The idea here is that `indexer` publishes whatever it finds under a (customisable) routing key, which other services
+(eg. `trade-ingest` or something completely different) can consume to build data pipelines.
+
+In terms of data format, this sink sends messages with JSON array of the raw [`Stash`](../stash-api/src/common/stash.rs) update.
+
+### S3
+
+The idea here is to flush one minute-wide arrays of [`Stash`](../stash-api/src/common/stash.rs) as gzipped JSONL files
 into a specified S3 bucket. Every minute, a new file in `{bucket-name}/{league}/{YYYY/mm/dd/HH/MM}.json.gz`
 will be created, eg. `poe-stash-indexer/Ancestor/2023/08/23/12/34.json.gz`.
 
 By default, the AWS Rust SDK reads your environment variables to find AWS credentials and picks up your credentials & region, but you can always override the latter via `S3_SINK_REGION`.
-So if you use your AWS CLI locally to create AWS credentials for your shell session and export these environment variables, the AWS SDK and `indexer` will
-automatically pick up your credentials.
+So if you use your AWS CLI locally to create AWS credentials for your shell session and export these environment variables, the AWS SDK and `indexer` will automatically pick up your credentials.
 If you use SSO via your AWS CLI then you might have to set the environment variable `AWS_PROFILE` to specify the correct credential SSO profile, ie. `AWS_PROFILE="my-profile" cargo run --bin indexer`.
 
 You are free to further process the data in whatever way you see fit.
 AWS EMR/Glue and Athena could be used to compact the minute-wide chunks or run analytics on them.
+
+### PostgreSQL
+
+tbd
+
+### Local File
+
+tbd
+
+### Kafka
+
+tbd
 
 ## Stopping & Resuming
 

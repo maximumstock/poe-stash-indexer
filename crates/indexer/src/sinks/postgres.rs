@@ -3,7 +3,7 @@ use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, Execute, Pool, Postgres, QueryBuilder};
 use stash_api::common::stash::Stash;
-use tracing::{info, trace};
+use tracing::{debug, trace};
 use trade_common::{assets::AssetIndex, league::League, note_parser::PriceParser};
 
 use crate::config::ensure_string_from_env;
@@ -36,13 +36,14 @@ impl PostgresSink {
 
 #[async_trait]
 impl Sink for PostgresSink {
-    #[tracing::instrument(skip(self, payload), name = "sink-handle-rabbitmq")]
+    #[tracing::instrument(skip(self, payload), name = "sink-handle-postgres")]
     async fn handle(&mut self, payload: &[Stash]) -> Result<usize, Box<dyn std::error::Error>> {
         // todo: sink-specific metrics
         // metrics.inc_stashes_ingested(stash_records.len() as u64);
 
         // todo: group stash records by league and call ingest
-        let league = League::new("asdf".to_string());
+        // replace non-ascii by `_` and run migration for newly discovered leagues
+        let league = League::new("challenge".to_string());
         self.ingest(&self.pool, &league, &self.asset_index, payload)
             .await?;
 
@@ -55,7 +56,7 @@ impl Sink for PostgresSink {
 }
 
 impl PostgresSink {
-    #[tracing::instrument(skip(pool, asset_index, stash_records))]
+    #[tracing::instrument(skip(self, pool, asset_index, stash_records))]
     async fn ingest(
         // metrics: &mut impl StoreMetrics,
         &self,
@@ -129,7 +130,7 @@ impl PostgresSink {
             return Err(e.into());
         }
 
-        info!(
+        debug!(
             "Invalidate {} stashes, Insert {} offers",
             n_invalidated_stashes, n_ingested_offers
         );
@@ -168,7 +169,7 @@ fn map_stash_to_offers(stash: &Stash) -> Vec<Offer> {
         .iter()
         .filter(|item| item.note.is_some())
         .filter_map(|item| {
-            if let Ok(price) = price_parser.parse_price(&item.note.clone().unwrap()) {
+            if let Some(price) = price_parser.parse_price(&item.note.clone().unwrap()) {
                 let sold_item_name = match item.name.as_str() {
                     "" => item.type_line.clone(),
                     _ => item.name.clone(),
@@ -195,11 +196,13 @@ fn map_stash_to_offers(stash: &Stash) -> Vec<Offer> {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct PostgresConfig {
     pub connection_url: String,
 }
 
 impl PostgresConfig {
+    #[allow(dead_code)]
     pub fn from_env() -> Result<Option<PostgresConfig>, std::env::VarError> {
         if let Ok(string) = std::env::var("POSTGRES_SINK_ENABLED") {
             if string.to_lowercase().eq("false") || string.eq("0") {

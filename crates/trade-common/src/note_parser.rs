@@ -24,20 +24,21 @@ impl PriceParser {
         }
     }
 
-    pub fn parse_price<'a>(&self, note: &'a str) -> Result<Price<'a>, ()> {
+    pub fn parse_price<'a>(&self, note: &'a str) -> Option<Price<'a>> {
         if let Some(groups) = self.regex.captures(note) {
             let ratio = groups.get(2).map(|x| x.as_str());
             let item = groups.get(3).map(|x| x.as_str());
 
             if let (Some(ratio), Some(item)) = (ratio, item) {
-                return Ok(Price {
-                    ratio: Self::extract_ratio(ratio)?,
-                    item,
-                });
+                if let Ok(parsed_ration) = Self::extract_ratio(ratio) {
+                    return Some(Price {
+                        ratio: parsed_ration,
+                        item,
+                    });
+                }
             }
         }
-
-        Err(())
+        None
     }
 
     fn extract_ratio(input: &str) -> Result<f32, ()> {
@@ -150,17 +151,17 @@ mod tests {
 
         for (input, _expected) in VALID {
             assert!(parser.is_price(input));
-            assert!(matches!(parser.parse_price(input), Ok(_expected)));
+            assert!(matches!(parser.parse_price(input), Some(_expected)));
         }
 
         for input in SYNTACTICALLY_INVALID {
             assert!(!parser.is_price(input));
-            assert!(matches!(parser.parse_price(input), Err(())));
+            assert!(parser.parse_price(input).is_none());
         }
 
         for input in SEMANTICALLY_INVALID {
             assert!(parser.is_price(input));
-            assert!(matches!(parser.parse_price(input), Err(())));
+            assert!(parser.parse_price(input).is_none());
         }
     }
 }

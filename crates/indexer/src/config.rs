@@ -1,6 +1,6 @@
 use trade_common::secret::SecretString;
 
-use crate::sinks::{postgres::PostgresConfig, rabbitmq::RabbitMqConfig, s3::S3Config};
+use crate::sinks::{rabbitmq::RabbitMqConfig, s3::S3Config};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RestartMode {
@@ -23,7 +23,7 @@ impl RestartMode {
 pub struct Configuration {
     pub rabbitmq: Option<RabbitMqConfig>,
     pub s3: Option<S3Config>,
-    pub postgres: Option<PostgresConfig>,
+    // pub postgres: Option<PostgresConfig>,
     pub metrics_port: u32,
     pub client_id: String,
     pub client_secret: SecretString,
@@ -37,7 +37,7 @@ impl Configuration {
             metrics_port: read_int_from_env("METRICS_PORT").unwrap_or(4000),
             rabbitmq: RabbitMqConfig::from_env()?,
             s3: S3Config::from_env()?,
-            postgres: PostgresConfig::from_env()?,
+            // postgres: PostgresConfig::from_env()?,
             client_id: ensure_string_from_env("POE_CLIENT_ID"),
             client_secret: SecretString::new(ensure_string_from_env("POE_CLIENT_SECRET")),
             developer_mail: SecretString::new(ensure_string_from_env("POE_DEVELOPER_MAIL")),
