@@ -14,7 +14,7 @@ chrono = { version = "0.4.39", default-features = true, features = ["serde"] }
 stash-api = { path = "../stash-api", default-features = false }
 signal-hook = { version = "0.3.17", default-features = false }
 prometheus_exporter = { version = "0.8.5", default-features = false }
-tokio = { version = "1.42.0", default-features = false, features = ["full"] }
+tokio = { version = "1.43.0", default-features = false, features = ["full"] }
 futures = { version = "0.3.31", default-features = false }
 tracing = { version = "0.1.41", default-features = false }
 trade-common = { path = "../trade-common", default-features = false }
