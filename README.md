@@ -8,6 +8,7 @@ This project aims to build tooling to gather data from Path of Exile's
 
 The main component in this project is the [indexer](crates/indexer/README.md) application.
 It offers an easy way to consume the [Public Stash Tab API river](https://www.pathofexile.com/developer/docs/reference#publicstashes) and flush it data sinks like RabbitMQ or S3 for further processing.
+
 More on the installation & usage in the dedicated [documentation](./crates/indexer/README.md).
 
 ## Project Structure
@@ -17,8 +18,7 @@ More on the installation & usage in the dedicated [documentation](./crates/index
 ├── README.md       # you are here
 ├── crates
 │   ├── indexer     # the main application
-│   ├── stash-api   # an internal library that `indexer` uses
-│                   # below are some internal prototypes, you can ignore for now
+│   ├── stash-api   # an internal library that `indexer` uses below are some internal prototypes, you can ignore for now
 │   ├── stash-differ
 │   ├── trade-api
 │   ├── trade-common
@@ -29,7 +29,15 @@ More on the installation & usage in the dedicated [documentation](./crates/index
 
 ## Local Dev Environment
 
-There is [`infra/docker-compose.yaml`](./docker-compose.yaml) defines a setup of `indexer` and some of the other prototypes.
+If you are using `nix`, just run `nix-shell` and enjoy all dependencies being installed.
+
+From there you can setup the respective crate application you want to run via environment variables however you see fit.
+See the [indexer README.md](./crates/indexer/README.md) for more information on what environment variables to set.
+
+### Example Docker Setup
+
+There are a couple different applications in this umbrella project of which only `indexer` is as of now relevant for users.
+As an example, there is [`infra/docker-compose.yaml`](./docker-compose.yaml) defines a setup of `indexer` and some of the other prototypes.
 Feel free to use or copy any of it.
 
 - `indexer` - setup of the `indexer` service to start fetching and feed the data stream into a RabbitMQ instance
