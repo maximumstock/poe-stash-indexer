@@ -20,7 +20,7 @@ aws-sdk-s3 = "1.76.0"
 aws-types = "1.3.4"
 aws-config = "1.5.16"
 aws-credential-types = "1.2.1"
-flate2 = "1.0.35"
+flate2 = "1.1.0"
 jsonl = "4.0.1"
 anyhow = "1.0.96"
 
