@@ -14,7 +14,7 @@ tokio = { version = "1.43.0", features = ["full"] }
 typed-builder = "0.19.1"
 prometheus_exporter = "0.8.5"
 tracing = "0.1.37"
-chrono = { version = "0.4.39", features = ["serde"] }
+chrono = { version = "0.4.40", features = ["serde"] }
 sqlx = { version = "0.8.3", features = [
     "runtime-tokio-rustls",
     "postgres",
