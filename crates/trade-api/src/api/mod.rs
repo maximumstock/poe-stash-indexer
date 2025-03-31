@@ -38,9 +38,9 @@ where
 
     info!("Starting API: {options:?}");
 
-    let _ = axum::Server::bind(&options.into())
-        .serve(app.into_make_service())
-        .await;
+    let listener = tokio::net::TcpListener::bind(options.into()).await.unwrap();
+
+    let _ = axum::serve(listener, app.into_make_service()).await;
 }
 
 fn trace_layer(
