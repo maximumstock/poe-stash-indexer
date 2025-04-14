@@ -26,7 +26,7 @@ aws-config = { version = "1.5.18", default-features = false }
 aws-credential-types = { version = "1.2.2", default-features = false }
 flate2 = { version = "1.1.1", default-features = false, features = ["zlib"] }
 jsonl = { version = "4.0.1", default-features = false }
-sqlx = { version = "0.8.3", default-features = false, features = [
+sqlx = { version = "0.8.4", default-features = false, features = [
     "runtime-tokio-rustls",
     "postgres",
     "migrate",
