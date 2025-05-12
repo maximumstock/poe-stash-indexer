@@ -2998,6 +2998,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "reqwest-middleware"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57f17d28a6e6acfe1733fe24bcd30774d13bffa4b8a22535b4c8c98423088d4e"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "http 1.1.0",
+ "reqwest 0.12.9",
+ "serde",
+ "thiserror 1.0.69",
+ "tower-service",
+]
+
+[[package]]
 name = "reqwest-tracing"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3009,7 +3024,7 @@ dependencies = [
  "matchit 0.7.3",
  "opentelemetry 0.19.0",
  "reqwest 0.11.27",
- "reqwest-middleware",
+ "reqwest-middleware 0.2.5",
  "task-local-extensions",
  "tracing",
  "tracing-opentelemetry 0.19.0",
@@ -4245,7 +4260,7 @@ dependencies = [
  "opentelemetry_sdk 0.23.0",
  "regex",
  "reqwest 0.11.27",
- "reqwest-middleware",
+ "reqwest-middleware 0.4.2",
  "reqwest-tracing",
  "serde",
  "tracing",
