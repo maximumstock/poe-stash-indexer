@@ -12,7 +12,7 @@ serde_json = { version = "1.0.140", default-features = false }
 dotenv = { version = "0.15.0", default-features = false }
 chrono = { version = "0.4.41", default-features = true, features = ["serde"] }
 stash-api = { path = "../stash-api", default-features = false }
-signal-hook = { version = "0.3.17", default-features = false }
+signal-hook = { version = "0.3.18", default-features = false }
 prometheus_exporter = { version = "0.8.5", default-features = false }
 tokio = { version = "1.45.0", default-features = false, features = ["full"] }
 futures = { version = "0.3.31", default-features = false }
