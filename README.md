@@ -2,6 +2,9 @@
 
 # poe-stash-indexer
 
+_Keep in mind: As there is no public stash tab API for PoE 2 yet, this project only works for PoE 1._
+_Once support for a PoE 2 stash tab API is available, I will work on it._
+
 This project aims to build tooling to gather data from Path of Exile's
 [Public Stash Tab API](https://www.pathofexile.com/developer/docs/reference#publicstashes)
 (see also the older [community wiki documentation](https://pathofexile.gamepedia.com/Public_stash_tab_API)).
