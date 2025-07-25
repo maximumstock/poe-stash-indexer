@@ -1836,9 +1836,9 @@ dependencies = [
 
 [[package]]
 name = "lapin"
-version = "3.0.0"
+version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "792d823427d788859cf36d471a9983e52e07e1267fb50ec07ecb240ef4ecd8af"
+checksum = "0429f667f5311386212febd814cc9e9da5edaea5d84bc6defe4c8ad52f982e9e"
 dependencies = [
  "amq-protocol",
  "async-trait",
