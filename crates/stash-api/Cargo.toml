@@ -14,7 +14,7 @@ reqwest = { version = "0.12.9", features = [
     "rustls-tls",
 ], default-features = false }
 chrono = { version = "0.4.41", features = ["serde"] }
-tokio = { version = "1.46.1", features = ["full"] }
+tokio = { version = "1.47.0", features = ["full"] }
 futures = { version = "0.3.31" }
 bytes = { version = "1.10.1" }
 serde_urlencoded = "0.7.1"
