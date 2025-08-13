@@ -22,15 +22,14 @@ pkgs.mkShell rec {
         ];
       })
 
-      rust-analyzer
       cargo-edit
       cargo-feature
       cargo-udeps
       cargo-bloat
     ]
     ++ (pkgs.lib.optionals pkgs.stdenv.isLinux [
-      # clang
-      # linuxPackages.perf
+      clang
+      linuxPackages.perf
       mold
     ])
     ++ (pkgs.lib.optionals pkgs.stdenv.isDarwin [
