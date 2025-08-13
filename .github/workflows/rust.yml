@@ -25,7 +25,7 @@ jobs:
         run: sudo apt-get install -y age protobuf-compiler
 
       - name: Checkout sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - uses: cachix/install-nix-action@v20
         with:
@@ -72,7 +72,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'docker skip') && github.ref_name == 'master'"
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Set up Rust cache
@@ -144,7 +144,7 @@ jobs:
   #   if: "!contains(github.event.head_commit.message, 'deploy skip') && github.ref_name == 'master'"
   #   steps:
   #     - name: Checkout
-  #       uses: actions/checkout@v2
+  #       uses: actions/checkout@v5
   #     - name: Deployment
   #       env:
   #         DEPLOY_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
