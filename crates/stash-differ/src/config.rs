@@ -20,7 +20,7 @@ impl Configuration {
 }
 
 fn ensure_string_from_env(name: &str) -> String {
-    std::env::var(name).unwrap_or_else(|_| panic!("Missing environment variable {}", name))
+    std::env::var(name).unwrap_or_else(|_| panic!("Missing environment variable {name}"))
 }
 
 #[allow(dead_code)]

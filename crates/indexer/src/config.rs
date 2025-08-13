@@ -47,7 +47,7 @@ impl Configuration {
 }
 
 pub fn ensure_string_from_env(name: &str) -> String {
-    std::env::var(name).unwrap_or_else(|_| panic!("Missing environment variable {}", name))
+    std::env::var(name).unwrap_or_else(|_| panic!("Missing environment variable {name}"))
 }
 
 pub fn read_string_from_env(name: &str) -> Option<String> {
