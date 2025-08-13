@@ -1,9 +1,10 @@
 let
-  rustOverlay = builtins.fetchTarball
-    "https://github.com/oxalica/rust-overlay/archive/master.tar.gz";
+  rustOverlay = builtins.fetchTarball "https://github.com/oxalica/rust-overlay/archive/master.tar.gz";
   pkgs = import <nixpkgs> { overlays = [ (import rustOverlay) ]; };
-in pkgs.mkShell rec {
-  buildInputs = with pkgs;
+in
+pkgs.mkShell rec {
+  buildInputs =
+    with pkgs;
     [
       clang
       nixfmt-classic
@@ -14,8 +15,11 @@ in pkgs.mkShell rec {
       protobuf
       docker-compose
 
-      (rust-bin.stable.latest.default.override {
-        extensions = [ "rust-src" "clippy" ];
+      (rust-bin.stable."1.88.0".default.override {
+        extensions = [
+          "rust-src"
+          "clippy"
+        ];
       })
 
       rust-analyzer
@@ -23,11 +27,13 @@ in pkgs.mkShell rec {
       cargo-feature
       cargo-udeps
       cargo-bloat
-    ] ++ (pkgs.lib.optionals pkgs.stdenv.isLinux [
+    ]
+    ++ (pkgs.lib.optionals pkgs.stdenv.isLinux [
       clang
       linuxPackages.perf
       mold
-    ]) ++ (pkgs.lib.optionals pkgs.stdenv.isDarwin [
+    ])
+    ++ (pkgs.lib.optionals pkgs.stdenv.isDarwin [
       # Additional darwin specific inputs can be set here
       pkgs.libiconv
       pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
@@ -36,7 +42,8 @@ in pkgs.mkShell rec {
   RUST_BACKTRACE = 1;
   AWS_PROFILE = "maximumstock";
 
-} // pkgs.lib.mkIf (pkgs.stdenv.isLinux) rec {
+}
+// pkgs.lib.mkIf (pkgs.stdenv.isLinux) rec {
   MOLD_PATH = "${pkgs.mold.out}/bin/mold";
   RUSTFLAGS = "-Clink-arg=-fuse-ld=${MOLD_PATH} -Clinker=clang";
   # LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath buildInputs;
