@@ -15,7 +15,7 @@ pkgs.mkShell rec {
       protobuf
       docker-compose
 
-      (rust-bin.stable."1.88.0".default.override {
+      (rust-bin.stable.latest.default.override {
         extensions = [
           "rust-src"
           "clippy"
@@ -29,8 +29,8 @@ pkgs.mkShell rec {
       cargo-bloat
     ]
     ++ (pkgs.lib.optionals pkgs.stdenv.isLinux [
-      clang
-      linuxPackages.perf
+      # clang
+      # linuxPackages.perf
       mold
     ])
     ++ (pkgs.lib.optionals pkgs.stdenv.isDarwin [
