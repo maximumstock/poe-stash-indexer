@@ -1,4 +1,4 @@
-![Continuous Integration](https://github.com/maximumstock/poe-stash-indexer/workflows/Continuous%20Integration/badge.svg)
+[![Continuous Integration](https://github.com/maximumstock/poe-stash-indexer/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/maximumstock/poe-stash-indexer/actions/workflows/rust.yml)
 
 # poe-stash-indexer
 
