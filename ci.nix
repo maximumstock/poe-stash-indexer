@@ -1,8 +1,6 @@
-let
-  rustOverlay = builtins.fetchTarball "https://github.com/oxalica/rust-overlay/archive/master.tar.gz";
-  pkgs = import <nixpkgs> { overlays = [ (import rustOverlay) ]; };
-in
+{ pkgs }:
 pkgs.mkShell rec {
+
   buildInputs =
     with pkgs;
     [
@@ -28,7 +26,6 @@ pkgs.mkShell rec {
       cargo-bloat
     ]
     ++ (pkgs.lib.optionals pkgs.stdenv.isLinux [
-      clang
       linuxPackages.perf
       mold
     ])
@@ -39,7 +36,6 @@ pkgs.mkShell rec {
     ]);
 
   RUST_BACKTRACE = 1;
-  AWS_PROFILE = "maximumstock";
 
 }
 // pkgs.lib.mkIf (pkgs.stdenv.isLinux) rec {
