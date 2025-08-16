@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::{NaiveDateTime, Utc};
-use stash_api::common::stash::{protocol::Item, Stash};
+use stash_api::{common::stash::Stash, poe_api::poe_stash_api::protocol::Item};
 use tracing::info;
 
 use crate::differ::{DiffEvent, StashDiffer};
@@ -63,7 +63,7 @@ impl SearchableStash {
             items: value
                 .items
                 .into_iter()
-                .map(|item| (item.id.clone(), item))
+                .map(|item| (item.id.clone().unwrap(), item))
                 .collect(),
             league: value.league,
             timestamp,

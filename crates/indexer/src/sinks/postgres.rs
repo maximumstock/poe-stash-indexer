@@ -147,14 +147,14 @@ type ItemId = String;
 #[derive(Debug, Serialize, Deserialize)]
 /// Describes an offer from the view of the seller.
 pub struct Offer {
-    pub(crate) item_id: ItemId,
+    pub(crate) item_id: Option<ItemId>,
     pub(crate) stash_id: StashId,
     /// Item that is sold from the point of view of the seller.
     pub(crate) sell: String,
     /// Item that the seller receives.
     pub(crate) buy: String,
     pub(crate) seller_account: String,
-    pub(crate) stock: u32,
+    pub(crate) stock: u16,
     pub(crate) conversion_rate: f32,
     pub(crate) created_at: u64,
 }
@@ -176,7 +176,7 @@ fn map_stash_to_offers(stash: &Stash) -> Vec<Offer> {
                 };
 
                 Some(Offer {
-                    stock: item.stack_size.unwrap_or(1),
+                    stock: item.stack_size.unwrap_or(1_u16),
                     sell: sold_item_name,
                     conversion_rate: price.ratio,
                     buy: price.item.to_owned(),

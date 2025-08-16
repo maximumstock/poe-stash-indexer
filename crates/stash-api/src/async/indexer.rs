@@ -9,10 +9,10 @@ use trade_common::secret::SecretString;
 use trade_common::telemetry::generate_http_client;
 
 use crate::common::parse::parse_change_id_from_bytes;
-use crate::common::poe_api::{get_oauth_token, user_agent, OAuthResponse};
-use crate::common::stash::protocol::StashTabResponseInternal;
 use crate::common::stash::Stash;
 use crate::common::ChangeId;
+use crate::poe_api::auth::{get_oauth_token, user_agent, OAuthResponse};
+use crate::poe_api::poe_stash_api::protocol::PublicStashTabResponse;
 
 #[derive(Debug)]
 pub struct Indexer {
@@ -194,7 +194,7 @@ async fn process(
         }
     }
 
-    let deserialised = match serde_json::from_slice::<StashTabResponseInternal>(&bytes) {
+    let deserialised = match serde_json::from_slice::<PublicStashTabResponse>(&bytes) {
         Ok(deserialised) => deserialised,
         Err(e) => {
             info!("Rescheduling in 5s due to deserialization issue {:?}", e);
@@ -225,7 +225,6 @@ async fn process(
         .into_iter()
         .map(|s| Stash {
             account_name: s.account_name,
-            last_character_name: s.last_character_name,
             id: s.id,
             stash: s.stash,
             stash_type: s.stash_type,
