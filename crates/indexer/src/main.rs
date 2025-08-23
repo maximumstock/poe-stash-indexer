@@ -128,7 +128,7 @@ fn setup_signal_handlers() -> Result<Arc<AtomicBool>, Box<dyn std::error::Error>
     Ok(signal_flag)
 }
 
-async fn setup_sinks<'a>(
+async fn setup_sinks(
     config: Configuration,
 ) -> Result<Vec<Box<dyn Sink>>, Box<dyn std::error::Error>> {
     let mut sinks: Vec<Box<dyn Sink>> = vec![];

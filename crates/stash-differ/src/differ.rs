@@ -76,6 +76,7 @@ impl StashDiffer {
 
 #[derive(Serialize, Clone)]
 #[serde(tag = "type")]
+#[allow(clippy::large_enum_variant)]
 pub enum DiffEvent {
     Added(Added),
     Removed(Removed),
