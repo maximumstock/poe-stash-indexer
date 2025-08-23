@@ -1732,7 +1732,6 @@ dependencies = [
  "serde",
  "serde_json",
  "signal-hook",
- "sqlx",
  "stash-api",
  "tokio",
  "tracing",

@@ -145,14 +145,5 @@ async fn setup_sinks<'a>(
         tracing::info!("Configured S3 sink");
     }
 
-    // if let Some(config) = config.postgres {
-    //     let mut asset_index = AssetIndex::new();
-    //     asset_index.init().await?;
-
-    //     let postgres_sink = PostgresSink::connect(&config, asset_index).await.unwrap();
-    //     sinks.push(Box::new(postgres_sink));
-    //     tracing::info!("Configured PostgreSQL sink");
-    // }
-
     Ok(sinks)
 }
