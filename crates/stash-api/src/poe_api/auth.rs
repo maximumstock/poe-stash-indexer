@@ -46,7 +46,7 @@ pub async fn get_oauth_token(
     ))
     .unwrap();
 
-    let response = generate_http_client()
+    let response = generate_http_client(None)
         .post(url)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .header(

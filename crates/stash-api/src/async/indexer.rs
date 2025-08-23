@@ -7,6 +7,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, error, error_span, info, trace, trace_span};
 use trade_common::secret::SecretString;
 use trade_common::telemetry::generate_http_client;
+use trade_common::{ClientWithMiddleware, RateLimiter};
 
 use crate::common::parse::parse_change_id_from_bytes;
 use crate::common::stash::Stash;
@@ -46,6 +47,15 @@ impl Indexer {
                 .await
                 .expect("Fetch OAuth credentials");
 
+        let rate_limiter = RateLimiter::builder()
+            .initial(0)
+            .max(1)
+            .refill(1)
+            .interval(Duration::from_secs(1))
+            .build();
+
+        let client = Arc::new(generate_http_client(Some(rate_limiter)));
+
         let (tx, rx) = channel(100);
 
         schedule_job(
@@ -55,6 +65,7 @@ impl Indexer {
             self.client_secret.clone(),
             self.developer_mail.clone(),
             Arc::new(RwLock::new(Some(credentials))),
+            client,
         );
         rx
     }
@@ -67,6 +78,7 @@ fn schedule_job(
     client_secret: SecretString,
     developer_mail: SecretString,
     config: Arc<RwLock<Option<OAuthResponse>>>,
+    client: Arc<ClientWithMiddleware>,
 ) {
     tokio::spawn(process(
         next_change_id,
@@ -75,6 +87,7 @@ fn schedule_job(
         client_secret,
         developer_mail,
         config,
+        client,
     ));
 }
 
@@ -86,6 +99,7 @@ async fn process(
     client_secret: SecretString,
     developer_mail: SecretString,
     config: Arc<RwLock<Option<OAuthResponse>>>,
+    client: Arc<ClientWithMiddleware>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // check if stopping
     if tx.is_closed() {
@@ -98,8 +112,6 @@ async fn process(
     );
     debug!("Requesting {}", url);
 
-    // TODO: static client somewhere
-    let client = generate_http_client();
     let response = client
         .get(url)
         .header("Accept", "application/json")
@@ -136,6 +148,7 @@ async fn process(
                     client_secret,
                     developer_mail,
                     config,
+                    client,
                 );
             });
             return Ok(());
@@ -156,6 +169,7 @@ async fn process(
             client_secret,
             developer_mail,
             config,
+            client,
         );
         return Ok(());
     }
@@ -176,6 +190,7 @@ async fn process(
                     client_secret,
                     developer_mail,
                     config,
+                    client,
                 );
                 return Ok(());
             } else {
@@ -189,6 +204,7 @@ async fn process(
                     client_secret.clone(),
                     developer_mail.clone(),
                     config.clone(),
+                    client.clone(),
                 );
             }
         }
@@ -206,6 +222,7 @@ async fn process(
                 client_secret,
                 developer_mail,
                 config,
+                client,
             );
             return Ok(());
         }
