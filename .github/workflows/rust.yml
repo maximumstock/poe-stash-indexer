@@ -74,10 +74,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - name: Set up Rust cache
         id: restore-cache
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -105,7 +105,7 @@ jobs:
           gh actions-cache delete ${{ steps.restore-cache.outputs.cache-primary-key }} --confirm
         continue-on-error: true
       - name: Save Rust Docker CI step cache
-        uses: actions/cache/save@v3
+        uses: actions/cache/save@v4
         if: always()
         with:
           path: |
