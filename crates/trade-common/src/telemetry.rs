@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::Resource;
 use reqwest_leaky_bucket::leaky_bucket::RateLimiter;
@@ -10,7 +8,7 @@ use tracing_subscriber::{prelude::*, EnvFilter, Registry};
 
 pub fn setup_telemetry(service_name: &str) -> Result<(), opentelemetry::trace::TraceError> {
     if let Ok(otel_collector) = std::env::var("OTEL_COLLECTOR") {
-        info!("Connecting to OTEL_COLLECTOR {}", otel_collector);
+        println!("Connecting to OTEL_COLLECTOR {}", otel_collector);
         let tracer = opentelemetry_otlp::new_pipeline()
             .tracing()
             .with_exporter(
