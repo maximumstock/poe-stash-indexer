@@ -13,13 +13,11 @@ use std::{
     },
 };
 
-use crate::resumption::State;
+use crate::metrics::setup_metrics;
 use crate::resumption::StateWrapper;
-use crate::sinks::rabbitmq::RabbitMqSink;
-use crate::{metrics::setup_metrics, sinks::s3::S3Sink};
+use crate::{resumption::State, sinks::sink::setup_sinks};
 
 use config::{Configuration, RestartMode};
-use sinks::sink::Sink;
 use stash_api::{
     common::{poe_ninja_client::PoeNinjaClient, ChangeId},
     r#async::indexer::{Indexer, IndexerMessage},
@@ -126,24 +124,4 @@ fn setup_signal_handlers() -> Result<Arc<AtomicBool>, Box<dyn std::error::Error>
     signal_hook::flag::register(signal_hook::consts::SIGINT, signal_flag.clone())?;
     signal_hook::flag::register(signal_hook::consts::SIGTERM, signal_flag.clone())?;
     Ok(signal_flag)
-}
-
-async fn setup_sinks(
-    config: Configuration,
-) -> Result<Vec<Box<dyn Sink>>, Box<dyn std::error::Error>> {
-    let mut sinks: Vec<Box<dyn Sink>> = vec![];
-
-    if let Some(conf) = config.rabbitmq {
-        let mq_sink = RabbitMqSink::connect(conf).await?;
-        sinks.push(Box::new(mq_sink));
-        tracing::info!("Configured RabbitMQ fanout sink");
-    }
-
-    if let Some(config) = config.s3 {
-        let s3_sink = S3Sink::connect(&config.bucket_name, &config.region).await?;
-        sinks.push(Box::new(s3_sink));
-        tracing::info!("Configured S3 sink");
-    }
-
-    Ok(sinks)
 }
