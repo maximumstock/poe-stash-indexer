@@ -21,9 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'ci skip')"
     steps:
-      - name: Dependencies
-        run: sudo apt-get install -y age protobuf-compiler
-
       - name: Checkout sources
         uses: actions/checkout@v5
         with:

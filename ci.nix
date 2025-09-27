@@ -10,7 +10,6 @@ pkgs.mkShell rec {
       gettext
       age
       vegeta
-      protobuf
       docker-compose
 
       (rust-bin.stable.latest.default.override {
