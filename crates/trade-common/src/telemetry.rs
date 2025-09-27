@@ -1,5 +1,6 @@
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::Resource;
+use reqwest_leaky_bucket::leaky_bucket::RateLimiter;
 use reqwest_middleware::ClientBuilder;
 use reqwest_tracing::{SpanBackendWithUrl, TracingMiddleware};
 use tracing::info;
@@ -7,7 +8,7 @@ use tracing_subscriber::{prelude::*, EnvFilter, Registry};
 
 pub fn setup_telemetry(service_name: &str) -> Result<(), opentelemetry::trace::TraceError> {
     if let Ok(otel_collector) = std::env::var("OTEL_COLLECTOR") {
-        info!("Connecting to OTEL_COLLECTOR {}", otel_collector);
+        println!("Connecting to OTEL_COLLECTOR {}", otel_collector);
         let tracer = opentelemetry_otlp::new_pipeline()
             .tracing()
             .with_exporter(
@@ -55,10 +56,20 @@ pub fn teardown_telemetry() {
     opentelemetry::global::shutdown_tracer_provider();
 }
 
-pub fn generate_http_client() -> reqwest_middleware::ClientWithMiddleware {
+/// Sets up a reusable tracing-first reqwest client with optional rate limiting
+pub fn generate_http_client(
+    rate_limiter: Option<RateLimiter>,
+) -> reqwest_middleware::ClientWithMiddleware {
     let reqwest_client = reqwest::Client::builder().build().unwrap();
 
-    ClientBuilder::new(reqwest_client)
-        .with(TracingMiddleware::<SpanBackendWithUrl>::new())
-        .build()
+    if let Some(limiter) = rate_limiter {
+        ClientBuilder::new(reqwest_client)
+            .with(TracingMiddleware::<SpanBackendWithUrl>::new())
+            .with(reqwest_leaky_bucket::rate_limit_all(limiter))
+            .build()
+    } else {
+        ClientBuilder::new(reqwest_client)
+            .with(TracingMiddleware::<SpanBackendWithUrl>::new())
+            .build()
+    }
 }

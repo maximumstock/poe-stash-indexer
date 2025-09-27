@@ -1,6 +1,5 @@
 mod change_id;
 pub mod parse;
-pub mod poe_api;
 pub mod poe_ninja_client;
 pub mod stash;
 

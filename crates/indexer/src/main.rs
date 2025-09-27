@@ -128,7 +128,7 @@ fn setup_signal_handlers() -> Result<Arc<AtomicBool>, Box<dyn std::error::Error>
     Ok(signal_flag)
 }
 
-async fn setup_sinks<'a>(
+async fn setup_sinks(
     config: Configuration,
 ) -> Result<Vec<Box<dyn Sink>>, Box<dyn std::error::Error>> {
     let mut sinks: Vec<Box<dyn Sink>> = vec![];
@@ -144,15 +144,6 @@ async fn setup_sinks<'a>(
         sinks.push(Box::new(s3_sink));
         tracing::info!("Configured S3 sink");
     }
-
-    // if let Some(config) = config.postgres {
-    //     let mut asset_index = AssetIndex::new();
-    //     asset_index.init().await?;
-
-    //     let postgres_sink = PostgresSink::connect(&config, asset_index).await.unwrap();
-    //     sinks.push(Box::new(postgres_sink));
-    //     tracing::info!("Configured PostgreSQL sink");
-    // }
 
     Ok(sinks)
 }
