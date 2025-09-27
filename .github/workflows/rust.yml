@@ -130,7 +130,7 @@ jobs:
           shortSha=$(git rev-parse --short ${{ github.sha }})
           echo "::set-output name=short_sha::$shortSha"
       - name: Build indexer
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./crates/indexer/Dockerfile
