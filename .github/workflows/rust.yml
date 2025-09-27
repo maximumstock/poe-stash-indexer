@@ -41,7 +41,7 @@ jobs:
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
       - name: Compile
-        run: nix develop --command bash -c "cargo test --all-targets --all-features --no-run --locked"
+        run: nix develop --command bash -c "cargo build --all-targets --all-features --locked"
 
       - name: Test
         run: nix develop --command bash -c "make test"
