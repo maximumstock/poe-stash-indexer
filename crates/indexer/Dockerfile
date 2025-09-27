@@ -2,7 +2,6 @@
 FROM rust:bullseye as development
 # Add apt.llvm.org repository and install clang
 RUN apt-get update
-RUN apt-get install -y protobuf-compiler
 RUN cargo install cargo-watch
 WORKDIR /app
 COPY . .
