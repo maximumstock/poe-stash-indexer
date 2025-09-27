@@ -24,7 +24,8 @@ cargo install --path crates/indexer
 or use the latest Docker image:
 
 ```bash
-docker run \
+# Only published platform is linux/amd64 as of now
+docker run --platform linux/amd64 \
     # these configuration options are required to talk to the API
     # see the configuration options below
     -e POE_CLIENT_ID="" \

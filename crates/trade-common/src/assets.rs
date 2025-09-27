@@ -39,7 +39,7 @@ impl AssetIndex {
             "https://www.pathofexile.com/api/trade/data/static".parse()?,
         );
         request.headers_mut().insert("user-agent", HeaderValue::from_str("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36").unwrap());
-        let client = generate_http_client();
+        let client = generate_http_client(None);
         let asset_response = client
             .execute(request)
             .await

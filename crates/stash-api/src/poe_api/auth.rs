@@ -46,7 +46,7 @@ pub async fn get_oauth_token(
     ))
     .unwrap();
 
-    let response = generate_http_client()
+    let response = generate_http_client(None)
         .post(url)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .header(
@@ -64,7 +64,7 @@ const DEFAULT_RATE_LIMIT_TIMER: u64 = 60;
 
 pub fn parse_rate_limit_timer(input: Option<&str>) -> Duration {
     let seconds = input
-        .and_then(|v| v.split(':').last())
+        .and_then(|v| v.split(':').next_back())
         .map(|s| {
             if s.ne("60") {
                 tracing::warn!("Expected x-rate-limit-ip to be 60 seconds");

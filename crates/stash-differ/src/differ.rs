@@ -1,6 +1,6 @@
 use chrono::NaiveDateTime;
 use serde::Serialize;
-use stash_api::common::stash::protocol::Item;
+use stash_api::poe_api::poe_stash_api::protocol::Item;
 use tracing::info;
 
 use crate::store::SearchableStash;
@@ -76,6 +76,7 @@ impl StashDiffer {
 
 #[derive(Serialize, Clone)]
 #[serde(tag = "type")]
+#[allow(clippy::large_enum_variant)]
 pub enum DiffEvent {
     Added(Added),
     Removed(Removed),

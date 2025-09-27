@@ -18,5 +18,5 @@ fn int_from_env(key: &str) -> Result<u32, Box<dyn std::error::Error>> {
 }
 
 fn str_from_env(key: &str) -> Result<String, Box<dyn std::error::Error>> {
-    Ok(std::env::var(key).unwrap_or_else(|_| panic!("{} environment variable", key)))
+    Ok(std::env::var(key).unwrap_or_else(|_| panic!("{key} environment variable")))
 }
