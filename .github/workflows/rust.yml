@@ -52,6 +52,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      workflows: write
     needs: ci
     if: github.actor == 'dependabot[bot]'
     steps:
