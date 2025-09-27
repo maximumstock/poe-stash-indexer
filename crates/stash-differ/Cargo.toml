@@ -7,8 +7,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.219", features = ["derive"] }
-chrono = { version = "0.4.41", features = ["serde"] }
+serde = { version = "1.0.227", features = ["derive"] }
+chrono = { version = "0.4.42", features = ["serde"] }
 dotenv = "0.15.0"
 stash-api = { path = "../stash-api" }
 signal-hook = "0.3.18"
@@ -22,7 +22,7 @@ aws-config = "1.5.18"
 aws-credential-types = "1.2.2"
 flate2 = "1.1.2"
 jsonl = "4.0.1"
-anyhow = "1.0.99"
+anyhow = "1.0.100"
 
 [[bin]]
 name = "stash-differ"
