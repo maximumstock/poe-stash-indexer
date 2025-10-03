@@ -41,14 +41,8 @@ jobs:
       #     name: "${{ secrets.CACHIX_AUTH_USERNAME }}"
       #     authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
-      - name: Compile
-        run: nix develop --command bash -c "cargo build --all-targets --all-features --locked"
-
-      - name: Test
-        run: nix develop --command bash -c "make test"
-
-      - name: Format & Lint
-        run: nix develop --command bash -c "make tidy-check"
+      - name: Build, Test & Lint
+        run: nix build --extra-experimental-features "nix-command flakes" .#indexer
 
   dependabot-auto-merge:
     runs-on: ubuntu-latest
