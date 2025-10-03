@@ -31,7 +31,7 @@
           cargoClippyExtraArgs = "--all-features --all-targets -- -D warnings";
         };
         indexer-docker = pkgs.dockerTools.buildImage {
-          name = "indexer";
+          name = "maximumstock2/indexer";
           tag = "latest"; # todo: extend this with another tag for the actual Cargo version
           copyToRoot = [ indexer ];
           config = {

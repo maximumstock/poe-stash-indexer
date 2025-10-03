@@ -98,7 +98,6 @@ jobs:
 
       - name: Build & Push Indexer
         run: |
-          OCI_ARCHIVE=$(nix-build --no-out-link -A packages.x86_64-linux.ociApplicationImage)
           docker load < result
           # TODO: extend this with another tag for the actual Cargo version
           docker push maximumstock2/indexer:latest
