@@ -12,7 +12,7 @@ chrono = { version = "0.4.42", features = ["serde"] }
 dotenv = "0.15.0"
 stash-api = { path = "../stash-api" }
 signal-hook = "0.3.18"
-tokio = { version = "1.47.1", features = ["full"] }
+tokio = { version = "1.48.0", features = ["full"] }
 futures = "0.3.31"
 tracing = "0.1.41"
 trade-common = { path = "../trade-common" }
