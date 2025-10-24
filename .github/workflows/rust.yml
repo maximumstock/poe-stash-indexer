@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
 
 env:
   # Because matklad said so https://matklad.github.io/2021/09/04/fast-rust-builds.html
@@ -90,51 +91,8 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # - name: Set short git commit SHA
-      #   id: vars
-      #   run: |
-      #     shortSha=$(git rev-parse --short ${{ github.sha }})
-      #     echo "::set-output name=short_sha::$shortSha"
-
       - name: Build & Push Indexer
         run: |
           docker load < result
           # TODO: extend this with another tag for the actual Cargo version
           docker push maximumstock2/indexer:latest
-
-  # deploy:
-  #   runs-on: ubuntu-latest
-  #   needs:
-  #     - ci
-  #     - docker
-  #   if: "!contains(github.event.head_commit.message, 'deploy skip') && github.ref_name == 'master'"
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v5
-  #     - name: Deployment
-  #       env:
-  #         DEPLOY_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
-  #         DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-  #         DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-  #         AGE_KEY: ${{ secrets.AGE_KEY }}
-  #       run: |
-  #         eval $(ssh-agent -s)
-  #         ssh-add <(echo "$DEPLOY_PRIVATE_KEY")
-  #         ssh -q -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << EOF
-  #           export AGE_KEY="$AGE_KEY"
-  #           export ENV="production"
-
-  #           set -ex
-  #           echo "Environment: $ENV"
-
-  #           # Make sure we have the latest images
-  #           docker pull maximumstock2/trade-api:latest
-  #           docker pull maximumstock2/trade-ingest:latest
-  #           docker pull maximumstock2/indexer:latest
-
-  #           cd deployment && git pull
-  #           make config
-  #           docker-compose -f docker-compose.yaml -f docker-compose.production.yaml build --force-rm reverse-proxy rabbitmq
-  #           make up-prod
-  #           docker-compose -f docker-compose.yaml -f docker-compose.production.yaml logs --tail=1000 trade-api trade-store indexer
-  #         EOF
