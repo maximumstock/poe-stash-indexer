@@ -18,7 +18,7 @@ tracing = "0.1.41"
 trade-common = { path = "../trade-common" }
 aws-sdk-s3 = "1.109.0"
 aws-types = "1.3.6"
-aws-config = "1.8.8"
+aws-config = "1.8.10"
 aws-credential-types = "1.2.2"
 flate2 = "1.1.5"
 jsonl = "4.0.1"
