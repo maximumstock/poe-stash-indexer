@@ -152,9 +152,9 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "aws-config"
-version = "1.8.10"
+version = "1.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1856b1b48b65f71a4dd940b1c0931f9a7b646d4a924b9828ffefc1454714668a"
+checksum = "a0149602eeaf915158e14029ba0c78dedb8c08d554b024d54c8f239aab46511d"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -182,9 +182,9 @@ dependencies = [
 
 [[package]]
 name = "aws-credential-types"
-version = "1.2.9"
+version = "1.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86590e57ea40121d47d3f2e131bfd873dea15d78dc2f4604f4734537ad9e56c4"
+checksum = "b01c9521fa01558f750d183c8c68c81b0155b9d193a4ba7f84c36bd1b6d04a06"
 dependencies = [
  "aws-smithy-async",
  "aws-smithy-runtime-api",
@@ -218,9 +218,9 @@ dependencies = [
 
 [[package]]
 name = "aws-runtime"
-version = "1.5.14"
+version = "1.5.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fe0fd441565b0b318c76e7206c8d1d0b0166b3e986cf30e890b61feb6192045"
+checksum = "7ce527fb7e53ba9626fc47824f25e256250556c40d8f81d27dd92aa38239d632"
 dependencies = [
  "aws-credential-types",
  "aws-sigv4",
@@ -243,9 +243,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-s3"
-version = "1.112.0"
+version = "1.115.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eee73a27721035c46da0572b390a69fbdb333d0177c24f3d8f7ff952eeb96690"
+checksum = "fdaa0053cbcbc384443dd24569bd5d1664f86427b9dc04677bd0ab853954baec"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -277,9 +277,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-sso"
-version = "1.88.0"
+version = "1.90.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d05b276777560aa9a196dbba2e3aada4d8006d3d7eeb3ba7fe0c317227d933c4"
+checksum = "4f18e53542c522459e757f81e274783a78f8c81acdfc8d1522ee8a18b5fb1c66"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -299,9 +299,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-ssooidc"
-version = "1.90.0"
+version = "1.92.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9be14d6d9cd761fac3fd234a0f47f7ed6c0df62d83c0eeb7012750e4732879b"
+checksum = "532f4d866012ffa724a4385c82e8dd0e59f0ca0e600f3f22d4c03b6824b34e4a"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -321,9 +321,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-sts"
-version = "1.90.0"
+version = "1.94.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98a862d704c817d865c8740b62d8bbeb5adcb30965e93b471df8a5bcefa20a80"
+checksum = "1be6fbbfa1a57724788853a623378223fe828fc4c09b146c992f0c95b6256174"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -780,9 +780,9 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "bytes"
-version = "1.10.1"
+version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
+checksum = "b35204fbdc0b3f4446b89fc1ac2cf84a8a68971995d0bf2e925ec7cd960f9cb3"
 
 [[package]]
 name = "bytes-utils"
@@ -4044,18 +4044,18 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "typed-builder"
-version = "0.23.0"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d0dd654273fc253fde1df4172c31fb6615cf8b041d3a4008a028ef8b1119e66"
+checksum = "1cce8e9c8115897e896894868ad4ae6851eff0fb7fd33fa95610e0fa93211886"
 dependencies = [
  "typed-builder-macro",
 ]
 
 [[package]]
 name = "typed-builder-macro"
-version = "0.23.0"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "016c26257f448222014296978b2c8456e2cad4de308c35bdb1e383acd569ef5b"
+checksum = "921d52b8b19b1a455f54fa76a925a1cf49c0d6a7c6b232fc58523400d1f91560"
 dependencies = [
  "proc-macro2",
  "quote",
