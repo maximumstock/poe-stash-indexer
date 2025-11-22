@@ -12,6 +12,18 @@ and lets you save its data to different [sinks](#sinks).
 - [x] Minimum indexing delay due to look-ahead for next `change_id` on partial HTTP response
 - [x] Graceful handling of shutdown signals by flushing all sinks
 
+## Prerequisites
+
+You will need valid developer credentials to authenticate `indexer` with GGG.
+The [official API documentation](https://www.pathofexile.com/developer/docs/index#gettingstarted) describes
+what you need to do in order to receive such credentials.
+
+Make sure your credentials fulfill the following requirements:
+
+- allow the [`Confidential Clients` client type](https://www.pathofexile.com/developer/docs/authorization#clients-confidential)
+- allow the [`Client Credentials Grant` grant type](https://www.pathofexile.com/developer/docs/authorization#grants-client-credentials)
+- permit the [`service:psapi` API scope](https://www.pathofexile.com/developer/docs/authorization#scopes)
+
 ## Installation & Quickstart
 
 You can either build and install the application yourself by:
@@ -24,7 +36,7 @@ cargo install --path crates/indexer
 or use the latest Docker image:
 
 ```bash
-# Only published platform is linux/amd64 as of now
+# Only published platform is linux/amd64 as of now, but you can always build the Dockerfile yourself for your platform of choice
 docker run --platform linux/amd64 \
     # these configuration options are required to talk to the API
     # see the configuration options below

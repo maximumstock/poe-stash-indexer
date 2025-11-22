@@ -1,5 +1,7 @@
 [![Continuous Integration](https://github.com/maximumstock/poe-stash-indexer/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/maximumstock/poe-stash-indexer/actions/workflows/rust.yml)
 
+> **Disclaimer: This product isn't affiliated with or endorsed by Grinding Gear Games in any way.**
+
 # poe-stash-indexer
 
 _Keep in mind: As there is no public stash tab API for PoE 2 yet, this project only works for PoE 1._
