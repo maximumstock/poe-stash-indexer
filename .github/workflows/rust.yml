@@ -23,7 +23,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'ci skip')"
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
 
@@ -68,7 +68,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'docker skip') && github.ref_name == 'master'"
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
       - uses: cachix/install-nix-action@v31
