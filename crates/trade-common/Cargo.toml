@@ -11,7 +11,7 @@ reqwest = { version = "0.12.24", features = [
   "json",
   "rustls-tls",
 ], default-features = false }
-tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 opentelemetry = { version = "0.23.0" }
 opentelemetry_sdk = { version = "0.23.0", features = ["rt-tokio"] }
 opentelemetry-otlp = "0.16.0"
