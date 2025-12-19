@@ -16,7 +16,7 @@ opentelemetry = { version = "0.23.0" }
 opentelemetry_sdk = { version = "0.23.0", features = ["rt-tokio"] }
 opentelemetry-otlp = "0.16.0"
 tracing-opentelemetry = "0.24.0"
-tracing = "0.1.43"
+tracing = "0.1.44"
 reqwest-middleware = "0.4.2"
 reqwest-tracing = { version = "0.5.8", features = ["opentelemetry_0_22"] }
 regex = "1.12.2"

@@ -16,7 +16,7 @@ signal-hook = { version = "0.3.18", default-features = false }
 prometheus_exporter = { version = "0.8.5", default-features = false }
 tokio = { version = "1.48.0", default-features = false, features = ["full"] }
 futures = { version = "0.3.31", default-features = false }
-tracing = { version = "0.1.43", default-features = false }
+tracing = { version = "0.1.44", default-features = false }
 trade-common = { path = "../trade-common", default-features = false }
 async-trait = { version = "0.1.89", default-features = false }
 lapin = { version = "3.7.2", default-features = false }
