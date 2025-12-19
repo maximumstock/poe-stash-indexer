@@ -13,7 +13,7 @@ signal-hook = "0.3.18"
 tokio = { version = "1.48.0", features = ["full"] }
 typed-builder = "0.23.2"
 prometheus_exporter = "0.8.5"
-tracing = "0.1.43"
+tracing = "0.1.44"
 chrono = { version = "0.4.42", features = ["serde"] }
 sqlx = { version = "0.8.6", features = [
     "runtime-tokio-rustls",
