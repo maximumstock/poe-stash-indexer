@@ -9,7 +9,7 @@ edition = "2021"
 regex = "1.12.2"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.147"
-signal-hook = "0.3.18"
+signal-hook = "0.4.1"
 tokio = { version = "1.48.0", features = ["full"] }
 typed-builder = "0.23.2"
 prometheus_exporter = "0.8.5"
