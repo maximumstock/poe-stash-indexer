@@ -11,7 +11,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 chrono = { version = "0.4.43", features = ["serde"] }
 dotenv = "0.15.0"
 stash-api = { path = "../stash-api" }
-signal-hook = "0.4.1"
+signal-hook = "0.4.3"
 tokio = { version = "1.49.0", features = ["full"] }
 futures = "0.3.31"
 tracing = "0.1.44"
