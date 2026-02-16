@@ -15,7 +15,7 @@ reqwest = { version = "0.12.28", features = [
 ], default-features = false }
 chrono = { version = "0.4.43", features = ["serde"] }
 tokio = { version = "1.49.0", features = ["full"] }
-futures = { version = "0.3.31" }
+futures = { version = "0.3.32" }
 bytes = { version = "1.11.1" }
 serde_urlencoded = "0.7.1"
 trade-common = { path = "../trade-common" }
