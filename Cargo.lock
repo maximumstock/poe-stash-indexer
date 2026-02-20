@@ -2799,10 +2799,39 @@ dependencies = [
 ]
 
 [[package]]
-name = "reqwest-leaky-bucket"
-version = "0.4.0"
+name = "reqwest"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99ea23b517779144bef5fba5a5401bbdc2aac6244c529e8b418f8ce1b6d5fdf0"
+checksum = "04e9018c9d814e5f30cc16a0f03271aeab3571e609612d9fe78c1aa8d11c2f62"
+dependencies = [
+ "base64 0.22.1",
+ "bytes",
+ "futures-core",
+ "http 1.3.1",
+ "http-body 1.0.1",
+ "http-body-util",
+ "hyper 1.7.0",
+ "hyper-util",
+ "js-sys",
+ "log",
+ "percent-encoding",
+ "pin-project-lite",
+ "sync_wrapper 1.0.2",
+ "tokio",
+ "tower 0.5.2",
+ "tower-http",
+ "tower-service",
+ "url",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "reqwest-leaky-bucket"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b6bf0cbd135d86ab7e9e0b71b946890d42ae6cb4e7f7e2728ae13f6ffdad6f6"
 dependencies = [
  "leaky-bucket",
  "reqwest-ratelimit",
@@ -2817,22 +2846,36 @@ dependencies = [
  "anyhow",
  "async-trait",
  "http 1.3.1",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "thiserror 1.0.69",
  "tower-service",
 ]
 
 [[package]]
-name = "reqwest-ratelimit"
-version = "0.4.1"
+name = "reqwest-middleware"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b8fff0d8036f23dcad6c27605ca3baa8ae3867438d0a8b34072f40f6c8bf628"
+checksum = "f42e2f48018a33d679ee7f477a446b697663a14e91ab0b3a0206792a22dd3aa8"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "http 1.3.1",
+ "reqwest 0.13.1",
+ "thiserror 2.0.16",
+ "tower-service",
+]
+
+[[package]]
+name = "reqwest-ratelimit"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9dcdd7bc47db7ba0b18b58ebbfba6449c266d0334175eaf5e2219ac4c3a047df"
 dependencies = [
  "async-trait",
  "http 1.3.1",
- "reqwest",
- "reqwest-middleware",
+ "reqwest 0.13.1",
+ "reqwest-middleware 0.5.0",
 ]
 
 [[package]]
@@ -2847,8 +2890,8 @@ dependencies = [
  "http 1.3.1",
  "matchit 0.8.4",
  "opentelemetry 0.22.0",
- "reqwest",
- "reqwest-middleware",
+ "reqwest 0.12.28",
+ "reqwest-middleware 0.4.2",
  "tracing",
  "tracing-opentelemetry 0.23.0",
 ]
@@ -3489,7 +3532,7 @@ dependencies = [
  "bytes",
  "chrono",
  "futures",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -4006,9 +4049,9 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry_sdk 0.23.0",
  "regex",
- "reqwest",
+ "reqwest 0.12.28",
  "reqwest-leaky-bucket",
- "reqwest-middleware",
+ "reqwest-middleware 0.4.2",
  "reqwest-tracing",
  "serde",
  "tracing",
