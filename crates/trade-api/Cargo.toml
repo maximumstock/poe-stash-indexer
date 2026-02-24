@@ -22,5 +22,5 @@ sqlx = { version = "0.8.6", features = [
 ] }
 trade-common = { path = "../trade-common" }
 axum = "0.8.8"
-tower = "0.5.2"
+tower = "0.5.3"
 tower-http = { version = "0.6.8", features = ["trace"] }
